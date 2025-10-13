@@ -80,7 +80,7 @@ export const ResetPassword: React.FC = () => {
             </p>
             <button
               onClick={() => window.location.href = '/'}
-              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue transition-colors"
+              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue transition-colors uppercase"
             >
               Continue to Sign In
             </button>
@@ -153,7 +153,7 @@ export const ResetPassword: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase"
           >
             {loading ? 'Updating...' : 'Update Password'}
           </button>

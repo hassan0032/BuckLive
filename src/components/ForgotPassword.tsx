@@ -46,7 +46,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
             </p>
             <button
               onClick={onBack}
-              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue transition-colors"
+              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue transition-colors uppercase"
             >
               Back to Sign In
             </button>
@@ -91,7 +91,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase"
           >
             {loading ? 'Sending...' : 'Send Reset Link'}
           </button>
@@ -100,7 +100,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
         <div className="mt-6 text-center">
           <button
             onClick={onBack}
-            className="flex items-center justify-center space-x-2 text-gray-600 hover:text-gray-700 font-medium mx-auto"
+            className="flex items-center justify-center space-x-2 text-gray-600 hover:text-gray-700 font-bold mx-auto uppercase"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Sign In</span>

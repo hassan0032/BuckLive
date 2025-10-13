@@ -70,7 +70,7 @@ export const Auth: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8">
           <button
             onClick={() => setIsSignUp(false)}
-            className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors"
+            className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors uppercase font-bold"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back to sign in
@@ -88,7 +88,7 @@ export const Auth: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-6">
             <button
               onClick={() => setRegistrationType('access_code')}
-              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
+              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left uppercase font-bold"
             >
               <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
                 <Key className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
@@ -103,7 +103,7 @@ export const Auth: React.FC = () => {
 
             <button
               onClick={() => setRegistrationType('payment')}
-              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
+              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left uppercase font-bold"
             >
               <div className="absolute -top-3 right-6">
                 <span className="bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-medium">
@@ -135,7 +135,7 @@ export const Auth: React.FC = () => {
         {isSignUp && registrationType && (
           <button
             onClick={() => setRegistrationType(null)}
-            className="mb-4 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors"
+            className="mb-4 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors uppercase font-bold"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back
@@ -242,7 +242,7 @@ export const Auth: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase"
           >
             {loading
               ? 'Please wait...'
@@ -260,7 +260,7 @@ export const Auth: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowForgotPassword(true)}
-              className="text-brand-primary hover:text-brand-d-blue font-medium text-sm mb-4 block mx-auto"
+              className="text-brand-primary hover:text-brand-d-blue font-bold text-sm mb-4 block mx-auto uppercase"
             >
               Forgot your password?
             </button>
@@ -272,7 +272,7 @@ export const Auth: React.FC = () => {
               setRegistrationType(null);
               setError('');
             }}
-            className="text-brand-primary hover:text-brand-d-blue font-medium"
+            className="text-brand-primary hover:text-brand-d-blue font-bold uppercase"
           >
             {isSignUp
               ? 'Already have an account? Sign in'

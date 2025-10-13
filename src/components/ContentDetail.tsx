@@ -95,7 +95,7 @@ export const ContentDetail: React.FC = () => {
         <p className="text-gray-600 mb-4">The content you're looking for doesn't exist or you don't have access to it.</p>
         <button
           onClick={() => navigate('/library')}
-          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
+          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Library
@@ -111,7 +111,7 @@ export const ContentDetail: React.FC = () => {
     <div className="space-y-8">
       <button
         onClick={() => navigate('/library')}
-        className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+        className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors uppercase font-bold"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Library
@@ -210,7 +210,7 @@ export const ContentDetail: React.FC = () => {
                 href={singleContent.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
+                className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
               >
                 <BookOpen className="h-4 w-4 mr-2" />
                 Read Full Article
@@ -246,7 +246,7 @@ export const ContentDetail: React.FC = () => {
                   href={singleContent.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
+                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download PDF

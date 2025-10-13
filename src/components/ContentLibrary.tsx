@@ -107,7 +107,7 @@ export const ContentLibrary: React.FC = () => {
 
             <button
               onClick={handleSearch}
-              className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
+              className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
             >
               <Filter className="h-4 w-4" />
             </button>
@@ -201,7 +201,7 @@ export const ContentLibrary: React.FC = () => {
                 {/* Action Button */}
                 <button
                   onClick={() => navigate(`/content/${item.id}`)}
-                  className="w-full mt-3 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors"
+                  className="w-full mt-3 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
                 >
                   {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download PDF' : 'Read Article'}
                 </button>

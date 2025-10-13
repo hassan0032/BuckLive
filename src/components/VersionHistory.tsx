@@ -104,7 +104,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                   </h3>
                   <button
                     onClick={() => setShowPreview(false)}
-                    className="text-brand-primary hover:text-brand-d-blue text-sm"
+                    className="text-brand-primary hover:text-brand-d-blue text-sm uppercase font-bold"
                   >
                     Back to list
                   </button>
@@ -136,7 +136,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                   <div className="pt-4 border-t">
                     <button
                       onClick={() => handleRestore(selectedVersion)}
-                      className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors flex items-center"
+                      className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors flex items-center uppercase font-bold"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Restore This Version
@@ -179,13 +179,13 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                             setSelectedVersion(version);
                             setShowPreview(true);
                           }}
-                          className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors uppercase font-bold"
                         >
                           Preview
                         </button>
                         <button
                           onClick={() => handleRestore(version)}
-                          className="px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                          className="px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center uppercase font-bold"
                         >
                           <RotateCcw className="h-3.5 w-3.5 mr-1" />
                           Restore

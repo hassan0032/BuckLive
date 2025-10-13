@@ -44,7 +44,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <button
                     key={item.id}
                     onClick={() => navigate(item.path)}
-                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold transition-colors uppercase ${
                       isActive(item.path)
                         ? 'text-brand-primary bg-brand-beige-light'
                         : 'text-gray-700 hover:text-brand-primary hover:bg-gray-50'
@@ -63,7 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
               <button
                 onClick={handleSignOut}
-                className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors"
+                className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors uppercase"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sign Out</span>
@@ -81,7 +81,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <button
                 key={item.id}
                 onClick={() => navigate(item.path)}
-                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors uppercase ${
                   isActive(item.path)
                     ? 'text-brand-primary bg-brand-beige-light'
                     : 'text-gray-700 hover:text-brand-primary hover:bg-gray-50'

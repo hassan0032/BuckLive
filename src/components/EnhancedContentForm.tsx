@@ -187,7 +187,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
               {editingContent && formData.type === 'blog' && (
                 <button
                   onClick={() => setShowVersionHistory(true)}
-                  className="px-3 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center"
+                  className="px-3 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center uppercase font-bold"
                 >
                   <History className="h-4 w-4 mr-2" />
                   History
@@ -206,7 +206,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
             <nav className="flex px-6">
               <button
                 onClick={() => setActiveTab('general')}
-                className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-3 px-4 border-b-2 font-bold text-sm transition-colors uppercase ${
                   activeTab === 'general'
                     ? 'border-brand-primary text-brand-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -216,7 +216,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
               </button>
               <button
                 onClick={() => setActiveTab('media')}
-                className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
+                className={`py-3 px-4 border-b-2 font-bold text-sm transition-colors uppercase ${
                   activeTab === 'media'
                     ? 'border-brand-primary text-brand-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -227,7 +227,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
               {formData.type === 'blog' && (
                 <button
                   onClick={() => setActiveTab('content')}
-                  className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
+                  className={`py-3 px-4 border-b-2 font-bold text-sm transition-colors uppercase ${
                     activeTab === 'content'
                       ? 'border-brand-primary text-brand-primary'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -443,7 +443,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors uppercase font-bold"
             >
               Cancel
             </button>
@@ -452,7 +452,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 type="button"
                 onClick={() => handleSubmit(true)}
                 disabled={!isValid || saving}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center"
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center uppercase font-bold"
               >
                 {saving ? (
                   <Loader className="h-4 w-4 mr-2 animate-spin" />
@@ -465,7 +465,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 type="button"
                 onClick={() => handleSubmit(false)}
                 disabled={!isValid || saving}
-                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center"
+                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center uppercase font-bold"
               >
                 {saving ? (
                   <Loader className="h-4 w-4 mr-2 animate-spin" />

@@ -100,7 +100,7 @@ export const PaymentSelection: React.FC<PaymentSelectionProps> = ({
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors"
+          className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors uppercase font-bold"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -197,7 +197,7 @@ export const PaymentSelection: React.FC<PaymentSelectionProps> = ({
         <button
           onClick={handleCheckout}
           disabled={loading}
-          className="w-full bg-brand-primary text-white py-4 px-6 rounded-lg font-medium hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          className="w-full bg-brand-primary text-white py-4 px-6 rounded-lg font-bold hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center uppercase"
         >
           {loading ? (
             'Processing...'
