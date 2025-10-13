@@ -46,7 +46,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
             </p>
             <button
               onClick={onBack}
-              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue transition-colors uppercase"
+              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue transition-colors uppercase text-sm"
             >
               Back to Sign In
             </button>
@@ -91,7 +91,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase"
+            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase text-sm"
           >
             {loading ? 'Sending...' : 'Send Reset Link'}
           </button>

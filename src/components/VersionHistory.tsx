@@ -136,7 +136,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                   <div className="pt-4 border-t">
                     <button
                       onClick={() => handleRestore(selectedVersion)}
-                      className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors flex items-center uppercase font-bold"
+                      className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors flex items-center uppercase font-bold text-sm"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Restore This Version

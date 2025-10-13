@@ -465,7 +465,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 type="button"
                 onClick={() => handleSubmit(false)}
                 disabled={!isValid || saving}
-                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center uppercase font-bold"
+                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center uppercase font-bold text-sm"
               >
                 {saving ? (
                   <Loader className="h-4 w-4 mr-2 animate-spin" />

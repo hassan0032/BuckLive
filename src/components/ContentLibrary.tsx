@@ -201,7 +201,7 @@ export const ContentLibrary: React.FC = () => {
                 {/* Action Button */}
                 <button
                   onClick={() => navigate(`/content/${item.id}`)}
-                  className="w-full mt-3 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
+                  className="w-full mt-3 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
                 >
                   {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download PDF' : 'Read Article'}
                 </button>

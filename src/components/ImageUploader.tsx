@@ -221,7 +221,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               type="button"
               onClick={handleUpload}
               disabled={uploading || !completedCrop}
-              className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center uppercase font-bold"
+              className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center uppercase font-bold text-sm"
             >
               {uploading ? (
                 <>

@@ -113,7 +113,7 @@ export const AdminDashboard: React.FC = () => {
               setShowCommunityForm(true);
             }
           }}
-          className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
+          className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
         >
           <Plus className="h-4 w-4" />
           <span>{activeTab === 'content' ? 'Add Content' : 'Add Community'}</span>
@@ -302,7 +302,7 @@ export const AdminDashboard: React.FC = () => {
             </h2>
             <button
               onClick={() => setShowCommunityForm(true)}
-              className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
+              className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>Add Community</span>
@@ -489,7 +489,7 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
+                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
                   >
                     {editingCommunity ? 'Update' : 'Add'} Community
                   </button>

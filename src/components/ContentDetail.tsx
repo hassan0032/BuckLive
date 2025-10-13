@@ -95,7 +95,7 @@ export const ContentDetail: React.FC = () => {
         <p className="text-gray-600 mb-4">The content you're looking for doesn't exist or you don't have access to it.</p>
         <button
           onClick={() => navigate('/library')}
-          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
+          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Library
@@ -210,7 +210,7 @@ export const ContentDetail: React.FC = () => {
                 href={singleContent.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
+                className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
               >
                 <BookOpen className="h-4 w-4 mr-2" />
                 Read Full Article
@@ -246,7 +246,7 @@ export const ContentDetail: React.FC = () => {
                   href={singleContent.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
+                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download PDF
