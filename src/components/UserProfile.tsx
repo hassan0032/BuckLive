@@ -19,8 +19,8 @@ export const UserProfile: React.FC = () => {
       {/* Profile Card */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center space-x-4 mb-6">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-            <User className="h-8 w-8 text-blue-600" />
+          <div className="w-16 h-16 bg-brand-beige-light rounded-full flex items-center justify-center">
+            <User className="h-8 w-8 text-brand-primary" />
           </div>
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
@@ -90,7 +90,7 @@ export const UserProfile: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Account Statistics</h3>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">0</p>
+              <p className="text-2xl font-bold text-brand-primary">0</p>
               <p className="text-sm text-gray-600">Videos Watched</p>
             </div>
             <div className="text-center p-3 bg-green-50 rounded-lg">

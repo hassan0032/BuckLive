@@ -30,7 +30,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
@@ -46,7 +46,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
             </p>
             <button
               onClick={onBack}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue transition-colors"
             >
               Back to Sign In
             </button>
@@ -57,11 +57,11 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Mail className="h-8 w-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-beige-light rounded-full mb-4">
+            <Mail className="h-8 w-8 text-brand-primary" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Reset Password</h2>
           <p className="text-gray-600">
@@ -83,7 +83,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
               placeholder="Enter your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
               required
             />
           </div>
@@ -91,7 +91,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Sending...' : 'Send Reset Link'}
           </button>

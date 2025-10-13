@@ -33,7 +33,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
               <div className="flex items-center space-x-2">
-                <Home className="h-8 w-8 text-blue-600" />
+                <Home className="h-8 w-8 text-brand-primary" />
                 <h1 className="text-xl font-bold text-gray-900">
                   {user?.profile?.community?.name || 'Buck LIVE'}
                 </h1>
@@ -46,8 +46,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     onClick={() => navigate(item.path)}
                     className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive(item.path)
-                        ? 'text-blue-600 bg-blue-50'
-                        : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                        ? 'text-brand-primary bg-brand-beige-light'
+                        : 'text-gray-700 hover:text-brand-primary hover:bg-gray-50'
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -83,8 +83,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 onClick={() => navigate(item.path)}
                 className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive(item.path)
-                    ? 'text-blue-600 bg-blue-50'
-                    : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                    ? 'text-brand-primary bg-brand-beige-light'
+                    : 'text-gray-700 hover:text-brand-primary hover:bg-gray-50'
                 }`}
               >
                 <item.icon className="h-4 w-4" />

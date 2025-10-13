@@ -45,7 +45,7 @@ export const ContentLibrary: React.FC = () => {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'video': return 'bg-red-100 text-red-700';
-      case 'pdf': return 'bg-blue-100 text-blue-700';
+      case 'pdf': return 'bg-brand-beige-light text-brand-secondary';
       case 'blog': return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
     }
@@ -54,7 +54,7 @@ export const ContentLibrary: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -77,7 +77,7 @@ export const ContentLibrary: React.FC = () => {
               placeholder="Search content..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
@@ -86,7 +86,7 @@ export const ContentLibrary: React.FC = () => {
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Types</option>
               <option value="video">Videos</option>
@@ -97,7 +97,7 @@ export const ContentLibrary: React.FC = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Categories</option>
               {categories.map(category => (
@@ -107,7 +107,7 @@ export const ContentLibrary: React.FC = () => {
 
             <button
               onClick={handleSearch}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
             >
               <Filter className="h-4 w-4" />
             </button>
@@ -201,7 +201,7 @@ export const ContentLibrary: React.FC = () => {
                 {/* Action Button */}
                 <button
                   onClick={() => navigate(`/content/${item.id}`)}
-                  className="w-full mt-3 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="w-full mt-3 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors"
                 >
                   {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download PDF' : 'Read Article'}
                 </button>

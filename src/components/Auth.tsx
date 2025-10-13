@@ -46,11 +46,11 @@ export const Auth: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <User className="h-8 w-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-beige-light rounded-full mb-4">
+            <User className="h-8 w-8 text-brand-primary" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
@@ -79,7 +79,7 @@ export const Auth: React.FC = () => {
                   placeholder="First Name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
                   required
                 />
               </div>
@@ -90,7 +90,7 @@ export const Auth: React.FC = () => {
                   placeholder="Last Name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
                   required
                 />
               </div>
@@ -106,7 +106,7 @@ export const Auth: React.FC = () => {
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
                 maxLength={6}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors uppercase tracking-wider"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors uppercase tracking-wider"
                 required
               />
             </div>
@@ -119,7 +119,7 @@ export const Auth: React.FC = () => {
               placeholder="Email Address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
               required
             />
           </div>
@@ -131,7 +131,7 @@ export const Auth: React.FC = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
               required
             />
             <button
@@ -146,7 +146,7 @@ export const Auth: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
           </button>
@@ -157,7 +157,7 @@ export const Auth: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowForgotPassword(true)}
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm mb-4 block mx-auto"
+              className="text-brand-primary hover:text-brand-d-blue font-medium text-sm mb-4 block mx-auto"
             >
               Forgot your password?
             </button>
@@ -168,7 +168,7 @@ export const Auth: React.FC = () => {
               setIsSignUp(!isSignUp);
               setError('');
             }}
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className="text-brand-primary hover:text-brand-d-blue font-medium"
           >
             {isSignUp 
               ? 'Already have an account? Sign in' 

@@ -180,7 +180,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
               </h2>
               <p className="text-sm text-gray-600 mt-1">
                 {formData.status === 'draft' ? 'Draft' : 'Published'}
-                {autoSaving && <span className="ml-2 text-blue-600">Saving...</span>}
+                {autoSaving && <span className="ml-2 text-brand-primary">Saving...</span>}
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -208,7 +208,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 onClick={() => setActiveTab('general')}
                 className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'general'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-brand-primary text-brand-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -218,7 +218,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 onClick={() => setActiveTab('media')}
                 className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'media'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-brand-primary text-brand-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -229,7 +229,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                   onClick={() => setActiveTab('content')}
                   className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'content'
-                      ? 'border-blue-500 text-blue-600'
+                      ? 'border-brand-primary text-brand-primary'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -251,7 +251,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                       type="text"
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                       required
                     />
                   </div>
@@ -265,7 +265,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                       onChange={(e) =>
                         setFormData({ ...formData, type: e.target.value as any })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     >
                       <option value="video">Video</option>
                       <option value="pdf">PDF</option>
@@ -282,7 +282,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     required
                   />
                 </div>
@@ -296,7 +296,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                       type="text"
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                       required
                     />
                   </div>
@@ -309,7 +309,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                       type="text"
                       value={formData.author}
                       onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                       required
                     />
                   </div>
@@ -325,7 +325,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                       onChange={(e) =>
                         setFormData({ ...formData, required_tier: e.target.value as any })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     >
                       <option value="silver">Silver</option>
                       <option value="gold">Gold</option>
@@ -339,7 +339,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                       value={formData.tags}
                       onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                       placeholder="tag1, tag2, tag3"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     />
                   </div>
                 </div>
@@ -371,7 +371,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                           value={formData.url}
                           onChange={(e) => handleVimeoUrlChange(e.target.value)}
                           placeholder="https://vimeo.com/123456789"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                           required
                         />
                         {formData.vimeo_video_id && (
@@ -388,7 +388,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                           type="number"
                           value={formData.duration}
                           onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                         />
                       </div>
                     </div>
@@ -416,7 +416,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                       value={formData.url}
                       onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                       placeholder="https://example.com/blog-post"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     />
                     <p className="text-sm text-gray-500 mt-1">
                       Leave empty to use the built-in editor content
@@ -465,7 +465,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 type="button"
                 onClick={() => handleSubmit(false)}
                 disabled={!isValid || saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center"
               >
                 {saving ? (
                   <Loader className="h-4 w-4 mr-2 animate-spin" />

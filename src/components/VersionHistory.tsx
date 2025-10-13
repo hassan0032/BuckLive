@@ -82,7 +82,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center p-12">
-            <Loader className="h-8 w-8 animate-spin text-blue-600" />
+            <Loader className="h-8 w-8 animate-spin text-brand-primary" />
           </div>
         ) : versions.length === 0 ? (
           <div className="flex-1 flex items-center justify-center p-12">
@@ -104,7 +104,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                   </h3>
                   <button
                     onClick={() => setShowPreview(false)}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
+                    className="text-brand-primary hover:text-brand-d-blue text-sm"
                   >
                     Back to list
                   </button>
@@ -136,7 +136,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                   <div className="pt-4 border-t">
                     <button
                       onClick={() => handleRestore(selectedVersion)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                      className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors flex items-center"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Restore This Version
@@ -154,7 +154,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-beige-light text-brand-secondary">
                             Version {version.version_number}
                           </span>
                           <span className="text-sm text-gray-500">

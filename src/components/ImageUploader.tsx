@@ -157,7 +157,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           <div
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer"
+            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-brand-primary transition-colors cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -221,7 +221,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               type="button"
               onClick={handleUpload}
               disabled={uploading || !completedCrop}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+              className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center"
             >
               {uploading ? (
                 <>

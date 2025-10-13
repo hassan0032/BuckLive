@@ -57,7 +57,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-blue-600 underline',
+          class: 'text-brand-primary underline',
         },
       }),
       Image.configure({

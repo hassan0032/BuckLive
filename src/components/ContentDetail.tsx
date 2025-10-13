@@ -73,7 +73,7 @@ export const ContentDetail: React.FC = () => {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'video': return 'bg-red-100 text-red-700';
-      case 'pdf': return 'bg-blue-100 text-blue-700';
+      case 'pdf': return 'bg-brand-beige-light text-brand-secondary';
       case 'blog': return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
     }
@@ -82,7 +82,7 @@ export const ContentDetail: React.FC = () => {
   if (singleLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -95,7 +95,7 @@ export const ContentDetail: React.FC = () => {
         <p className="text-gray-600 mb-4">The content you're looking for doesn't exist or you don't have access to it.</p>
         <button
           onClick={() => navigate('/library')}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Library
@@ -210,7 +210,7 @@ export const ContentDetail: React.FC = () => {
                 href={singleContent.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
               >
                 <BookOpen className="h-4 w-4 mr-2" />
                 Read Full Article
@@ -246,7 +246,7 @@ export const ContentDetail: React.FC = () => {
                   href={singleContent.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download PDF

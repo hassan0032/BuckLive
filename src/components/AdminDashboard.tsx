@@ -113,7 +113,7 @@ export const AdminDashboard: React.FC = () => {
               setShowCommunityForm(true);
             }
           }}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors"
         >
           <Plus className="h-4 w-4" />
           <span>{activeTab === 'content' ? 'Add Content' : 'Add Community'}</span>
@@ -126,7 +126,7 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('content')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'content'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
@@ -136,7 +136,7 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('communities')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'communities'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
@@ -152,7 +152,7 @@ export const AdminDashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">Total Content</p>
               <p className="text-3xl font-bold text-gray-900">{stats.totalContent}</p>
             </div>
-            <BarChart3 className="h-8 w-8 text-blue-600" />
+            <BarChart3 className="h-8 w-8 text-brand-primary" />
           </div>
         </div>
 
@@ -170,9 +170,9 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-center">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">PDFs</p>
-              <p className="text-3xl font-bold text-blue-600">{stats.pdfs}</p>
+              <p className="text-3xl font-bold text-brand-primary">{stats.pdfs}</p>
             </div>
-            <FileText className="h-8 w-8 text-blue-600" />
+            <FileText className="h-8 w-8 text-brand-primary" />
           </div>
         </div>
 
@@ -251,7 +251,7 @@ export const AdminDashboard: React.FC = () => {
                           item.type === 'video'
                             ? 'bg-red-100 text-red-700'
                             : item.type === 'pdf'
-                            ? 'bg-blue-100 text-blue-700'
+                            ? 'bg-brand-beige-light text-brand-secondary'
                             : 'bg-green-100 text-green-700'
                         }`}
                       >
@@ -277,7 +277,7 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4 text-sm font-medium space-x-2">
                       <button
                         onClick={() => handleEdit(item)}
-                        className="text-blue-600 hover:text-blue-700 inline-block"
+                        className="text-brand-primary hover:text-brand-d-blue inline-block"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
@@ -302,7 +302,7 @@ export const AdminDashboard: React.FC = () => {
             </h2>
             <button
               onClick={() => setShowCommunityForm(true)}
-              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors"
             >
               <Plus className="h-4 w-4" />
               <span>Add Community</span>
@@ -373,7 +373,7 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4 text-sm font-medium space-x-2">
                       <button
                         onClick={() => handleEditCommunity(community)}
-                        className="text-blue-600 hover:text-blue-700 inline-block"
+                        className="text-brand-primary hover:text-brand-d-blue inline-block"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
@@ -420,7 +420,7 @@ export const AdminDashboard: React.FC = () => {
                     onChange={(e) =>
                       setCommunityFormData({ ...communityFormData, name: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     required
                   />
                 </div>
@@ -438,7 +438,7 @@ export const AdminDashboard: React.FC = () => {
                       })
                     }
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     required
                   />
                 </div>
@@ -456,7 +456,7 @@ export const AdminDashboard: React.FC = () => {
                         access_code: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     required
                   />
                 </div>
@@ -471,7 +471,7 @@ export const AdminDashboard: React.FC = () => {
                         is_active: e.target.checked,
                       })
                     }
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
                   />
                   <label className="ml-2 text-sm text-gray-700">Active</label>
                 </div>
@@ -489,7 +489,7 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors"
                   >
                     {editingCommunity ? 'Update' : 'Add'} Community
                   </button>

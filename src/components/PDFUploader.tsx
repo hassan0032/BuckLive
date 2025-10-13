@@ -110,7 +110,7 @@ export const PDFUploader: React.FC<PDFUploaderProps> = ({
           <div
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer"
+            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-brand-primary transition-colors cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
           >
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -142,7 +142,7 @@ export const PDFUploader: React.FC<PDFUploaderProps> = ({
                   href={currentPdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  className="text-sm text-brand-primary hover:text-brand-d-blue"
                 >
                   View PDF
                 </a>
@@ -157,7 +157,7 @@ export const PDFUploader: React.FC<PDFUploaderProps> = ({
           <div className="p-4 bg-gray-50 rounded-lg">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-3">
-                <FileText className="h-8 w-8 text-blue-600" />
+                <FileText className="h-8 w-8 text-brand-primary" />
                 <div>
                   <p className="font-medium text-gray-900">{selectedFile.name}</p>
                   <p className="text-sm text-gray-500">
@@ -197,7 +197,7 @@ export const PDFUploader: React.FC<PDFUploaderProps> = ({
               type="button"
               onClick={handleUpload}
               disabled={uploading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+              className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center"
             >
               {uploading ? (
                 <>
