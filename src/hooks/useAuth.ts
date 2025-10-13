@@ -13,19 +13,29 @@ export const useAuth = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          // Create basic user object without complex profile fetching
-          const basicUser: AppUser = {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select(`
+              *,
+              community:communities(*)
+            `)
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          const appUser: AppUser = {
             id: session.user.id,
             email: session.user.email!,
-            role: 'member',
+            role: profile?.role || 'member',
             created_at: session.user.created_at,
+            community_id: profile?.community_id,
             profile: {
-              first_name: session.user.user_metadata?.first_name || '',
-              last_name: session.user.user_metadata?.last_name || '',
-              avatar_url: null,
+              first_name: profile?.first_name || session.user.user_metadata?.first_name || '',
+              last_name: profile?.last_name || session.user.user_metadata?.last_name || '',
+              avatar_url: profile?.avatar_url || null,
+              community: profile?.community || undefined,
             },
           };
-          setUser(basicUser);
+          setUser(appUser);
         } else {
           setUser(null);
         }
@@ -44,19 +54,29 @@ export const useAuth = () => {
       async (event, session) => {
         try {
           if (session?.user) {
-            // Create basic user object
-            const basicUser: AppUser = {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select(`
+                *,
+                community:communities(*)
+              `)
+              .eq('id', session.user.id)
+              .maybeSingle();
+
+            const appUser: AppUser = {
               id: session.user.id,
               email: session.user.email!,
-              role: 'member',
+              role: profile?.role || 'member',
               created_at: session.user.created_at,
+              community_id: profile?.community_id,
               profile: {
-                first_name: session.user.user_metadata?.first_name || '',
-                last_name: session.user.user_metadata?.last_name || '',
-                avatar_url: null,
+                first_name: profile?.first_name || session.user.user_metadata?.first_name || '',
+                last_name: profile?.last_name || session.user.user_metadata?.last_name || '',
+                avatar_url: profile?.avatar_url || null,
+                community: profile?.community || undefined,
               },
             };
-            setUser(basicUser);
+            setUser(appUser);
           } else {
             setUser(null);
           }
