@@ -275,8 +275,8 @@ export const Auth: React.FC = () => {
             className="text-brand-primary hover:text-brand-d-blue font-bold"
           >
             {isSignUp
-              ? 'Already have an account? Sign in &rarr;'
-              : "Don't have an account? Sign up &rarr;"
+              ? 'Already have an account? Sign in.'
+              : "Don't have an account? Sign up."
             }
           </button>
         </div>
