@@ -1,0 +1,491 @@
+import React, { useState, useEffect } from 'react';
+import { Content, ContentVersion } from '../types';
+import { X, Save, Eye, History, Loader } from 'lucide-react';
+import { ImageUploader } from './ImageUploader';
+import { PDFUploader } from './PDFUploader';
+import { RichTextEditor } from './RichTextEditor';
+import { VersionHistory } from './VersionHistory';
+import { useContent } from '../hooks/useContent';
+
+interface EnhancedContentFormProps {
+  editingContent?: Content | null;
+  onClose: () => void;
+  onSubmit: (data: any, isDraft: boolean) => Promise<void>;
+}
+
+export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
+  editingContent,
+  onClose,
+  onSubmit,
+}) => {
+  const { uploadThumbnail, uploadPDF, saveDraft } = useContent();
+  const [activeTab, setActiveTab] = useState<'general' | 'media' | 'content'>('general');
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    type: 'video' as 'video' | 'pdf' | 'blog',
+    url: '',
+    thumbnail_url: '',
+    storage_thumbnail_path: '',
+    storage_pdf_path: '',
+    tags: '',
+    category: '',
+    author: '',
+    required_tier: 'silver' as 'silver' | 'gold',
+    duration: '',
+    file_size: '',
+    blog_content: '',
+    blog_content_draft: '',
+    vimeo_video_id: '',
+    status: 'published' as 'draft' | 'published',
+  });
+
+  useEffect(() => {
+    if (editingContent) {
+      setFormData({
+        title: editingContent.title,
+        description: editingContent.description,
+        type: editingContent.type,
+        url: editingContent.url,
+        thumbnail_url: editingContent.thumbnail_url || '',
+        storage_thumbnail_path: editingContent.storage_thumbnail_path || '',
+        storage_pdf_path: editingContent.storage_pdf_path || '',
+        tags: editingContent.tags.join(', '),
+        category: editingContent.category,
+        author: editingContent.author,
+        required_tier: editingContent.required_tier,
+        duration: editingContent.duration?.toString() || '',
+        file_size: editingContent.file_size?.toString() || '',
+        blog_content: editingContent.blog_content || '',
+        blog_content_draft: editingContent.blog_content_draft || '',
+        vimeo_video_id: editingContent.vimeo_video_id || '',
+        status: editingContent.status || 'published',
+      });
+    }
+  }, [editingContent]);
+
+  const extractVimeoId = (url: string): string => {
+    const patterns = [
+      /vimeo\.com\/(\d+)/,
+      /player\.vimeo\.com\/video\/(\d+)/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return '';
+  };
+
+  const handleVimeoUrlChange = (url: string) => {
+    setFormData({
+      ...formData,
+      url,
+      vimeo_video_id: extractVimeoId(url),
+    });
+  };
+
+  const handleThumbnailUpload = async (fileName: string, publicUrl: string) => {
+    setFormData({
+      ...formData,
+      storage_thumbnail_path: fileName,
+      thumbnail_url: '',
+    });
+  };
+
+  const handlePDFUpload = async (fileName: string, publicUrl: string, fileSize: number) => {
+    setFormData({
+      ...formData,
+      storage_pdf_path: fileName,
+      url: '',
+      file_size: fileSize.toString(),
+    });
+  };
+
+  const handleAutoSave = async (html: string) => {
+    if (!editingContent?.id) return;
+
+    setAutoSaving(true);
+    await saveDraft(editingContent.id, html);
+    setAutoSaving(false);
+  };
+
+  const handleVersionRestore = (version: ContentVersion) => {
+    setFormData({
+      ...formData,
+      title: version.title,
+      description: version.description,
+      blog_content: version.blog_content,
+    });
+    setShowVersionHistory(false);
+  };
+
+  const handleSubmit = async (isDraft: boolean) => {
+    setSaving(true);
+    try {
+      const contentData: any = {
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        url: formData.url,
+        thumbnail_url: formData.thumbnail_url,
+        storage_thumbnail_path: formData.storage_thumbnail_path,
+        storage_pdf_path: formData.storage_pdf_path,
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        category: formData.category,
+        author: formData.author,
+        required_tier: formData.required_tier,
+        status: isDraft ? 'draft' : 'published',
+        vimeo_video_id: formData.vimeo_video_id,
+      };
+
+      if (formData.type === 'video' && formData.duration) {
+        contentData.duration = parseInt(formData.duration);
+      }
+
+      if (formData.type === 'pdf' && formData.file_size) {
+        contentData.file_size = parseInt(formData.file_size);
+      }
+
+      if (formData.type === 'blog') {
+        contentData.blog_content = formData.blog_content;
+        contentData.blog_content_draft = formData.blog_content_draft;
+      }
+
+      if (!isDraft && !editingContent) {
+        contentData.published_at = new Date().toISOString();
+      }
+
+      await onSubmit(contentData, isDraft);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isValid = formData.title && formData.description && formData.category && formData.author &&
+    (formData.type !== 'blog' || formData.blog_content);
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900">
+                {editingContent ? 'Edit Content' : 'Add New Content'}
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {formData.status === 'draft' ? 'Draft' : 'Published'}
+                {autoSaving && <span className="ml-2 text-blue-600">Saving...</span>}
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {editingContent && formData.type === 'blog' && (
+                <button
+                  onClick={() => setShowVersionHistory(true)}
+                  className="px-3 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center"
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  History
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          <div className="border-b border-gray-200">
+            <nav className="flex px-6">
+              <button
+                onClick={() => setActiveTab('general')}
+                className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'general'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                General
+              </button>
+              <button
+                onClick={() => setActiveTab('media')}
+                className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'media'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Media
+              </button>
+              {formData.type === 'blog' && (
+                <button
+                  onClick={() => setActiveTab('content')}
+                  className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === 'content'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Content Editor
+                </button>
+              )}
+            </nav>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {activeTab === 'general' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Content Type *
+                    </label>
+                    <select
+                      value={formData.type}
+                      onChange={(e) =>
+                        setFormData({ ...formData, type: e.target.value as any })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="video">Video</option>
+                      <option value="pdf">PDF</option>
+                      <option value="blog">Blog Post</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description *
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Author *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.author}
+                      onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Required Tier
+                    </label>
+                    <select
+                      value={formData.required_tier}
+                      onChange={(e) =>
+                        setFormData({ ...formData, required_tier: e.target.value as any })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="silver">Silver</option>
+                      <option value="gold">Gold</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                    <input
+                      type="text"
+                      value={formData.tags}
+                      onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                      placeholder="tag1, tag2, tag3"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'media' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Thumbnail Image</h3>
+                  <ImageUploader
+                    onUploadComplete={handleThumbnailUpload}
+                    currentImageUrl={formData.thumbnail_url}
+                  />
+                </div>
+
+                {formData.type === 'video' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                      Vimeo Video Settings
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Vimeo URL *
+                        </label>
+                        <input
+                          type="url"
+                          value={formData.url}
+                          onChange={(e) => handleVimeoUrlChange(e.target.value)}
+                          placeholder="https://vimeo.com/123456789"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                        {formData.vimeo_video_id && (
+                          <p className="text-sm text-green-600 mt-1">
+                            Video ID detected: {formData.vimeo_video_id}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Duration (seconds)
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.duration}
+                          onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {formData.type === 'pdf' && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">PDF Upload</h3>
+                    <PDFUploader
+                      onUploadComplete={handlePDFUpload}
+                      currentPdfUrl={formData.url}
+                      currentFileName={formData.storage_pdf_path.split('/').pop()}
+                    />
+                  </div>
+                )}
+
+                {formData.type === 'blog' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      External Link (optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.url}
+                      onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                      placeholder="https://example.com/blog-post"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Leave empty to use the built-in editor content
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'content' && formData.type === 'blog' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Blog Content</h3>
+                <RichTextEditor
+                  content={formData.blog_content}
+                  onChange={(html) => setFormData({ ...formData, blog_content: html })}
+                  onAutoSave={editingContent ? handleAutoSave : undefined}
+                  placeholder="Write your blog post content here..."
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="p-6 border-t border-gray-200 flex justify-between items-center bg-gray-50">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => handleSubmit(true)}
+                disabled={!isValid || saving}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center"
+              >
+                {saving ? (
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save as Draft
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubmit(false)}
+                disabled={!isValid || saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+              >
+                {saving ? (
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Eye className="h-4 w-4 mr-2" />
+                )}
+                Publish
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showVersionHistory && editingContent && (
+        <VersionHistory
+          contentId={editingContent.id}
+          onRestore={handleVersionRestore}
+          onClose={() => setShowVersionHistory(false)}
+        />
+      )}
+    </>
+  );
+};

@@ -141,6 +141,72 @@ export const useContent = () => {
     }
   };
 
+  const uploadThumbnail = async (file: Blob, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('thumbnails')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('thumbnails')
+        .getPublicUrl(fileName);
+
+      return { data: { path: data.path, publicUrl }, error: null };
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : 'Upload failed' };
+    }
+  };
+
+  const uploadPDF = async (file: File, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('pdfs')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('pdfs')
+        .getPublicUrl(fileName);
+
+      return { data: { path: data.path, publicUrl }, error: null };
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : 'Upload failed' };
+    }
+  };
+
+  const deleteFile = async (bucket: 'thumbnails' | 'pdfs', path: string) => {
+    try {
+      const { error } = await supabase.storage.from(bucket).remove([path]);
+      if (error) throw error;
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Delete failed' };
+    }
+  };
+
+  const saveDraft = async (id: string, draftContent: string) => {
+    try {
+      const { error } = await supabase
+        .from('content')
+        .update({ blog_content_draft: draftContent })
+        .eq('id', id);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Failed to save draft' };
+    }
+  };
+
   useEffect(() => {
     fetchContent();
   }, []);
@@ -157,6 +223,10 @@ export const useContent = () => {
     deleteContent,
     fetchContentById,
     fetchRelatedContent,
+    uploadThumbnail,
+    uploadPDF,
+    deleteFile,
+    saveDraft,
     refetch: fetchContent,
   };
 };

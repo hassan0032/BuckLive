@@ -36,8 +36,27 @@ export interface Content {
   created_at: string;
   updated_at: string;
   author: string;
-  duration?: number; // for videos in seconds
-  file_size?: number; // for PDFs in bytes
+  duration?: number;
+  file_size?: number;
+  blog_content?: string;
+  blog_content_draft?: string;
+  storage_thumbnail_path?: string;
+  storage_pdf_path?: string;
+  status?: 'draft' | 'published';
+  vimeo_video_id?: string;
+  published_at?: string;
+}
+
+export interface ContentVersion {
+  id: string;
+  content_id: string;
+  version_number: number;
+  blog_content: string;
+  title: string;
+  description: string;
+  change_summary: string;
+  created_by: string;
+  created_at: string;
 }
 
 export interface AuthState {

@@ -1,21 +1,9 @@
 import React, { useState } from 'react';
 import { useContent } from '../hooks/useContent';
 import { useCommunities } from '../hooks/useCommunities';
-import { Plus, Edit, Trash2, Users, BarChart3, Upload, Shield } from 'lucide-react';
-import { Community } from '../types';
-
-interface ContentFormData {
-  title: string;
-  description: string;
-  type: 'video' | 'pdf' | 'blog';
-  url: string;
-  thumbnail_url: string;
-  tags: string;
-  category: string;
-  author: string;
-  duration?: string;
-  file_size?: string;
-}
+import { Plus, Edit, Trash2, BarChart3, Upload, Image as ImageIcon, FileText } from 'lucide-react';
+import { Community, Content } from '../types';
+import { EnhancedContentForm } from './EnhancedContentForm';
 
 interface CommunityFormData {
   name: string;
@@ -26,22 +14,12 @@ interface CommunityFormData {
 
 export const AdminDashboard: React.FC = () => {
   const { content, addContent, updateContent, deleteContent, loading } = useContent();
-  const { communities, addCommunity, updateCommunity, deleteCommunity, generateAccessCode } = useCommunities();
+  const { communities, addCommunity, updateCommunity, deleteCommunity } = useCommunities();
   const [showForm, setShowForm] = useState(false);
   const [showCommunityForm, setShowCommunityForm] = useState(false);
-  const [editingContent, setEditingContent] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'content' | 'communities'>('content');
-  const [formData, setFormData] = useState<ContentFormData>({
-    title: '',
-    description: '',
-    type: 'video',
-    url: '',
-    thumbnail_url: '',
-    tags: '',
-    category: '',
-    author: '',
-  });
 
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>({
     name: '',
@@ -50,39 +28,20 @@ export const AdminDashboard: React.FC = () => {
     is_active: true,
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const contentData = {
-      ...formData,
-      tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-      duration: formData.duration ? parseInt(formData.duration) : undefined,
-      file_size: formData.file_size ? parseInt(formData.file_size) : undefined,
-    };
-
+  const handleContentSubmit = async (contentData: any, isDraft: boolean) => {
     if (editingContent) {
-      await updateContent(editingContent, contentData);
+      await updateContent(editingContent.id, contentData);
     } else {
       await addContent(contentData);
     }
 
     setShowForm(false);
     setEditingContent(null);
-    setFormData({
-      title: '',
-      description: '',
-      type: 'video',
-      url: '',
-      thumbnail_url: '',
-      tags: '',
-      category: '',
-      author: '',
-    });
   };
 
   const handleCommunitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (editingCommunity) {
       await updateCommunity(editingCommunity, communityFormData);
     } else {
@@ -99,20 +58,8 @@ export const AdminDashboard: React.FC = () => {
     });
   };
 
-  const handleEdit = (item: any) => {
-    setEditingContent(item.id);
-    setFormData({
-      title: item.title,
-      description: item.description,
-      type: item.type,
-      url: item.url,
-      thumbnail_url: item.thumbnail_url || '',
-      tags: item.tags.join(', '),
-      category: item.category,
-      author: item.author,
-      duration: item.duration?.toString() || '',
-      file_size: item.file_size?.toString() || '',
-    });
+  const handleEdit = (item: Content) => {
+    setEditingContent(item);
     setShowForm(true);
   };
 
@@ -146,18 +93,26 @@ export const AdminDashboard: React.FC = () => {
     blogs: content.filter(c => c.type === 'blog').length,
     communities: communities.length,
     activeCommunities: communities.filter(c => c.is_active).length,
+    drafts: content.filter(c => c.status === 'draft').length,
+    published: content.filter(c => c.status === 'published').length,
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage content and users</p>
+          <p className="text-gray-600">Manage content and communities</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            if (activeTab === 'content') {
+              setEditingContent(null);
+              setShowForm(true);
+            } else {
+              setShowCommunityForm(true);
+            }
+          }}
           className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
@@ -165,7 +120,6 @@ export const AdminDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
@@ -191,7 +145,6 @@ export const AdminDashboard: React.FC = () => {
         </nav>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center">
@@ -219,7 +172,7 @@ export const AdminDashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">PDFs</p>
               <p className="text-3xl font-bold text-blue-600">{stats.pdfs}</p>
             </div>
-            <Upload className="h-8 w-8 text-blue-600" />
+            <FileText className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
@@ -234,203 +187,89 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Content Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">
-                {editingContent ? 'Edit Content' : 'Add New Content'}
-              </h2>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => setFormData({...formData, title: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                    <select
-                      value={formData.type}
-                      onChange={(e) => setFormData({...formData, type: e.target.value as any})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="video">Video</option>
-                      <option value="pdf">PDF</option>
-                      <option value="blog">Blog Post</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
-                    <input
-                      type="url"
-                      value={formData.url}
-                      onChange={(e) => setFormData({...formData, url: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail URL</label>
-                    <input
-                      type="url"
-                      value={formData.thumbnail_url}
-                      onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <input
-                      type="text"
-                      value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Author</label>
-                    <input
-                      type="text"
-                      value={formData.author}
-                      onChange={(e) => setFormData({...formData, author: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
-                  <input
-                    type="text"
-                    value={formData.tags}
-                    onChange={(e) => setFormData({...formData, tags: e.target.value})}
-                    placeholder="react, javascript, tutorial"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                {formData.type === 'video' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (seconds)</label>
-                    <input
-                      type="number"
-                      value={formData.duration}
-                      onChange={(e) => setFormData({...formData, duration: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                )}
-
-                {formData.type === 'pdf' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">File Size (bytes)</label>
-                    <input
-                      type="number"
-                      value={formData.file_size}
-                      onChange={(e) => setFormData({...formData, file_size: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                )}
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowForm(false);
-                      setEditingContent(null);
-                    }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    {editingContent ? 'Update' : 'Add'} Content
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab Content */}
       {activeTab === 'content' ? (
-        /* Content Table */
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Content Management</h2>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Author</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Thumbnail
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Author
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {content.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{item.title}</div>
-                      <div className="text-sm text-gray-500 truncate max-w-xs">{item.description}</div>
+                      {item.thumbnail_url ? (
+                        <img
+                          src={item.thumbnail_url}
+                          alt={item.title}
+                          className="w-20 h-12 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-20 h-12 bg-gray-200 rounded flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-gray-400" />
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                        item.type === 'video' ? 'bg-red-100 text-red-700' :
-                        item.type === 'pdf' ? 'bg-blue-100 text-blue-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
+                      <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                      <div className="text-sm text-gray-500 truncate max-w-xs">
+                        {item.description}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                          item.type === 'video'
+                            ? 'bg-red-100 text-red-700'
+                            : item.type === 'pdf'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}
+                      >
                         {item.type.toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{item.category}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                        item.required_tier === 'gold' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {item.required_tier.toUpperCase()}
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                          item.status === 'published'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}
+                      >
+                        {(item.status || 'published').toUpperCase()}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{item.category}</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{item.author}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {new Date(item.created_at).toLocaleDateString()}
@@ -438,13 +277,13 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4 text-sm font-medium space-x-2">
                       <button
                         onClick={() => handleEdit(item)}
-                        className="text-blue-600 hover:text-blue-700"
+                        className="text-blue-600 hover:text-blue-700 inline-block"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 inline-block"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -456,10 +295,11 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* Communities Table */
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Communities & Access Codes</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Communities & Access Codes
+            </h2>
             <button
               onClick={() => setShowCommunityForm(true)}
               className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -468,17 +308,29 @@ export const AdminDashboard: React.FC = () => {
               <span>Add Community</span>
             </button>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Access Code</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tier</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Access Code
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tier
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -494,16 +346,24 @@ export const AdminDashboard: React.FC = () => {
                       </code>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                        community.membership_tier === 'gold' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                          community.membership_tier === 'gold'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
                         {community.membership_tier.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                        community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                          community.is_active
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
                         {community.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </span>
                     </td>
@@ -513,13 +373,13 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4 text-sm font-medium space-x-2">
                       <button
                         onClick={() => handleEditCommunity(community)}
-                        className="text-blue-600 hover:text-blue-700"
+                        className="text-blue-600 hover:text-blue-700 inline-block"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteCommunity(community.id)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 inline-block"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -528,6 +388,114 @@ export const AdminDashboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {showForm && (
+        <EnhancedContentForm
+          editingContent={editingContent}
+          onClose={() => {
+            setShowForm(false);
+            setEditingContent(null);
+          }}
+          onSubmit={handleContentSubmit}
+        />
+      )}
+
+      {showCommunityForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">
+                {editingCommunity ? 'Edit Community' : 'Add New Community'}
+              </h2>
+
+              <form onSubmit={handleCommunitySubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={communityFormData.name}
+                    onChange={(e) =>
+                      setCommunityFormData({ ...communityFormData, name: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={communityFormData.description}
+                    onChange={(e) =>
+                      setCommunityFormData({
+                        ...communityFormData,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Access Code
+                  </label>
+                  <input
+                    type="text"
+                    value={communityFormData.access_code}
+                    onChange={(e) =>
+                      setCommunityFormData({
+                        ...communityFormData,
+                        access_code: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={communityFormData.is_active}
+                    onChange={(e) =>
+                      setCommunityFormData({
+                        ...communityFormData,
+                        is_active: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label className="ml-2 text-sm text-gray-700">Active</label>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCommunityForm(false);
+                      setEditingCommunity(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingCommunity ? 'Update' : 'Add'} Community
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
