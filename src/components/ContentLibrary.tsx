@@ -1,23 +1,44 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { Content } from '../types';
-import { Search, Filter, Video, FileText, BookOpen, Clock, Download, Tag } from 'lucide-react';
+import { Search, Filter, Video, FileText, BookOpen, Clock, Download, Tag, X } from 'lucide-react';
 
 export const ContentLibrary: React.FC = () => {
   const { content, loading, searchContent } = useContent();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const categories = useMemo(() => {
     const cats = new Set(content.map(item => item.category));
     return Array.from(cats);
   }, [content]);
 
+  useEffect(() => {
+    if (location.state?.selectedTag) {
+      const tag = location.state.selectedTag;
+      setSelectedTags([tag]);
+      searchContent(searchQuery, selectedType, selectedCategory, [tag]);
+    }
+  }, [location.state]);
+
   const handleSearch = async () => {
-    await searchContent(searchQuery, selectedType, selectedCategory);
+    await searchContent(searchQuery, selectedType, selectedCategory, selectedTags);
+  };
+
+  const handleTagClick = async (tag: string) => {
+    const newTags = selectedTags.includes(tag) ? selectedTags.filter(t => t !== tag) : [tag];
+    setSelectedTags(newTags);
+    await searchContent(searchQuery, selectedType, selectedCategory, newTags);
+  };
+
+  const clearTagFilter = async () => {
+    setSelectedTags([]);
+    await searchContent(searchQuery, selectedType, selectedCategory, []);
   };
 
   const formatDuration = (seconds?: number) => {
@@ -69,6 +90,28 @@ export const ContentLibrary: React.FC = () => {
 
       {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
+        {/* Active Tag Filter */}
+        {selectedTags.length > 0 && (
+          <div className="flex items-center gap-2 pb-4 border-b border-gray-200">
+            <span className="text-sm text-gray-600">Filtered by tag:</span>
+            {selectedTags.map((tag) => (
+              <div
+                key={tag}
+                className="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary text-white rounded-md text-sm font-medium"
+              >
+                <Tag className="h-3 w-3" />
+                {tag}
+                <button
+                  onClick={clearTagFilter}
+                  className="hover:bg-white hover:bg-opacity-20 rounded-full p-0.5 transition-colors"
+                  aria-label="Clear tag filter"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -178,13 +221,21 @@ export const ContentLibrary: React.FC = () => {
                 {item.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-3">
                     {item.tags.slice(0, 3).map((tag, index) => (
-                      <span
+                      <button
                         key={index}
-                        className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTagClick(tag);
+                        }}
+                        className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${
+                          selectedTags.includes(tag)
+                            ? 'bg-brand-primary text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
                       >
                         <Tag className="h-3 w-3 mr-1" />
                         {tag}
-                      </span>
+                      </button>
                     ))}
                     {item.tags.length > 3 && (
                       <span className="text-xs text-gray-500">+{item.tags.length - 3} more</span>

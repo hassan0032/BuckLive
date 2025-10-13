@@ -25,7 +25,7 @@ export const useContent = () => {
     }
   };
 
-  const searchContent = async (query: string, type?: string, category?: string) => {
+  const searchContent = async (query: string, type?: string, category?: string, tags?: string[]) => {
     try {
       setLoading(true);
       let queryBuilder = supabase
@@ -42,6 +42,10 @@ export const useContent = () => {
 
       if (category) {
         queryBuilder = queryBuilder.eq('category', category);
+      }
+
+      if (tags && tags.length > 0) {
+        queryBuilder = queryBuilder.contains('tags', tags);
       }
 
       const { data, error } = await queryBuilder.order('created_at', { ascending: false });

@@ -223,13 +223,14 @@ export const ContentDetail: React.FC = () => {
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {singleContent.tags.map((tag, index) => (
-                  <span
+                  <button
                     key={index}
-                    className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-md"
+                    onClick={() => navigate('/library', { state: { selectedTag: tag } })}
+                    className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-md hover:bg-brand-primary hover:text-white transition-all hover:scale-105 cursor-pointer"
                   >
                     <Tag className="h-3 w-3 mr-1" />
                     {tag}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
