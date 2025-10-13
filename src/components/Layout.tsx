@@ -34,7 +34,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="flex items-center space-x-8">
               <div className="flex items-center space-x-2">
                 <Home className="h-8 w-8 text-blue-600" />
-                <h1 className="text-xl font-bold text-gray-900">MemberHub</h1>
+                <h1 className="text-xl font-bold text-gray-900">
+                  {user?.profile?.community?.name || 'Buck LIVE'}
+                </h1>
               </div>
               
               <nav className="hidden md:flex space-x-8">
