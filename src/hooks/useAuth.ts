@@ -18,6 +18,7 @@ export const useAuth = () => {
         if (!mounted) return;
 
         if (session?.user) {
+          console.log('🔍 Fetching profile for user:', session.user.id);
           const { data: profile, error: profileError } = await supabase
             .from('user_profiles')
             .select(`
@@ -28,7 +29,10 @@ export const useAuth = () => {
             .maybeSingle();
 
           if (profileError) {
-            console.error('Error fetching profile:', profileError);
+            console.error('❌ Error fetching profile:', profileError);
+          } else {
+            console.log('✅ Profile data received:', profile);
+            console.log('👤 User role from profile:', profile?.role);
           }
 
           if (!mounted) return;
@@ -46,6 +50,8 @@ export const useAuth = () => {
               community: profile?.community || undefined,
             },
           };
+          console.log('👥 Final appUser object:', appUser);
+          console.log('🔑 Final role set to:', appUser.role);
           setUser(appUser);
         } else {
           setUser(null);
@@ -70,6 +76,7 @@ export const useAuth = () => {
         (async () => {
           try {
             if (session?.user) {
+              console.log('🔄 Auth state changed - Fetching profile for:', session.user.id);
               const { data: profile, error: profileError } = await supabase
                 .from('user_profiles')
                 .select(`
@@ -80,7 +87,10 @@ export const useAuth = () => {
                 .maybeSingle();
 
               if (profileError) {
-                console.error('Error fetching profile in auth state change:', profileError);
+                console.error('❌ Error fetching profile in auth state change:', profileError);
+              } else {
+                console.log('✅ Profile data in auth state change:', profile);
+                console.log('👤 User role in auth state change:', profile?.role);
               }
 
               if (!mounted) return;
@@ -98,6 +108,8 @@ export const useAuth = () => {
                   community: profile?.community || undefined,
                 },
               };
+              console.log('👥 Final appUser in auth state change:', appUser);
+              console.log('🔑 Final role in auth state change:', appUser.role);
               setUser(appUser);
             } else {
               if (mounted) {
