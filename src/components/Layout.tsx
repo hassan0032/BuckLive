@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { signOut } from '../lib/supabase';
-import { LogOut, User, Settings, Library, Home } from 'lucide-react';
+import { LogOut, User, Settings, Library } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -33,10 +33,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
               <div className="flex items-center space-x-2">
-                <Home className="h-8 w-8 text-brand-primary" />
-                <h1 className="text-xl font-bold text-gray-900">
-                  {user?.profile?.community?.name || 'Buck LIVE'}
-                </h1>
+                <img src="/live-logo-solo.png" alt="Logo" className="h-8 w-auto" />
+                {user?.profile?.community?.name && (
+                  <h1 className="text-xl font-bold text-gray-900">
+                    {user.profile.community.name}
+                  </h1>
+                )}
               </div>
               
               <nav className="hidden md:flex space-x-8">

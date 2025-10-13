@@ -143,8 +143,8 @@ export const Auth: React.FC = () => {
         )}
 
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-beige-light rounded-full mb-4">
-            <User className="h-8 w-8 text-brand-primary" />
+          <div className="flex justify-center mb-6">
+            <img src="/live-logo-solo.png" alt="Logo" className="h-16 w-auto" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
