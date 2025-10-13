@@ -195,6 +195,29 @@ export const ContentDetail: React.FC = () => {
             </p>
           </div>
 
+          {singleContent.type === 'blog' && singleContent.blog_content && (
+            <div className="mb-8">
+              <div
+                className="prose prose-lg max-w-none"
+                dangerouslySetInnerHTML={{ __html: singleContent.blog_content }}
+              />
+            </div>
+          )}
+
+          {singleContent.type === 'blog' && singleContent.url && (
+            <div className="mb-6">
+              <a
+                href={singleContent.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Read Full Article
+              </a>
+            </div>
+          )}
+
           {singleContent.tags.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Tags</h3>
@@ -227,17 +250,6 @@ export const ContentDetail: React.FC = () => {
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download PDF
-                </a>
-              )}
-              {singleContent.type === 'blog' && (
-                <a
-                  href={singleContent.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Read Article
                 </a>
               )}
             </div>
