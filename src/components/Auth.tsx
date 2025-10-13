@@ -81,7 +81,7 @@ export const Auth: React.FC = () => {
               How would you like to join?
             </h2>
             <p className="text-gray-600">
-              Choose the registration method that works best for you
+              Choose the registration method that works best for you.
             </p>
           </div>
 
@@ -275,8 +275,8 @@ export const Auth: React.FC = () => {
             className="text-brand-primary hover:text-brand-d-blue font-bold"
           >
             {isSignUp
-              ? 'Already have an account? sign in'
-              : "Don't have an account? sign up"
+              ? 'Already have an account? Sign in &rarr;'
+              : "Don't have an account? Sign up &rarr;"
             }
           </button>
         </div>
