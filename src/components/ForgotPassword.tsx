@@ -46,9 +46,9 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
             </p>
             <button
               onClick={onBack}
-              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue transition-colors uppercase text-sm"
+              className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue transition-colors text-sm"
             >
-              Back to Sign In
+              Back to sign in
             </button>
           </div>
         </div>
@@ -100,10 +100,10 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
         <div className="mt-6 text-center">
           <button
             onClick={onBack}
-            className="flex items-center justify-center space-x-2 text-gray-600 hover:text-gray-700 font-bold mx-auto uppercase"
+            className="flex items-center justify-center space-x-2 text-gray-600 hover:text-gray-700 font-bold mx-auto"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to Sign In</span>
+            <span>Back to sign in</span>
           </button>
         </div>
       </div>

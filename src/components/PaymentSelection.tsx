@@ -100,7 +100,7 @@ export const PaymentSelection: React.FC<PaymentSelectionProps> = ({
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors uppercase font-bold"
+          className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-bold"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back

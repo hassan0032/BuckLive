@@ -70,7 +70,7 @@ export const Auth: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8">
           <button
             onClick={() => setIsSignUp(false)}
-            className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors uppercase font-bold"
+            className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-bold"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back to sign in
@@ -88,7 +88,7 @@ export const Auth: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-6">
             <button
               onClick={() => setRegistrationType('access_code')}
-              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left uppercase font-bold"
+              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
             >
               <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
                 <Key className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
@@ -97,13 +97,13 @@ export const Auth: React.FC = () => {
                 Join with Access Code
               </h3>
               <p className="text-gray-600">
-                Have an access code from your organization? Join an existing community with instant access.
+                Have an access code from your organization? join an existing community with instant access.
               </p>
             </button>
 
             <button
               onClick={() => setRegistrationType('payment')}
-              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left uppercase font-bold"
+              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
             >
               <div className="absolute -top-3 right-6">
                 <span className="bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-medium">
@@ -117,7 +117,7 @@ export const Auth: React.FC = () => {
                 Purchase Individual Membership
               </h3>
               <p className="text-gray-600">
-                Get immediate access with a monthly subscription. Choose between Silver or Gold tiers.
+                Get immediate access with a monthly subscription. choose between Silver or Gold tiers.
               </p>
               <div className="mt-4 flex items-center gap-4 text-sm">
                 <span className="text-gray-700 font-medium">Starting at $19/month</span>
@@ -135,7 +135,7 @@ export const Auth: React.FC = () => {
         {isSignUp && registrationType && (
           <button
             onClick={() => setRegistrationType(null)}
-            className="mb-4 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors uppercase font-bold"
+            className="mb-4 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-bold"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back
@@ -260,7 +260,7 @@ export const Auth: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowForgotPassword(true)}
-              className="text-brand-primary hover:text-brand-d-blue font-bold text-sm mb-4 block mx-auto uppercase"
+              className="text-brand-primary hover:text-brand-d-blue font-bold text-sm mb-4 block mx-auto"
             >
               Forgot your password?
             </button>
@@ -272,11 +272,11 @@ export const Auth: React.FC = () => {
               setRegistrationType(null);
               setError('');
             }}
-            className="text-brand-primary hover:text-brand-d-blue font-bold uppercase"
+            className="text-brand-primary hover:text-brand-d-blue font-bold"
           >
             {isSignUp
-              ? 'Already have an account? Sign in'
-              : "Don't have an account? Sign up"
+              ? 'Already have an account? sign in'
+              : "Don't have an account? sign up"
             }
           </button>
         </div>
