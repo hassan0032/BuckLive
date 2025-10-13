@@ -154,7 +154,7 @@ export const Auth: React.FC = () => {
               ? registrationType === 'access_code'
                 ? 'Enter your details and access code'
                 : 'Create your account to continue'
-              : 'Sign in to access your library'
+              : 'Sign in to access your library.'
             }
           </p>
         </div>
