@@ -1,26 +1,29 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { signOut } from '../lib/supabase';
 import { LogOut, User, Settings, Library, Home } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
-  currentPage?: string;
-  onPageChange?: (page: string) => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) => {
+export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
   };
 
   const navItems = [
-    { id: 'library', label: 'Library', icon: Library },
-    { id: 'profile', label: 'Profile', icon: User },
-    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
+    { id: 'library', label: 'Library', icon: Library, path: '/library' },
+    { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }] : []),
   ];
+
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -38,9 +41,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
                 {navItems.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => onPageChange?.(item.id)}
+                    onClick={() => navigate(item.path)}
                     className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      currentPage === item.id
+                      isActive(item.path)
                         ? 'text-blue-600 bg-blue-50'
                         : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
                     }`}
@@ -75,9 +78,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => onPageChange?.(item.id)}
+                onClick={() => navigate(item.path)}
                 className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
-                  currentPage === item.id
+                  isActive(item.path)
                     ? 'text-blue-600 bg-blue-50'
                     : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
                 }`}

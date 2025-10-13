@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { Auth } from './components/Auth';
 import { ResetPassword } from './components/ResetPassword';
@@ -6,13 +7,13 @@ import { Layout } from './components/Layout';
 import { ContentLibrary } from './components/ContentLibrary';
 import { AdminDashboard } from './components/AdminDashboard';
 import { UserProfile } from './components/UserProfile';
+import { ContentDetail } from './components/ContentDetail';
 
 function App() {
   const { user, loading, isAdmin } = useAuth();
-  const [currentPage, setCurrentPage] = useState('library');
 
   // Check if we're on the reset password page
-  const isResetPasswordPage = window.location.pathname === '/reset-password' || 
+  const isResetPasswordPage = window.location.pathname === '/reset-password' ||
                               window.location.hash.includes('type=recovery');
 
   if (loading) {
@@ -32,23 +33,19 @@ function App() {
     return <Auth />;
   }
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'library':
-        return <ContentLibrary />;
-      case 'profile':
-        return <UserProfile />;
-      case 'admin':
-        return isAdmin ? <AdminDashboard /> : <ContentLibrary />;
-      default:
-        return <ContentLibrary />;
-    }
-  };
-
   return (
-    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-      {renderPage()}
-    </Layout>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/library" replace />} />
+          <Route path="/library" element={<ContentLibrary />} />
+          <Route path="/content/:id" element={<ContentDetail />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />
+          <Route path="*" element={<Navigate to="/library" replace />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
   );
 }
 

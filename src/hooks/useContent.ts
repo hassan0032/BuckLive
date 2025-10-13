@@ -6,6 +6,8 @@ export const useContent = () => {
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [singleContent, setSingleContent] = useState<Content | null>(null);
+  const [singleLoading, setSingleLoading] = useState(false);
 
   const fetchContent = async () => {
     try {
@@ -101,6 +103,44 @@ export const useContent = () => {
     }
   };
 
+  const fetchContentById = async (id: string) => {
+    try {
+      setSingleLoading(true);
+      const { data, error } = await supabase
+        .from('content')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      setSingleContent(data);
+      return { data, error: null };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch content';
+      setError(errorMessage);
+      return { data: null, error: errorMessage };
+    } finally {
+      setSingleLoading(false);
+    }
+  };
+
+  const fetchRelatedContent = async (contentId: string, category: string, tags: string[], limit: number = 4) => {
+    try {
+      const { data, error } = await supabase
+        .from('content')
+        .select('*')
+        .neq('id', contentId)
+        .or(`category.eq.${category},tags.ov.{${tags.join(',')}}`)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return { data: data || [], error: null };
+    } catch (err) {
+      return { data: [], error: err instanceof Error ? err.message : 'Failed to fetch related content' };
+    }
+  };
+
   useEffect(() => {
     fetchContent();
   }, []);
@@ -109,10 +149,14 @@ export const useContent = () => {
     content,
     loading,
     error,
+    singleContent,
+    singleLoading,
     searchContent,
     addContent,
     updateContent,
     deleteContent,
+    fetchContentById,
+    fetchRelatedContent,
     refetch: fetchContent,
   };
 };

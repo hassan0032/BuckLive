@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { Content } from '../types';
 import { Search, Filter, Video, FileText, BookOpen, Clock, Download, Tag } from 'lucide-react';
 
 export const ContentLibrary: React.FC = () => {
   const { content, loading, searchContent } = useContent();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -197,7 +199,10 @@ export const ContentLibrary: React.FC = () => {
                 </div>
 
                 {/* Action Button */}
-                <button className="w-full mt-3 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                <button
+                  onClick={() => navigate(`/content/${item.id}`)}
+                  className="w-full mt-3 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                >
                   {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download PDF' : 'Read Article'}
                 </button>
               </div>
