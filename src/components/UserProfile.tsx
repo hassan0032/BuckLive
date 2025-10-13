@@ -1,12 +1,29 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { User, Mail, Shield, Calendar } from 'lucide-react';
+import { User, Mail, Shield, Calendar, CreditCard, AlertCircle } from 'lucide-react';
 
 export const UserProfile: React.FC = () => {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
 
   if (!user) return null;
+
+  const isIndividualMember = user.registration_type === 'self_registered';
+  const subscriptionActive = user.subscription_status === 'active';
+  const getTierDisplay = () => {
+    if (isIndividualMember && user.payment_tier) {
+      return user.payment_tier.toUpperCase();
+    }
+    if (user.profile?.community) {
+      return user.profile.community.membership_tier?.toUpperCase() || 'SILVER';
+    }
+    return 'SILVER';
+  };
+
+  const getTierColor = () => {
+    const tier = isIndividualMember ? user.payment_tier : user.profile?.community?.membership_tier;
+    return tier === 'gold' ? 'text-yellow-600' : 'text-gray-600';
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -49,17 +66,23 @@ export const UserProfile: React.FC = () => {
                 </p>
               </div>
             </div>
-            
-            {user.profile?.community && (
+
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <Shield className="h-5 w-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Membership Tier</p>
+                <p className={`text-sm font-medium ${getTierColor()}`}>
+                  {getTierDisplay()}
+                </p>
+              </div>
+            </div>
+
+            {isIndividualMember && (
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <Shield className="h-5 w-5 text-gray-400" />
+                <CreditCard className="h-5 w-5 text-gray-400" />
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Membership Tier</p>
-                  <p className={`text-sm font-medium ${
-                    user.profile.community.membership_tier === 'gold' ? 'text-yellow-600' : 'text-gray-600'
-                  }`}>
-                    {user.profile.community.membership_tier?.toUpperCase() || 'SILVER'}
-                  </p>
+                  <p className="text-sm font-medium text-gray-700">Subscription Type</p>
+                  <p className="text-sm text-gray-900">Individual Membership</p>
                 </div>
               </div>
             )}
@@ -80,11 +103,39 @@ export const UserProfile: React.FC = () => {
               <User className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm font-medium text-gray-700">Account Status</p>
-                <p className="text-sm text-green-600 font-medium">Active</p>
+                <p className={`text-sm font-medium ${
+                  subscriptionActive || user.profile?.community ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {subscriptionActive || user.profile?.community ? 'Active' : 'Inactive'}
+                </p>
               </div>
             </div>
+
+            {isIndividualMember && user.subscription_ends_at && (
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <Calendar className="h-5 w-5 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Next Billing Date</p>
+                  <p className="text-sm text-gray-900">
+                    {new Date(user.subscription_ends_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {isIndividualMember && !subscriptionActive && (
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-yellow-800">Subscription Inactive</p>
+              <p className="text-sm text-yellow-700 mt-1">
+                Your subscription is not active. Please update your payment method to continue accessing premium content.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Account Statistics</h3>

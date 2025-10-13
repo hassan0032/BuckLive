@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { signUp, signIn, validateAccessCode } from '../lib/supabase';
-import { Eye, EyeOff, User, Mail, Lock, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock, ArrowLeft, CreditCard, Key } from 'lucide-react';
 import { ForgotPassword } from './ForgotPassword';
+import { PaymentSelection } from './PaymentSelection';
+
+type RegistrationType = 'access_code' | 'payment' | null;
 
 export const Auth: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [registrationType, setRegistrationType] = useState<RegistrationType>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -22,14 +26,18 @@ export const Auth: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // Validate access code first
-        const { data: communityId, error: codeError } = await validateAccessCode(accessCode);
-        if (codeError) {
-          throw new Error('Invalid access code');
+        if (registrationType === 'access_code') {
+          const { data: communityId, error: codeError } = await validateAccessCode(accessCode);
+          if (codeError) {
+            throw new Error('Invalid access code');
+          }
+
+          const { error } = await signUp(email, password, firstName, lastName, communityId);
+          if (error) throw error;
+        } else if (registrationType === 'payment') {
+          const { error } = await signUp(email, password, firstName, lastName, null);
+          if (error) throw error;
         }
-        
-        const { error } = await signUp(email, password, firstName, lastName, communityId);
-        if (error) throw error;
       } else {
         const { error } = await signIn(email, password);
         if (error) throw error;
@@ -45,9 +53,95 @@ export const Auth: React.FC = () => {
     return <ForgotPassword onBack={() => setShowForgotPassword(false)} />;
   }
 
+  if (isSignUp && registrationType === 'payment' && email && password && firstName && lastName) {
+    return (
+      <PaymentSelection
+        email={email}
+        firstName={firstName}
+        lastName={lastName}
+        onBack={() => setRegistrationType(null)}
+      />
+    );
+  }
+
+  if (isSignUp && !registrationType) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8">
+          <button
+            onClick={() => setIsSignUp(false)}
+            className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back to sign in
+          </button>
+
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              How would you like to join?
+            </h2>
+            <p className="text-gray-600">
+              Choose the registration method that works best for you
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <button
+              onClick={() => setRegistrationType('access_code')}
+              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
+            >
+              <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
+                <Key className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Join with Access Code
+              </h3>
+              <p className="text-gray-600">
+                Have an access code from your organization? Join an existing community with instant access.
+              </p>
+            </button>
+
+            <button
+              onClick={() => setRegistrationType('payment')}
+              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
+            >
+              <div className="absolute -top-3 right-6">
+                <span className="bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-medium">
+                  Popular
+                </span>
+              </div>
+              <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
+                <CreditCard className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Purchase Individual Membership
+              </h3>
+              <p className="text-gray-600">
+                Get immediate access with a monthly subscription. Choose between Silver or Gold tiers.
+              </p>
+              <div className="mt-4 flex items-center gap-4 text-sm">
+                <span className="text-gray-700 font-medium">Starting at $19/month</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+        {isSignUp && registrationType && (
+          <button
+            onClick={() => setRegistrationType(null)}
+            className="mb-4 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back
+          </button>
+        )}
+
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-beige-light rounded-full mb-4">
             <User className="h-8 w-8 text-brand-primary" />
@@ -56,8 +150,10 @@ export const Auth: React.FC = () => {
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h2>
           <p className="text-gray-600">
-            {isSignUp 
-              ? 'Join our member community today' 
+            {isSignUp
+              ? registrationType === 'access_code'
+                ? 'Enter your details and access code'
+                : 'Create your account to continue'
               : 'Sign in to access your library'
             }
           </p>
@@ -97,7 +193,7 @@ export const Auth: React.FC = () => {
             </div>
           )}
 
-          {isSignUp && (
+          {isSignUp && registrationType === 'access_code' && (
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
@@ -148,7 +244,14 @@ export const Auth: React.FC = () => {
             disabled={loading}
             className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
+            {loading
+              ? 'Please wait...'
+              : isSignUp && registrationType === 'payment'
+                ? 'Continue to Payment'
+                : isSignUp
+                  ? 'Create Account'
+                  : 'Sign In'
+            }
           </button>
         </form>
 
@@ -162,16 +265,17 @@ export const Auth: React.FC = () => {
               Forgot your password?
             </button>
           )}
-          
+
           <button
             onClick={() => {
               setIsSignUp(!isSignUp);
+              setRegistrationType(null);
               setError('');
             }}
             className="text-brand-primary hover:text-brand-d-blue font-medium"
           >
-            {isSignUp 
-              ? 'Already have an account? Sign in' 
+            {isSignUp
+              ? 'Already have an account? Sign in'
               : "Don't have an account? Sign up"
             }
           </button>

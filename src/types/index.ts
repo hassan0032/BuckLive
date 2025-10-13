@@ -4,6 +4,13 @@ export interface User {
   role: 'member' | 'admin';
   created_at: string;
   community_id?: string;
+  registration_type?: 'access_code' | 'self_registered';
+  stripe_customer_id?: string;
+  subscription_id?: string;
+  subscription_status?: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete';
+  payment_tier?: 'silver' | 'gold';
+  subscription_started_at?: string;
+  subscription_ends_at?: string;
   profile?: {
     first_name?: string;
     last_name?: string;
