@@ -2,10 +2,10 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { Content } from '../types';
-import { Search, Video, FileText, BookOpen, Clock, Download, Tag, X } from 'lucide-react';
+import { Search, Video, FileText, BookOpen, Clock, Download, Tag, X, Loader2 } from 'lucide-react';
 
 export const ContentLibrary: React.FC = () => {
-  const { content, loading, searchContent } = useContent();
+  const { content, loading, searching, searchContent } = useContent();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -254,6 +254,9 @@ export const ContentLibrary: React.FC = () => {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative" ref={autocompleteRef}>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
+            {searching && (
+              <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-brand-primary animate-spin z-10" />
+            )}
             <input
               type="text"
               placeholder="Search content..."
@@ -261,7 +264,7 @@ export const ContentLibrary: React.FC = () => {
               onChange={(e) => handleSearchQueryChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => searchQuery.trim().length >= 2 && setShowAutocomplete(true)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
               autoComplete="off"
             />
 
@@ -335,7 +338,15 @@ export const ContentLibrary: React.FC = () => {
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+        {searching && (
+          <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10 rounded-lg">
+            <div className="flex items-center gap-2 text-brand-primary">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-sm font-medium">Searching...</span>
+            </div>
+          </div>
+        )}
         {content.map((item) => {
           const ContentIcon = getContentIcon(item.type);
           return (

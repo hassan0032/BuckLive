@@ -5,6 +5,7 @@ import { Content } from '../types';
 export const useContent = () => {
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [singleContent, setSingleContent] = useState<Content | null>(null);
   const [singleLoading, setSingleLoading] = useState(false);
@@ -27,7 +28,7 @@ export const useContent = () => {
 
   const searchContent = async (query: string, type?: string, category?: string, tags?: string[]) => {
     try {
-      setLoading(true);
+      setSearching(true);
       let queryBuilder = supabase
         .from('content')
         .select('*');
@@ -55,7 +56,7 @@ export const useContent = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
   };
 
@@ -218,6 +219,7 @@ export const useContent = () => {
   return {
     content,
     loading,
+    searching,
     error,
     singleContent,
     singleLoading,
