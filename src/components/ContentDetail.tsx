@@ -121,10 +121,10 @@ export const ContentDetail: React.FC = () => {
         {singleContent.type === 'video' && vimeoId ? (
           <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
             <iframe
-              src={`https://player.vimeo.com/video/${vimeoId}?title=1&byline=1&portrait=1&autoplay=0`}
+              src={`https://player.vimeo.com/video/${vimeoId}?h=&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479`}
               className="absolute top-0 left-0 w-full h-full"
               frameBorder="0"
-              allow="autoplay; fullscreen; picture-in-picture"
+              allow="autoplay; fullscreen; picture-in-picture; clipboard-write"
               allowFullScreen
               title={singleContent.title}
             ></iframe>
