@@ -204,7 +204,7 @@ export const ContentLibrary: React.FC = () => {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'video': return 'bg-red-100 text-red-700';
+      case 'video': return 'bg-blue-100 text-blue-700';
       case 'pdf': return 'bg-brand-beige-light text-brand-secondary';
       case 'blog': return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
@@ -223,7 +223,7 @@ export const ContentLibrary: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Content Library</h1>
+        <h1 className="text-3xl font-bold text-[#363f49] mb-2">Content Library</h1>
         <p className="text-gray-600">Discover videos, articles, and resources to help you live better longer.</p>
       </div>
 
@@ -282,7 +282,7 @@ export const ContentLibrary: React.FC = () => {
                       <>
                         <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">{result.value}</div>
+                          <div className="text-sm font-medium text-[#363f49] truncate">{result.value}</div>
                           <div className="text-xs text-gray-500">Content</div>
                         </div>
                       </>
@@ -291,7 +291,7 @@ export const ContentLibrary: React.FC = () => {
                       <>
                         <Tag className="h-4 w-4 text-brand-primary flex-shrink-0" />
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">{result.value}</div>
+                          <div className="text-sm font-medium text-[#363f49]">{result.value}</div>
                           <div className="text-xs text-gray-500">Tag</div>
                         </div>
                       </>
@@ -300,7 +300,7 @@ export const ContentLibrary: React.FC = () => {
                       <>
                         <BookOpen className="h-4 w-4 text-green-600 flex-shrink-0" />
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">{result.value}</div>
+                          <div className="text-sm font-medium text-[#363f49]">{result.value}</div>
                           <div className="text-xs text-gray-500">Category</div>
                         </div>
                       </>
@@ -397,7 +397,7 @@ export const ContentLibrary: React.FC = () => {
 
               {/* Content */}
               <div className="p-4">
-                <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+                <h3 className="font-semibold text-lg text-[#363f49] mb-2 line-clamp-2">
                   {item.title}
                 </h3>
                 <p className="text-gray-600 text-sm mb-3 line-clamp-3">
@@ -431,7 +431,7 @@ export const ContentLibrary: React.FC = () => {
                 )}
 
                 {/* Footer */}
-                <div className="flex justify-between items-center text-sm text-gray-500">
+                <div className="flex justify-between items-center text-xs text-gray-500">
                   <span>By {item.author}</span>
                   <span>{new Date(item.created_at).toLocaleDateString()}</span>
                 </div>
@@ -439,7 +439,7 @@ export const ContentLibrary: React.FC = () => {
                 {/* Action Button */}
                 <button
                   onClick={() => navigate(`/content/${item.id}`)}
-                  className="w-full mt-3 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
+                  className="w-full mt-3 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
                 >
                   {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download PDF' : 'Read Article'}
                 </button>
@@ -452,7 +452,7 @@ export const ContentLibrary: React.FC = () => {
       {content.length === 0 && (
         <div className="text-center py-12">
           <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No content found</h3>
+          <h3 className="text-lg font-medium text-[#363f49] mb-2">No content found</h3>
           <p className="text-gray-600">Try adjusting your search filters</p>
         </div>
       )}

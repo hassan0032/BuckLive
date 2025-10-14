@@ -29,7 +29,7 @@ export const UserProfile: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Profile</h1>
+        <h1 className="text-3xl font-bold text-[#363f49] mb-2">Your Profile</h1>
         <p className="text-gray-600">Manage your account settings</p>
       </div>
 
@@ -40,7 +40,7 @@ export const UserProfile: React.FC = () => {
             <User className="h-8 w-8 text-brand-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-[#363f49]">
               {user.profile?.first_name} {user.profile?.last_name}
             </h2>
             <p className="text-gray-600">{user.email}</p>
@@ -53,7 +53,7 @@ export const UserProfile: React.FC = () => {
               <Mail className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm font-medium text-gray-700">Email</p>
-                <p className="text-sm text-gray-900">{user.email}</p>
+                <p className="text-sm text-[#363f49]">{user.email}</p>
               </div>
             </div>
 
@@ -61,7 +61,7 @@ export const UserProfile: React.FC = () => {
               <Shield className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm font-medium text-gray-700">Role</p>
-                <p className="text-sm text-gray-900 capitalize">
+                <p className="text-sm text-[#363f49] capitalize">
                   {user.role || 'Member'}
                 </p>
               </div>
@@ -82,7 +82,7 @@ export const UserProfile: React.FC = () => {
                 <CreditCard className="h-5 w-5 text-gray-400" />
                 <div>
                   <p className="text-sm font-medium text-gray-700">Subscription Type</p>
-                  <p className="text-sm text-gray-900">Individual Membership</p>
+                  <p className="text-sm text-[#363f49]">Individual Membership</p>
                 </div>
               </div>
             )}
@@ -93,7 +93,7 @@ export const UserProfile: React.FC = () => {
               <Calendar className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm font-medium text-gray-700">Member Since</p>
-                <p className="text-sm text-gray-900">
+                <p className="text-sm text-[#363f49]">
                   {new Date(user.created_at).toLocaleDateString()}
                 </p>
               </div>
@@ -116,7 +116,7 @@ export const UserProfile: React.FC = () => {
                 <Calendar className="h-5 w-5 text-gray-400" />
                 <div>
                   <p className="text-sm font-medium text-gray-700">Next Billing Date</p>
-                  <p className="text-sm text-gray-900">
+                  <p className="text-sm text-[#363f49]">
                     {new Date(user.subscription_ends_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -138,7 +138,7 @@ export const UserProfile: React.FC = () => {
         )}
 
         <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Account Statistics</h3>
+          <h3 className="text-lg font-medium text-[#363f49] mb-4">Account Statistics</h3>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 bg-blue-50 rounded-lg">
               <p className="text-2xl font-bold text-brand-primary">0</p>

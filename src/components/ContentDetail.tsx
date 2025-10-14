@@ -72,7 +72,7 @@ export const ContentDetail: React.FC = () => {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'video': return 'bg-red-100 text-red-700';
+      case 'video': return 'bg-blue-100 text-blue-700';
       case 'pdf': return 'bg-brand-beige-light text-brand-secondary';
       case 'blog': return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
@@ -91,11 +91,11 @@ export const ContentDetail: React.FC = () => {
     return (
       <div className="text-center py-12">
         <Video className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Content not found</h3>
+        <h3 className="text-lg font-medium text-[#363f49] mb-2">Content not found</h3>
         <p className="text-gray-600 mb-4">The content you're looking for doesn't exist or you don't have access to it.</p>
         <button
           onClick={() => navigate('/library')}
-          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
+          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Library
@@ -113,7 +113,7 @@ export const ContentDetail: React.FC = () => {
     <div className="space-y-8">
       <button
         onClick={() => navigate('/library')}
-        className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors uppercase font-bold"
+        className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors uppercase font-semibold"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Library
@@ -160,7 +160,7 @@ export const ContentDetail: React.FC = () => {
             )}
           </div>
 
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-[#363f49] mb-4">
             {singleContent.title}
           </h1>
 
@@ -212,7 +212,7 @@ export const ContentDetail: React.FC = () => {
                 href={singleContent.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
+                className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
               >
                 <BookOpen className="h-4 w-4 mr-2" />
                 Read Full Article
@@ -222,7 +222,7 @@ export const ContentDetail: React.FC = () => {
 
           {singleContent.tags.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Tags</h3>
+              <h3 className="text-sm font-semibold text-[#363f49] mb-3">Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {singleContent.tags.map((tag, index) => (
                   <button
@@ -241,7 +241,7 @@ export const ContentDetail: React.FC = () => {
           <div className="border-t border-gray-200 pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-900">Category</p>
+                <p className="text-sm font-semibold text-[#363f49]">Category</p>
                 <p className="text-gray-600">{singleContent.category}</p>
               </div>
               {singleContent.type === 'pdf' && (
@@ -249,7 +249,7 @@ export const ContentDetail: React.FC = () => {
                   href={singleContent.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
+                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download PDF
@@ -262,7 +262,7 @@ export const ContentDetail: React.FC = () => {
 
       {relatedContent.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-900">Related Content</h2>
+          <h2 className="text-2xl font-bold text-[#363f49]">Related Content</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {relatedContent.map((item) => {
               const RelatedIcon = getContentIcon(item.type);
@@ -289,10 +289,10 @@ export const ContentDetail: React.FC = () => {
                     </div>
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
+                    <h3 className="font-semibold text-[#363f49] mb-1 line-clamp-2">
                       {item.title}
                     </h3>
-                    <p className="text-sm text-gray-600 line-clamp-2">
+                    <p className="text-xs text-gray-600 line-clamp-2">
                       {item.description}
                     </p>
                   </div>

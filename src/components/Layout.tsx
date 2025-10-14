@@ -32,14 +32,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
               <div className="flex items-center space-x-2">
                 <img src="/live-logo-solo.png" alt="Logo" className="h-8 w-auto" />
                 {user?.profile?.community?.name && (
-                  <h1 className="text-xl font-bold text-gray-900">
+                  <h1 className="text-xl font-bold text-[#363f49]">
                     {user.profile.community.name}
                   </h1>
                 )}
@@ -50,7 +50,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <button
                     key={item.id}
                     onClick={() => navigate(item.path)}
-                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold transition-colors uppercase ${
+                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold transition-colors uppercase ${
                       isActive(item.path)
                         ? 'text-brand-primary bg-brand-beige-light'
                         : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
@@ -62,7 +62,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 ))}
                 <button
                   onClick={handleBuckInstituteClick}
-                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
+                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
                 >
                   <ExternalLink className="h-4 w-4" />
                   <span>Buck Institute</span>
@@ -76,7 +76,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
               <button
                 onClick={handleSignOut}
-                className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors uppercase"
+                className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors uppercase"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sign Out</span>
@@ -87,14 +87,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Mobile Navigation */}
-      <div className="md:hidden bg-white border-b border-gray-200">
+      <div className="md:hidden bg-white border-b border-gray-200 sticky top-16 z-40">
         <div className="px-4 py-2">
           <div className="flex space-x-4 overflow-x-auto">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => navigate(item.path)}
-                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors uppercase ${
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors uppercase ${
                   isActive(item.path)
                     ? 'text-brand-primary bg-brand-beige-light'
                     : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
@@ -106,7 +106,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             ))}
             <button
               onClick={handleBuckInstituteClick}
-              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
+              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
             >
               <ExternalLink className="h-4 w-4" />
               <span>Buck Institute</span>

@@ -70,14 +70,14 @@ export const Auth: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8">
           <button
             onClick={() => setIsSignUp(false)}
-            className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-bold"
+            className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-semibold"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back to sign in
           </button>
 
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            <h2 className="text-3xl font-bold text-[#363f49] mb-2">
               How would you like to join?
             </h2>
             <p className="text-gray-600">
@@ -93,7 +93,7 @@ export const Auth: React.FC = () => {
               <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
                 <Key className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl font-bold text-[#363f49] mb-2">
                 Join with Access Code
               </h3>
               <p className="text-gray-600">
@@ -113,7 +113,7 @@ export const Auth: React.FC = () => {
               <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
                 <CreditCard className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl font-bold text-[#363f49] mb-2">
                 Purchase Individual Membership
               </h3>
               <p className="text-gray-600">
@@ -135,7 +135,7 @@ export const Auth: React.FC = () => {
         {isSignUp && registrationType && (
           <button
             onClick={() => setRegistrationType(null)}
-            className="mb-4 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-bold"
+            className="mb-4 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-semibold"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back
@@ -146,7 +146,7 @@ export const Auth: React.FC = () => {
           <div className="flex justify-center mb-6">
             <img src="/live-logo-solo.png" alt="Logo" className="h-16 w-auto" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          <h2 className="text-3xl font-bold text-[#363f49] mb-2">
             {isSignUp ? 'Create Account' : 'Welcome!'}
           </h2>
           <p className="text-gray-600">
@@ -242,7 +242,7 @@ export const Auth: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase text-sm"
+            className="w-full bg-brand-primary text-white py-3 px-4 rounded-lg font-semibold hover:bg-brand-d-blue focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase text-sm"
           >
             {loading
               ? 'Please wait...'
@@ -260,7 +260,7 @@ export const Auth: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowForgotPassword(true)}
-              className="text-brand-primary hover:text-brand-d-blue font-bold text-sm mb-4 block mx-auto"
+              className="text-brand-primary hover:text-brand-d-blue font-semibold text-sm mb-4 block mx-auto"
             >
               Forgot your password?
             </button>
@@ -272,7 +272,7 @@ export const Auth: React.FC = () => {
               setRegistrationType(null);
               setError('');
             }}
-            className="text-brand-primary hover:text-brand-d-blue font-bold"
+            className="text-brand-primary hover:text-brand-d-blue font-semibold"
           >
             {isSignUp
               ? 'Already have an account? Sign in.'

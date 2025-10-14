@@ -101,7 +101,7 @@ export const AdminDashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-[#363f49]">Admin Dashboard</h1>
           <p className="text-gray-600">Manage content and communities</p>
         </div>
         <button
@@ -113,7 +113,7 @@ export const AdminDashboard: React.FC = () => {
               setShowCommunityForm(true);
             }
           }}
-          className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
+          className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
         >
           <Plus className="h-4 w-4" />
           <span>{activeTab === 'content' ? 'Add Content' : 'Add Community'}</span>
@@ -124,7 +124,7 @@ export const AdminDashboard: React.FC = () => {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('content')}
-            className={`py-2 px-1 border-b-2 font-bold text-sm uppercase ${
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
               activeTab === 'content'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -134,7 +134,7 @@ export const AdminDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('communities')}
-            className={`py-2 px-1 border-b-2 font-bold text-sm uppercase ${
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
               activeTab === 'communities'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -150,7 +150,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-center">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">Total Content</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalContent}</p>
+              <p className="text-3xl font-bold text-[#363f49]">{stats.totalContent}</p>
             </div>
             <BarChart3 className="h-8 w-8 text-brand-primary" />
           </div>
@@ -160,9 +160,9 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-center">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">Videos</p>
-              <p className="text-3xl font-bold text-red-600">{stats.videos}</p>
+              <p className="text-3xl font-bold text-blue-600">{stats.videos}</p>
             </div>
-            <Upload className="h-8 w-8 text-red-600" />
+            <Upload className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export const AdminDashboard: React.FC = () => {
       {activeTab === 'content' ? (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Content Management</h2>
+            <h2 className="text-lg font-semibold text-[#363f49]">Content Management</h2>
           </div>
 
           <div className="overflow-x-auto">
@@ -240,7 +240,7 @@ export const AdminDashboard: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                      <div className="text-sm font-medium text-[#363f49]">{item.title}</div>
                       <div className="text-sm text-gray-500 truncate max-w-xs">
                         {item.description}
                       </div>
@@ -249,7 +249,7 @@ export const AdminDashboard: React.FC = () => {
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
                           item.type === 'video'
-                            ? 'bg-red-100 text-red-700'
+                            ? 'bg-blue-100 text-blue-700'
                             : item.type === 'pdf'
                             ? 'bg-brand-beige-light text-brand-secondary'
                             : 'bg-green-100 text-green-700'
@@ -269,8 +269,8 @@ export const AdminDashboard: React.FC = () => {
                         {(item.status || 'published').toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{item.category}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{item.author}</td>
+                    <td className="px-6 py-4 text-sm text-[#363f49]">{item.category}</td>
+                    <td className="px-6 py-4 text-sm text-[#363f49]">{item.author}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {new Date(item.created_at).toLocaleDateString()}
                     </td>
@@ -297,12 +297,12 @@ export const AdminDashboard: React.FC = () => {
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-[#363f49]">
               Communities & Access Codes
             </h2>
             <button
               onClick={() => setShowCommunityForm(true)}
-              className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
+              className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>Add Community</span>
@@ -337,7 +337,7 @@ export const AdminDashboard: React.FC = () => {
                 {communities.map((community) => (
                   <tr key={community.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{community.name}</div>
+                      <div className="text-sm font-medium text-[#363f49]">{community.name}</div>
                       <div className="text-sm text-gray-500">{community.description}</div>
                     </td>
                     <td className="px-6 py-4">
@@ -483,13 +483,13 @@ export const AdminDashboard: React.FC = () => {
                       setShowCommunityForm(false);
                       setEditingCommunity(null);
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-bold"
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold text-sm"
+                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
                   >
                     {editingCommunity ? 'Update' : 'Add'} Community
                   </button>
