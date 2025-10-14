@@ -29,7 +29,7 @@ export const UserProfile: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-[#363f49] mb-2">Your Profile</h1>
+        <h1 className="text-3xl font-semibold text-[#363f49] mb-2">Your Profile</h1>
         <p className="text-gray-600">Manage your account settings</p>
       </div>
 
