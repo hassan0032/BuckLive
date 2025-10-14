@@ -378,14 +378,14 @@ export const ContentLibrary: React.FC = () => {
                 )}
 
                 {/* Duration/Size Badge */}
-                {(item.duration || item.file_size) && (
+                {((item.type === 'video' && item.duration && item.duration > 0) || (item.file_size && item.file_size > 0)) && (
                   <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded-md text-xs">
-                    {item.type === 'video' && item.duration ? (
+                    {item.type === 'video' && item.duration && item.duration > 0 ? (
                       <div className="flex items-center space-x-1">
                         <Clock className="h-3 w-3" />
                         <span>{formatDuration(item.duration)}</span>
                       </div>
-                    ) : item.file_size ? (
+                    ) : item.file_size && item.file_size > 0 ? (
                       <div className="flex items-center space-x-1">
                         <Download className="h-3 w-3" />
                         <span>{formatFileSize(item.file_size)}</span>
