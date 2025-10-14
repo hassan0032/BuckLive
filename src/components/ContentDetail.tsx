@@ -104,7 +104,9 @@ export const ContentDetail: React.FC = () => {
     );
   }
 
-  const vimeoId = singleContent.type === 'video' ? extractVimeoId(singleContent.url) : null;
+  const vimeoId = singleContent.type === 'video'
+    ? (singleContent.vimeo_video_id || extractVimeoId(singleContent.url))
+    : null;
   const ContentIcon = getContentIcon(singleContent.type);
 
   return (
@@ -121,7 +123,7 @@ export const ContentDetail: React.FC = () => {
         {singleContent.type === 'video' && vimeoId ? (
           <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
             <iframe
-              src={`https://player.vimeo.com/video/${vimeoId}?h=&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479`}
+              src={`https://player.vimeo.com/video/${vimeoId}?badge=0&autopause=0`}
               className="absolute top-0 left-0 w-full h-full"
               frameBorder="0"
               allow="autoplay; fullscreen; picture-in-picture; clipboard-write"
