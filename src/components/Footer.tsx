@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
           <div className="flex items-center space-x-3">
             <div>
               <img src="/live-logo-solo.png" alt="Logo" className="h-10 w-auto" />
-              <span className="text-sm text-grey">
+              <span className="text-sm text-gray-500">
                 © {currentYear} Buck Institute. All rights reserved.
               </span>
             </div>
