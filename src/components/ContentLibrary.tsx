@@ -223,7 +223,7 @@ export const ContentLibrary: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-[#363f49] mb-2">Content Library</h1>
+        <h1 className="text-3xl font-semibold text-[#363f49] mb-2">Content Library</h1>
         <p className="text-gray-600">Discover videos, articles, and resources to help you live better longer.</p>
       </div>
 
