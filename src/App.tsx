@@ -8,6 +8,7 @@ import { ContentLibrary } from './components/ContentLibrary';
 import { AdminDashboard } from './components/AdminDashboard';
 import { UserProfile } from './components/UserProfile';
 import { ContentDetail } from './components/ContentDetail';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
 
 function App() {
   const { user, loading, isAdmin } = useAuth();
@@ -41,6 +42,7 @@ function App() {
           <Route path="/library" element={<ContentLibrary />} />
           <Route path="/content/:id" element={<ContentDetail />} />
           <Route path="/profile" element={<UserProfile />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />
           <Route path="*" element={<Navigate to="/library" replace />} />
         </Routes>

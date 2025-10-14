@@ -2,7 +2,8 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { signOut } from '../lib/supabase';
-import { LogOut, User, Settings, Library, ExternalLink } from 'lucide-react';
+import { LogOut, User, Settings, Library } from 'lucide-react';
+import { Footer } from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,10 +23,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }] : []),
   ];
-
-  const handleBuckInstituteClick = () => {
-    window.open('https://buckinstitute.org', '_blank', 'noopener,noreferrer');
-  };
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -60,13 +57,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <span>{item.label}</span>
                   </button>
                 ))}
-                <button
-                  onClick={handleBuckInstituteClick}
-                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Buck Institute</span>
-                </button>
               </nav>
             </div>
 
@@ -104,13 +94,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <span>{item.label}</span>
               </button>
             ))}
-            <button
-              onClick={handleBuckInstituteClick}
-              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
-            >
-              <ExternalLink className="h-4 w-4" />
-              <span>Buck Institute</span>
-            </button>
           </div>
         </div>
       </div>
@@ -119,6 +102,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
