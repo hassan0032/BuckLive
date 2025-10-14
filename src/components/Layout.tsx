@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { signOut } from '../lib/supabase';
-import { LogOut, User, Settings, Library } from 'lucide-react';
+import { LogOut, User, Settings, Library, ExternalLink } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,10 +23,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }] : []),
   ];
 
+  const handleBuckInstituteClick = () => {
+    window.open('https://buckinstitute.org', '_blank', 'noopener,noreferrer');
+  };
+
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,6 +46,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
               
               <nav className="hidden md:flex space-x-8">
+                <button
+                  onClick={handleBuckInstituteClick}
+                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Buck Institute</span>
+                </button>
                 {navItems.map((item) => (
                   <button
                     key={item.id}
@@ -49,7 +60,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold transition-colors uppercase ${
                       isActive(item.path)
                         ? 'text-brand-primary bg-brand-beige-light'
-                        : 'text-gray-700 hover:text-brand-primary hover:bg-gray-50'
+                        : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -79,6 +90,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="md:hidden bg-white border-b border-gray-200">
         <div className="px-4 py-2">
           <div className="flex space-x-4 overflow-x-auto">
+            <button
+              onClick={handleBuckInstituteClick}
+              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span>Buck Institute</span>
+            </button>
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -86,7 +104,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors uppercase ${
                   isActive(item.path)
                     ? 'text-brand-primary bg-brand-beige-light'
-                    : 'text-gray-700 hover:text-brand-primary hover:bg-gray-50'
+                    : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
                 }`}
               >
                 <item.icon className="h-4 w-4" />
