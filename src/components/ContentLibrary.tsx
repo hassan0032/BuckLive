@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { Content } from '../types';
-import { Search, Filter, Video, FileText, BookOpen, Clock, Download, Tag, X } from 'lucide-react';
+import { Search, Video, FileText, BookOpen, Clock, Download, Tag, X } from 'lucide-react';
 
 export const ContentLibrary: React.FC = () => {
   const { content, loading, searchContent } = useContent();
@@ -12,6 +12,11 @@ export const ContentLibrary: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [autocompleteResults, setAutocompleteResults] = useState<Array<{ type: 'title' | 'tag' | 'category'; value: string; content?: Content }>>([]);
+  const [selectedAutocompleteIndex, setSelectedAutocompleteIndex] = useState(-1);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
 
   const categories = useMemo(() => {
     const cats = new Set(content.map(item => item.category));
@@ -26,8 +31,137 @@ export const ContentLibrary: React.FC = () => {
     }
   }, [location.state]);
 
-  const handleSearch = async () => {
-    await searchContent(searchQuery, selectedType, selectedCategory, selectedTags);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
+        setShowAutocomplete(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const performSearch = useCallback(async (query: string, type: string, category: string, tags: string[]) => {
+    await searchContent(query, type, category, tags);
+  }, [searchContent]);
+
+  const generateAutocomplete = useCallback((query: string) => {
+    if (!query.trim()) {
+      setAutocompleteResults([]);
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const results: Array<{ type: 'title' | 'tag' | 'category'; value: string; content?: Content }> = [];
+
+    const seenTitles = new Set<string>();
+    const seenTags = new Set<string>();
+    const seenCategories = new Set<string>();
+
+    content.forEach(item => {
+      if (item.title.toLowerCase().includes(lowerQuery) && !seenTitles.has(item.title)) {
+        results.push({ type: 'title', value: item.title, content: item });
+        seenTitles.add(item.title);
+      }
+
+      if (!seenCategories.has(item.category) && item.category.toLowerCase().includes(lowerQuery)) {
+        results.push({ type: 'category', value: item.category });
+        seenCategories.add(item.category);
+      }
+
+      item.tags.forEach(tag => {
+        if (!seenTags.has(tag) && tag.toLowerCase().includes(lowerQuery)) {
+          results.push({ type: 'tag', value: tag });
+          seenTags.add(tag);
+        }
+      });
+    });
+
+    setAutocompleteResults(results.slice(0, 8));
+  }, [content]);
+
+  const handleSearchQueryChange = (value: string) => {
+    setSearchQuery(value);
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    if (value.trim()) {
+      setShowAutocomplete(true);
+      generateAutocomplete(value);
+
+      searchDebounceRef.current = setTimeout(() => {
+        performSearch(value, selectedType, selectedCategory, selectedTags);
+      }, 400);
+    } else {
+      setShowAutocomplete(false);
+      setAutocompleteResults([]);
+      performSearch('', selectedType, selectedCategory, selectedTags);
+    }
+  };
+
+  const handleAutocompleteSelect = (result: { type: 'title' | 'tag' | 'category'; value: string; content?: Content }) => {
+    if (result.type === 'title' && result.content) {
+      navigate(`/content/${result.content.id}`);
+    } else if (result.type === 'tag') {
+      setSelectedTags([result.value]);
+      setSearchQuery('');
+      performSearch('', selectedType, selectedCategory, [result.value]);
+    } else if (result.type === 'category') {
+      setSelectedCategory(result.value);
+      setSearchQuery('');
+      performSearch('', selectedType, result.value, selectedTags);
+    }
+    setShowAutocomplete(false);
+    setSelectedAutocompleteIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showAutocomplete || autocompleteResults.length === 0) {
+      if (e.key === 'Enter') {
+        performSearch(searchQuery, selectedType, selectedCategory, selectedTags);
+        setShowAutocomplete(false);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedAutocompleteIndex(prev =>
+          prev < autocompleteResults.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedAutocompleteIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedAutocompleteIndex >= 0) {
+          handleAutocompleteSelect(autocompleteResults[selectedAutocompleteIndex]);
+        } else {
+          performSearch(searchQuery, selectedType, selectedCategory, selectedTags);
+          setShowAutocomplete(false);
+        }
+        break;
+      case 'Escape':
+        setShowAutocomplete(false);
+        setSelectedAutocompleteIndex(-1);
+        break;
+    }
+  };
+
+  const handleTypeChange = (value: string) => {
+    setSelectedType(value);
+    performSearch(searchQuery, value, selectedCategory, selectedTags);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+    performSearch(searchQuery, selectedType, value, selectedTags);
   };
 
   const handleTagClick = async (tag: string) => {
@@ -113,22 +247,66 @@ export const ContentLibrary: React.FC = () => {
           </div>
         )}
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <div className="flex-1 relative" ref={autocompleteRef}>
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
             <input
               type="text"
               placeholder="Search content..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchQueryChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => searchQuery.trim() && setShowAutocomplete(true)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              autoComplete="off"
             />
+
+            {showAutocomplete && autocompleteResults.length > 0 && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                {autocompleteResults.map((result, index) => (
+                  <button
+                    key={`${result.type}-${result.value}-${index}`}
+                    onClick={() => handleAutocompleteSelect(result)}
+                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${
+                      index === selectedAutocompleteIndex ? 'bg-brand-primary bg-opacity-10' : ''
+                    }`}
+                  >
+                    {result.type === 'title' && (
+                      <>
+                        <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{result.value}</div>
+                          <div className="text-xs text-gray-500">Content</div>
+                        </div>
+                      </>
+                    )}
+                    {result.type === 'tag' && (
+                      <>
+                        <Tag className="h-4 w-4 text-brand-primary flex-shrink-0" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">{result.value}</div>
+                          <div className="text-xs text-gray-500">Tag</div>
+                        </div>
+                      </>
+                    )}
+                    {result.type === 'category' && (
+                      <>
+                        <BookOpen className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">{result.value}</div>
+                          <div className="text-xs text-gray-500">Category</div>
+                        </div>
+                      </>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          
+
           <div className="flex gap-2">
             <select
               value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
+              onChange={(e) => handleTypeChange(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Types</option>
@@ -139,7 +317,7 @@ export const ContentLibrary: React.FC = () => {
 
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Categories</option>
@@ -147,13 +325,6 @@ export const ContentLibrary: React.FC = () => {
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
-
-            <button
-              onClick={handleSearch}
-              className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-bold"
-            >
-              <Filter className="h-4 w-4" />
-            </button>
           </div>
         </div>
       </div>
