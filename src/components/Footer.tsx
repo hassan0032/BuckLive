@@ -19,10 +19,12 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center space-x-3">
-            <img src="/live-logo-solo.png" alt="Logo" className="h-10 w-auto" /><br />
-            <span className="text-sm">
-              © {currentYear} Buck Institute. All rights reserved.
-            </span>
+            <div></div>
+              <img src="/live-logo-solo.png" alt="Logo" className="h-10 w-auto" /><br />
+              <span className="text-sm">
+                © {currentYear} Buck Institute. All rights reserved.
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-6">
