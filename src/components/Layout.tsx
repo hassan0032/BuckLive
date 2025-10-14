@@ -46,13 +46,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
               
               <nav className="hidden md:flex space-x-8">
-                <button
-                  onClick={handleBuckInstituteClick}
-                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Buck Institute</span>
-                </button>
                 {navItems.map((item) => (
                   <button
                     key={item.id}
@@ -67,6 +60,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <span>{item.label}</span>
                   </button>
                 ))}
+                <button
+                  onClick={handleBuckInstituteClick}
+                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Buck Institute</span>
+                </button>
               </nav>
             </div>
 
@@ -90,13 +90,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="md:hidden bg-white border-b border-gray-200">
         <div className="px-4 py-2">
           <div className="flex space-x-4 overflow-x-auto">
-            <button
-              onClick={handleBuckInstituteClick}
-              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
-            >
-              <ExternalLink className="h-4 w-4" />
-              <span>Buck Institute</span>
-            </button>
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -111,6 +104,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <span>{item.label}</span>
               </button>
             ))}
+            <button
+              onClick={handleBuckInstituteClick}
+              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors uppercase text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light"
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span>Buck Institute</span>
+            </button>
           </div>
         </div>
       </div>
