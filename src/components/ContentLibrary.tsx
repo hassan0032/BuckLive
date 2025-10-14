@@ -47,7 +47,7 @@ export const ContentLibrary: React.FC = () => {
   }, [searchContent]);
 
   const generateAutocomplete = useCallback((query: string) => {
-    if (!query.trim()) {
+    if (!query.trim() || query.trim().length < 2) {
       setAutocompleteResults([]);
       return;
     }
@@ -89,8 +89,13 @@ export const ContentLibrary: React.FC = () => {
     }
 
     if (value.trim()) {
-      setShowAutocomplete(true);
-      generateAutocomplete(value);
+      if (value.trim().length >= 2) {
+        setShowAutocomplete(true);
+        generateAutocomplete(value);
+      } else {
+        setShowAutocomplete(false);
+        setAutocompleteResults([]);
+      }
 
       searchDebounceRef.current = setTimeout(() => {
         performSearch(value, selectedType, selectedCategory, selectedTags);
@@ -255,7 +260,7 @@ export const ContentLibrary: React.FC = () => {
               value={searchQuery}
               onChange={(e) => handleSearchQueryChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              onFocus={() => searchQuery.trim() && setShowAutocomplete(true)}
+              onFocus={() => searchQuery.trim().length >= 2 && setShowAutocomplete(true)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
               autoComplete="off"
             />
