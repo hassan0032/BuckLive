@@ -20,7 +20,7 @@ export const Footer: React.FC = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center space-x-3">
             <div>
-              <img src="/live-logo-solo.png" alt="Logo" className="h-10 w-auto" /><br />
+              <img src="/live-logo-solo.png" alt="Logo" className="h-10 w-auto" />
               <span className="text-sm">
                 © {currentYear} Buck Institute. All rights reserved.
               </span>
