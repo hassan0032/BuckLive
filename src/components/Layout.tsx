@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { signOut } from '../lib/supabase';
-import { LogOut, User, Settings, Library } from 'lucide-react';
+import { LogOut, User, Settings, Library, Users } from 'lucide-react';
 import { Footer } from './Footer';
 
 interface LayoutProps {
@@ -10,7 +10,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isCommunityManager } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -22,6 +22,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'library', label: 'Library', icon: Library, path: '/library' },
     { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }] : []),
+    ...(isCommunityManager ? [{ id: 'community-manager', label: 'Manage', icon: Users, path: '/community-manager' }] : []),
   ];
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');

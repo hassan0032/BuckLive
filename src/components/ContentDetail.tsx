@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
+import { useAuth } from '../hooks/useAuth';
+import { useContentTracking } from '../hooks/useContentTracking';
 import { Content } from '../types';
 import { ArrowLeft, Clock, Tag, User, Calendar, Video, FileText, BookOpen, Download } from 'lucide-react';
 
 export const ContentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { singleContent, singleLoading, fetchContentById, fetchRelatedContent } = useContent();
   const [relatedContent, setRelatedContent] = useState<Content[]>([]);
+
+  useContentTracking(id, user?.id, user?.community_id);
 
   useEffect(() => {
     if (id) {

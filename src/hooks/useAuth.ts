@@ -150,5 +150,6 @@ export const useAuth = () => {
     user,
     loading,
     isAdmin: user?.role === 'admin',
+    isCommunityManager: user?.role === 'community_manager',
   };
 };

@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   email: string;
-  role: 'member' | 'admin';
+  role: 'member' | 'admin' | 'community_manager';
   created_at: string;
   community_id?: string;
   registration_type?: 'access_code' | 'self_registered';
@@ -28,6 +28,33 @@ export interface Community {
   membership_tier: 'silver' | 'gold';
   created_at: string;
   updated_at: string;
+  created_by_manager_id?: string;
+  member_count?: number;
+}
+
+export interface CommunityManager {
+  id: string;
+  user_id: string;
+  community_id: string;
+  created_at: string;
+  created_by?: string;
+}
+
+export interface ContentView {
+  id: string;
+  user_id: string;
+  content_id: string;
+  view_duration: number;
+  viewed_at: string;
+  community_id?: string;
+}
+
+export interface UserSession {
+  id: string;
+  user_id: string;
+  login_at: string;
+  logout_at?: string;
+  session_duration?: number;
 }
 
 export interface Content {

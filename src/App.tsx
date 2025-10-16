@@ -6,12 +6,13 @@ import { ResetPassword } from './components/ResetPassword';
 import { Layout } from './components/Layout';
 import { ContentLibrary } from './components/ContentLibrary';
 import { AdminDashboard } from './components/AdminDashboard';
+import { CommunityManagerDashboard } from './components/CommunityManagerDashboard';
 import { UserProfile } from './components/UserProfile';
 import { ContentDetail } from './components/ContentDetail';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 
 function App() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isCommunityManager } = useAuth();
 
   // Check if we're on the reset password page
   const isResetPasswordPage = window.location.pathname === '/reset-password' ||
@@ -44,6 +45,7 @@ function App() {
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />
+          <Route path="/community-manager" element={isCommunityManager ? <CommunityManagerDashboard /> : <Navigate to="/library" replace />} />
           <Route path="*" element={<Navigate to="/library" replace />} />
         </Routes>
       </Layout>
