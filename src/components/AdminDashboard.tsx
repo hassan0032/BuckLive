@@ -4,6 +4,8 @@ import { useCommunities } from '../hooks/useCommunities';
 import { Plus, Edit, Trash2, BarChart3, Upload, Image as ImageIcon, FileText } from 'lucide-react';
 import { Community, Content } from '../types';
 import { EnhancedContentForm } from './EnhancedContentForm';
+import { AdminUserManagement } from './AdminUserManagement';
+import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 
 interface CommunityFormData {
   name: string;
@@ -19,7 +21,7 @@ export const AdminDashboard: React.FC = () => {
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'content' | 'communities'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics'>('content');
 
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>({
     name: '',
@@ -102,22 +104,28 @@ export const AdminDashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-semibold text-[#363f49]">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage content and communities</p>
+          <p className="text-gray-600">
+            {activeTab === 'users' ? 'Manage all users across the platform' :
+             activeTab === 'analytics' ? 'Platform-wide analytics and insights' :
+             'Manage content and communities'}
+          </p>
         </div>
-        <button
-          onClick={() => {
-            if (activeTab === 'content') {
-              setEditingContent(null);
-              setShowForm(true);
-            } else {
-              setShowCommunityForm(true);
-            }
-          }}
-          className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
-        >
-          <Plus className="h-4 w-4" />
-          <span>{activeTab === 'content' ? 'Add Content' : 'Add Community'}</span>
-        </button>
+        {(activeTab === 'content' || activeTab === 'communities') && (
+          <button
+            onClick={() => {
+              if (activeTab === 'content') {
+                setEditingContent(null);
+                setShowForm(true);
+              } else {
+                setShowCommunityForm(true);
+              }
+            }}
+            className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{activeTab === 'content' ? 'Add Content' : 'Add Community'}</span>
+          </button>
+        )}
       </div>
 
       <div className="border-b border-gray-200">
@@ -140,12 +148,33 @@ export const AdminDashboard: React.FC = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Communities & Access Codes
+            Communities
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
+              activeTab === 'users'
+                ? 'border-brand-primary text-brand-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            User Management
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
+              activeTab === 'analytics'
+                ? 'border-brand-primary text-brand-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Analytics
           </button>
         </nav>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {(activeTab === 'content' || activeTab === 'communities') && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center">
             <div className="flex-1">
@@ -185,7 +214,8 @@ export const AdminDashboard: React.FC = () => {
             <Upload className="h-8 w-8 text-green-600" />
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {activeTab === 'content' ? (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -391,6 +421,10 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {activeTab === 'users' && <AdminUserManagement />}
+
+      {activeTab === 'analytics' && <AdminAnalyticsDashboard />}
 
       {showForm && (
         <EnhancedContentForm

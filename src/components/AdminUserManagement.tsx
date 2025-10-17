@@ -1,31 +1,41 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Search, Mail, User as UserIcon, Calendar, Trash2 } from 'lucide-react';
-import { useCommunityUsers } from '../hooks/useCommunityUsers';
+import { Plus, Edit, Search, Mail, User as UserIcon, Calendar, Trash2, Building2, Shield } from 'lucide-react';
+import { useAllUsers } from '../hooks/useAllUsers';
+import { useCommunities } from '../hooks/useCommunities';
 
-interface UserManagementProps {
-  communityId: string;
-  communityName: string;
-}
+export const AdminUserManagement: React.FC = () => {
+  const [communityFilter, setCommunityFilter] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<'member' | 'admin' | 'community_manager' | ''>('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-export const UserManagement: React.FC<UserManagementProps> = ({ communityId, communityName }) => {
-  const { users, loading, createUser, updateUser, deleteUser } = useCommunityUsers(communityId);
+  const { users, loading, createUser, updateUser, deleteUser } = useAllUsers({
+    communityId: communityFilter || undefined,
+    role: roleFilter || undefined,
+    searchTerm: searchTerm || undefined,
+  });
+  const { communities } = useCommunities();
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     first_name: '',
     last_name: '',
+    community_id: '',
+    role: 'member' as 'member' | 'admin' | 'community_manager',
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${user.profile?.first_name} ${user.profile?.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const stats = {
+    totalUsers: users.length,
+    admins: users.filter(u => u.role === 'admin').length,
+    communityManagers: users.filter(u => u.role === 'community_manager').length,
+    members: users.filter(u => u.role === 'member').length,
+    goldTier: users.filter(u => u.payment_tier === 'gold').length,
+    silverTier: users.filter(u => u.payment_tier === 'silver').length,
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,21 +44,22 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
 
     try {
       if (editingUser) {
-        const userToEdit = users.find(u => u.id === editingUser);
-        if (userToEdit) {
-          const { error } = await updateUser(editingUser, {
-            email: formData.email,
-            profile: {
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-            },
-          });
+        const { error } = await updateUser(editingUser, {
+          email: formData.email,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          role: formData.role,
+          community_id: formData.community_id,
+        });
 
-          if (error) throw new Error(error);
-        }
+        if (error) throw new Error(error);
       } else {
         if (!formData.password || formData.password.length < 6) {
           throw new Error('Password must be at least 6 characters');
+        }
+
+        if (!formData.community_id) {
+          throw new Error('Please select a community');
         }
 
         const { error } = await createUser({
@@ -56,7 +67,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
           password: formData.password,
           first_name: formData.first_name,
           last_name: formData.last_name,
-          community_id: communityId,
+          community_id: formData.community_id,
+          role: formData.role,
         });
 
         if (error) throw new Error(error);
@@ -69,6 +81,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
         password: '',
         first_name: '',
         last_name: '',
+        community_id: '',
+        role: 'member',
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -86,6 +100,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
         password: '',
         first_name: user.profile?.first_name || '',
         last_name: user.profile?.last_name || '',
+        community_id: user.community_id || '',
+        role: user.role,
       });
       setShowCreateForm(true);
     }
@@ -118,7 +134,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-semibold text-[#363f49]">User Management</h2>
-          <p className="text-gray-600">Manage users in {communityName}</p>
+          <p className="text-gray-600">Manage all users across the platform</p>
         </div>
         <button
           onClick={() => {
@@ -128,6 +144,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
               password: '',
               first_name: '',
               last_name: '',
+              community_id: '',
+              role: 'member',
             });
             setShowCreateForm(true);
           }}
@@ -138,17 +156,68 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
         </button>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <p className="text-xs font-medium text-gray-600 uppercase">Total Users</p>
+          <p className="text-2xl font-bold text-[#363f49] mt-1">{stats.totalUsers}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <p className="text-xs font-medium text-gray-600 uppercase">Admins</p>
+          <p className="text-2xl font-bold text-red-600 mt-1">{stats.admins}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <p className="text-xs font-medium text-gray-600 uppercase">Managers</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">{stats.communityManagers}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <p className="text-xs font-medium text-gray-600 uppercase">Members</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">{stats.members}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <p className="text-xs font-medium text-gray-600 uppercase">Gold Tier</p>
+          <p className="text-2xl font-bold text-yellow-600 mt-1">{stats.goldTier}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <p className="text-xs font-medium text-gray-600 uppercase">Silver Tier</p>
+          <p className="text-2xl font-bold text-gray-600 mt-1">{stats.silverTier}</p>
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg shadow-sm">
-        <div className="p-4 border-b border-gray-200">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-            />
+        <div className="p-4 border-b border-gray-200 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+              />
+            </div>
+            <select
+              value={communityFilter}
+              onChange={(e) => setCommunityFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+            >
+              <option value="">All Communities</option>
+              {communities.map((community) => (
+                <option key={community.id} value={community.id}>
+                  {community.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value as any)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+            >
+              <option value="">All Roles</option>
+              <option value="admin">Admin</option>
+              <option value="community_manager">Community Manager</option>
+              <option value="member">Member</option>
+            </select>
           </div>
         </div>
 
@@ -166,6 +235,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Community
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tier
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -177,12 +249,20 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
+              {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-brand-beige-light flex items-center justify-center">
-                        <UserIcon className="h-5 w-5 text-brand-primary" />
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                        user.role === 'admin' ? 'bg-red-100' : user.role === 'community_manager' ? 'bg-blue-100' : 'bg-brand-beige-light'
+                      }`}>
+                        {user.role === 'admin' ? (
+                          <Shield className="h-5 w-5 text-red-600" />
+                        ) : user.role === 'community_manager' ? (
+                          <Building2 className="h-5 w-5 text-blue-600" />
+                        ) : (
+                          <UserIcon className="h-5 w-5 text-brand-primary" />
+                        )}
                       </div>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-[#363f49]">
@@ -198,9 +278,20 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-700">
-                      {user.role.toUpperCase()}
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                      user.role === 'admin'
+                        ? 'bg-red-100 text-red-700'
+                        : user.role === 'community_manager'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {user.role === 'community_manager' ? 'MANAGER' : user.role.toUpperCase()}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-600">
+                      {user.profile?.community?.name || 'N/A'}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     {user.payment_tier ? (
@@ -247,11 +338,13 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
           </table>
         </div>
 
-        {filteredUsers.length === 0 && (
+        {users.length === 0 && (
           <div className="text-center py-12">
             <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">
-              {searchTerm ? 'No users found matching your search' : 'No users in this community yet'}
+              {searchTerm || communityFilter || roleFilter
+                ? 'No users found matching your filters'
+                : 'No users in the system yet'}
             </p>
           </div>
         )}
@@ -326,6 +419,46 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                     />
                   </div>
                 )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Community *
+                  </label>
+                  <select
+                    value={formData.community_id}
+                    onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    required
+                  >
+                    <option value="">Select a community</option>
+                    {communities.map((community) => (
+                      <option key={community.id} value={community.id}>
+                        {community.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role *
+                  </label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    required
+                  >
+                    <option value="member">Member</option>
+                    <option value="community_manager">Community Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  {formData.role === 'admin' && (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Warning: Admin users have full system access
+                    </p>
+                  )}
+                </div>
 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
