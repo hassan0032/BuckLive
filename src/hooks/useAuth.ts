@@ -23,7 +23,7 @@ export const useAuth = () => {
             .from('user_profiles')
             .select(`
               *,
-              community:communities(*)
+              community:communities!user_profiles_community_id_fkey(*)
             `)
             .eq('id', session.user.id)
             .maybeSingle();
@@ -88,7 +88,7 @@ export const useAuth = () => {
                 .from('user_profiles')
                 .select(`
                   *,
-                  community:communities(*)
+                  community:communities!user_profiles_community_id_fkey(*)
                 `)
                 .eq('id', session.user.id)
                 .maybeSingle();

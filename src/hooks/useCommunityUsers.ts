@@ -19,7 +19,7 @@ export const useCommunityUsers = (communityId?: string) => {
         .from('user_profiles')
         .select(`
           *,
-          community:communities(*)
+          community:communities!user_profiles_community_id_fkey(*)
         `)
         .eq('community_id', communityId)
         .order('created_at', { ascending: false });
