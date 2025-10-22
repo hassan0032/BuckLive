@@ -55,3 +55,39 @@ export const updatePassword = async (newPassword: string) => {
   });
   return { data, error };
 };
+
+// Helper function to get thumbnail URL from content
+export const getThumbnailUrl = (content: { thumbnail_url?: string; storage_thumbnail_path?: string }): string => {
+  // If thumbnail_url is set, use it
+  if (content.thumbnail_url) {
+    return content.thumbnail_url;
+  }
+  
+  // Otherwise, generate public URL from storage path
+  if (content.storage_thumbnail_path) {
+    const { data } = supabase.storage
+      .from('thumbnails')
+      .getPublicUrl(content.storage_thumbnail_path);
+    return data.publicUrl;
+  }
+  
+  return '';
+};
+
+// Helper function to get PDF URL from content
+export const getPDFUrl = (content: { url?: string; storage_pdf_path?: string }): string => {
+  // If url is set, use it
+  if (content.url) {
+    return content.url;
+  }
+  
+  // Otherwise, generate public URL from storage path
+  if (content.storage_pdf_path) {
+    const { data } = supabase.storage
+      .from('pdfs')
+      .getPublicUrl(content.storage_pdf_path);
+    return data.publicUrl;
+  }
+  
+  return '';
+};

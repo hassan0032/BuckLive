@@ -3,12 +3,14 @@ import { Upload, X, Check, Loader, FileText } from 'lucide-react';
 
 interface PDFUploaderProps {
   onUploadComplete: (path: string, publicUrl: string, fileSize: number) => void;
+  uploadFunction: (file: File, fileName: string) => Promise<{ data: { path: string; publicUrl: string } | null; error: string | null }>;
   currentPdfUrl?: string;
   currentFileName?: string;
 }
 
 export const PDFUploader: React.FC<PDFUploaderProps> = ({
   onUploadComplete,
+  uploadFunction,
   currentPdfUrl,
   currentFileName,
 }) => {
@@ -57,7 +59,16 @@ export const PDFUploader: React.FC<PDFUploaderProps> = ({
 
       const fileName = `${Date.now()}-${selectedFile.name.replace(/\s+/g, '-')}`;
 
-      onUploadComplete(fileName, '', selectedFile.size);
+      // Actually upload to Supabase Storage
+      const result = await uploadFunction(selectedFile, fileName);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      if (result.data) {
+        onUploadComplete(result.data.path, result.data.publicUrl, selectedFile.size);
+      }
 
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -70,7 +81,7 @@ export const PDFUploader: React.FC<PDFUploaderProps> = ({
       }, 2000);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload PDF. Please try again.');
+      alert(`Failed to upload PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploading(false);
     }

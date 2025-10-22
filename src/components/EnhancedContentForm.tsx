@@ -89,19 +89,19 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
     });
   };
 
-  const handleThumbnailUpload = async (fileName: string, publicUrl: string) => {
+  const handleThumbnailUpload = async (path: string, publicUrl: string) => {
     setFormData({
       ...formData,
-      storage_thumbnail_path: fileName,
-      thumbnail_url: '',
+      storage_thumbnail_path: path,
+      thumbnail_url: publicUrl,
     });
   };
 
-  const handlePDFUpload = async (fileName: string, publicUrl: string, fileSize: number) => {
+  const handlePDFUpload = async (path: string, publicUrl: string, fileSize: number) => {
     setFormData({
       ...formData,
-      storage_pdf_path: fileName,
-      url: '',
+      storage_pdf_path: path,
+      url: publicUrl,
       file_size: fileSize.toString(),
     });
   };
@@ -127,20 +127,53 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
   const handleSubmit = async (isDraft: boolean) => {
     setSaving(true);
     try {
+      // Validate required fields
+      if (!formData.title.trim()) {
+        throw new Error('Title is required');
+      }
+      if (!formData.description.trim()) {
+        throw new Error('Description is required');
+      }
+      if (!formData.category.trim()) {
+        throw new Error('Category is required');
+      }
+      if (!formData.author.trim()) {
+        throw new Error('Author is required');
+      }
+
+      // Validate type-specific requirements
+      if (formData.type === 'video') {
+        if (!formData.vimeo_video_id && !formData.url) {
+          throw new Error('Vimeo video URL is required for video content');
+        }
+      }
+
+      if (formData.type === 'pdf') {
+        if (!formData.storage_pdf_path && !formData.url) {
+          throw new Error('PDF file must be uploaded for PDF content');
+        }
+      }
+
+      if (formData.type === 'blog' && !isDraft) {
+        if (!formData.blog_content || formData.blog_content.trim() === '<p></p>') {
+          throw new Error('Blog content is required when publishing');
+        }
+      }
+
       const contentData: any = {
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         type: formData.type,
-        url: formData.url,
-        thumbnail_url: formData.thumbnail_url,
-        storage_thumbnail_path: formData.storage_thumbnail_path,
-        storage_pdf_path: formData.storage_pdf_path,
+        url: formData.url || '',
+        thumbnail_url: formData.thumbnail_url || '',
+        storage_thumbnail_path: formData.storage_thumbnail_path || '',
+        storage_pdf_path: formData.storage_pdf_path || '',
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        category: formData.category,
-        author: formData.author,
+        category: formData.category.trim(),
+        author: formData.author.trim(),
         required_tier: formData.required_tier,
         status: isDraft ? 'draft' : 'published',
-        vimeo_video_id: formData.vimeo_video_id,
+        vimeo_video_id: formData.vimeo_video_id || '',
       };
 
       if (formData.type === 'video' && formData.duration) {
@@ -152,8 +185,8 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
       }
 
       if (formData.type === 'blog') {
-        contentData.blog_content = formData.blog_content;
-        contentData.blog_content_draft = formData.blog_content_draft;
+        contentData.blog_content = formData.blog_content || '';
+        contentData.blog_content_draft = formData.blog_content_draft || '';
       }
 
       if (!isDraft && !editingContent) {
@@ -161,13 +194,30 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
       }
 
       await onSubmit(contentData, isDraft);
+    } catch (error) {
+      console.error('Content submission error:', error);
+      alert(`Failed to save content: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
   };
 
-  const isValid = formData.title && formData.description && formData.category && formData.author &&
-    (formData.type !== 'blog' || formData.blog_content);
+  const isValid = () => {
+    if (!formData.title || !formData.description || !formData.category || !formData.author) {
+      return false;
+    }
+    
+    // Type-specific validation
+    if (formData.type === 'video' && !formData.vimeo_video_id && !formData.url) {
+      return false;
+    }
+    
+    if (formData.type === 'pdf' && !formData.storage_pdf_path && !formData.url) {
+      return false;
+    }
+    
+    return true;
+  };
 
   return (
     <>
@@ -352,6 +402,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Thumbnail Image</h3>
                   <ImageUploader
                     onUploadComplete={handleThumbnailUpload}
+                    uploadFunction={uploadThumbnail}
                     currentImageUrl={formData.thumbnail_url}
                   />
                 </div>
@@ -400,6 +451,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                     <h3 className="text-lg font-medium text-gray-900 mb-4">PDF Upload</h3>
                     <PDFUploader
                       onUploadComplete={handlePDFUpload}
+                      uploadFunction={uploadPDF}
                       currentPdfUrl={formData.url}
                       currentFileName={formData.storage_pdf_path.split('/').pop()}
                     />
@@ -451,7 +503,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
               <button
                 type="button"
                 onClick={() => handleSubmit(true)}
-                disabled={!isValid || saving}
+                disabled={!isValid() || saving}
                 className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center uppercase font-semibold"
               >
                 {saving ? (
@@ -464,7 +516,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
               <button
                 type="button"
                 onClick={() => handleSubmit(false)}
-                disabled={!isValid || saving}
+                disabled={!isValid() || saving}
                 className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors disabled:opacity-50 flex items-center uppercase font-semibold text-sm"
               >
                 {saving ? (

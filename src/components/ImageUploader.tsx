@@ -5,12 +5,14 @@ import { Upload, X, Check, Loader } from 'lucide-react';
 
 interface ImageUploaderProps {
   onUploadComplete: (path: string, publicUrl: string) => void;
+  uploadFunction: (file: Blob, fileName: string) => Promise<{ data: { path: string; publicUrl: string } | null; error: string | null }>;
   currentImageUrl?: string;
   aspectRatio?: number;
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
   onUploadComplete,
+  uploadFunction,
   currentImageUrl,
   aspectRatio = 16 / 9,
 }) => {
@@ -102,7 +104,16 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       const fileName = `${Date.now()}-${selectedFile.name.replace(/\s+/g, '-')}`;
 
-      onUploadComplete(fileName, '');
+      // Actually upload to Supabase Storage
+      const result = await uploadFunction(croppedBlob, fileName);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      if (result.data) {
+        onUploadComplete(result.data.path, result.data.publicUrl);
+      }
 
       setUploadSuccess(true);
       setTimeout(() => {
@@ -112,7 +123,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       }, 2000);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image. Please try again.');
+      alert(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploading(false);
     }

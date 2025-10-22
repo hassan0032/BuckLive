@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { useAuth } from '../hooks/useAuth';
 import { useContentTracking } from '../hooks/useContentTracking';
+import { getThumbnailUrl, getPDFUrl } from '../lib/supabase';
 import { Content } from '../types';
 import { ArrowLeft, Clock, Tag, User, Calendar, Video, FileText, BookOpen, Download } from 'lucide-react';
 
@@ -136,10 +137,10 @@ export const ContentDetail: React.FC = () => {
               title={singleContent.title}
             ></iframe>
           </div>
-        ) : singleContent.thumbnail_url ? (
+        ) : getThumbnailUrl(singleContent) ? (
           <div className="relative h-96 bg-gray-200">
             <img
-              src={singleContent.thumbnail_url}
+              src={getThumbnailUrl(singleContent)}
               alt={singleContent.title}
               className="w-full h-full object-cover"
             />
@@ -249,9 +250,9 @@ export const ContentDetail: React.FC = () => {
                 <p className="text-sm font-semibold text-[#363f49]">Category</p>
                 <p className="text-gray-600">{singleContent.category}</p>
               </div>
-              {singleContent.type === 'pdf' && (
+              {singleContent.type === 'pdf' && getPDFUrl(singleContent) && (
                 <a
-                  href={singleContent.url}
+                  href={getPDFUrl(singleContent)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"

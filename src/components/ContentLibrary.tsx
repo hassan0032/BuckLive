@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
+import { getThumbnailUrl } from '../lib/supabase';
 import { Content } from '../types';
 import { Search, Video, FileText, BookOpen, Clock, Download, Tag, X, Loader2 } from 'lucide-react';
 
@@ -349,13 +350,14 @@ export const ContentLibrary: React.FC = () => {
         )}
         {content.map((item) => {
           const ContentIcon = getContentIcon(item.type);
+          const thumbnailUrl = getThumbnailUrl(item);
           return (
             <div key={item.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
               {/* Thumbnail */}
               <div className="relative h-48 bg-gray-200">
-                {item.thumbnail_url ? (
+                {thumbnailUrl ? (
                   <img
-                    src={item.thumbnail_url}
+                    src={thumbnailUrl}
                     alt={item.title}
                     className="w-full h-full object-cover"
                   />

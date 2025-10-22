@@ -1,21 +1,22 @@
+import { BarChart3, Edit, FileText, Image as ImageIcon, Plus, Trash2, Upload } from 'lucide-react';
 import React, { useState } from 'react';
-import { useContent } from '../hooks/useContent';
 import { useCommunities } from '../hooks/useCommunities';
-import { Plus, Edit, Trash2, BarChart3, Upload, Image as ImageIcon, FileText } from 'lucide-react';
+import { useContent } from '../hooks/useContent';
 import { Community, Content } from '../types';
-import { EnhancedContentForm } from './EnhancedContentForm';
-import { AdminUserManagement } from './AdminUserManagement';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
+import { AdminUserManagement } from './AdminUserManagement';
+import { EnhancedContentForm } from './EnhancedContentForm';
 
 interface CommunityFormData {
   name: string;
   description: string;
   access_code: string;
   is_active: boolean;
+  membership_tier: 'silver' | 'gold';
 }
 
 export const AdminDashboard: React.FC = () => {
-  const { content, addContent, updateContent, deleteContent, loading } = useContent();
+  const { content, addContent, updateContent, deleteContent } = useContent();
   const { communities, addCommunity, updateCommunity, deleteCommunity } = useCommunities();
   const [showForm, setShowForm] = useState(false);
   const [showCommunityForm, setShowCommunityForm] = useState(false);
@@ -28,17 +29,34 @@ export const AdminDashboard: React.FC = () => {
     description: '',
     access_code: '',
     is_active: true,
+    membership_tier: 'silver',
   });
 
   const handleContentSubmit = async (contentData: any, isDraft: boolean) => {
-    if (editingContent) {
-      await updateContent(editingContent.id, contentData);
-    } else {
-      await addContent(contentData);
-    }
+    try {
+      let result;
+      if (editingContent) {
+        result = await updateContent(editingContent.id, contentData);
+      } else {
+        result = await addContent(contentData);
+      }
 
-    setShowForm(false);
-    setEditingContent(null);
+      if (result.error) {
+        alert(`Failed to save content: ${result.error}`);
+        return;
+      }
+
+      setShowForm(false);
+      setEditingContent(null);
+      
+      // Show success message
+      const action = editingContent ? 'updated' : 'created';
+      const status = isDraft ? 'draft' : 'published';
+      alert(`Content ${action} successfully as ${status}!`);
+    } catch (error) {
+      console.error('Error submitting content:', error);
+      alert(`Failed to save content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleCommunitySubmit = async (e: React.FormEvent) => {
@@ -57,6 +75,7 @@ export const AdminDashboard: React.FC = () => {
       description: '',
       access_code: '',
       is_active: true,
+      membership_tier: 'silver',
     });
   };
 
@@ -72,6 +91,7 @@ export const AdminDashboard: React.FC = () => {
       description: community.description,
       access_code: community.access_code,
       is_active: community.is_active,
+      membership_tier: community.membership_tier,
     });
     setShowCommunityForm(true);
   };
@@ -106,8 +126,8 @@ export const AdminDashboard: React.FC = () => {
           <h1 className="text-3xl font-semibold text-[#363f49]">Admin Dashboard</h1>
           <p className="text-gray-600">
             {activeTab === 'users' ? 'Manage all users across the platform' :
-             activeTab === 'analytics' ? 'Platform-wide analytics and insights' :
-             'Manage content and communities'}
+              activeTab === 'analytics' ? 'Platform-wide analytics and insights' :
+                'Manage content and communities'}
           </p>
         </div>
         {(activeTab === 'content' || activeTab === 'communities') && (
@@ -132,41 +152,37 @@ export const AdminDashboard: React.FC = () => {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('content')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'content'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'content'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             Content Management
           </button>
           <button
             onClick={() => setActiveTab('communities')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'communities'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'communities'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             Communities
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'users'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'users'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             User Management
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'analytics'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'analytics'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             Analytics
           </button>
@@ -175,45 +191,45 @@ export const AdminDashboard: React.FC = () => {
 
       {(activeTab === 'content' || activeTab === 'communities') && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600">Total Content</p>
-              <p className="text-3xl font-bold text-[#363f49]">{stats.totalContent}</p>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600">Total Content</p>
+                <p className="text-3xl font-bold text-[#363f49]">{stats.totalContent}</p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-brand-primary" />
             </div>
-            <BarChart3 className="h-8 w-8 text-brand-primary" />
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600">Videos</p>
-              <p className="text-3xl font-bold text-blue-600">{stats.videos}</p>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600">Videos</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.videos}</p>
+              </div>
+              <Upload className="h-8 w-8 text-blue-600" />
             </div>
-            <Upload className="h-8 w-8 text-blue-600" />
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600">PDFs</p>
-              <p className="text-3xl font-bold text-brand-primary">{stats.pdfs}</p>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600">PDFs</p>
+                <p className="text-3xl font-bold text-brand-primary">{stats.pdfs}</p>
+              </div>
+              <FileText className="h-8 w-8 text-brand-primary" />
             </div>
-            <FileText className="h-8 w-8 text-brand-primary" />
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600">Blog Posts</p>
-              <p className="text-3xl font-bold text-green-600">{stats.blogs}</p>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600">Blog Posts</p>
+                <p className="text-3xl font-bold text-green-600">{stats.blogs}</p>
+              </div>
+              <Upload className="h-8 w-8 text-green-600" />
             </div>
-            <Upload className="h-8 w-8 text-green-600" />
           </div>
-        </div>
         </div>
       )}
 
@@ -277,24 +293,22 @@ export const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                          item.type === 'video'
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${item.type === 'video'
                             ? 'bg-blue-100 text-blue-700'
                             : item.type === 'pdf'
-                            ? 'bg-brand-beige-light text-brand-secondary'
-                            : 'bg-green-100 text-green-700'
-                        }`}
+                              ? 'bg-brand-beige-light text-brand-secondary'
+                              : 'bg-green-100 text-green-700'
+                          }`}
                       >
                         {item.type.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                          item.status === 'published'
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${item.status === 'published'
                             ? 'bg-green-100 text-green-700'
                             : 'bg-yellow-100 text-yellow-700'
-                        }`}
+                          }`}
                       >
                         {(item.status || 'published').toUpperCase()}
                       </span>
@@ -377,22 +391,20 @@ export const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                          community.membership_tier === 'gold'
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.membership_tier === 'gold'
                             ? 'bg-yellow-100 text-yellow-700'
                             : 'bg-gray-100 text-gray-700'
-                        }`}
+                          }`}
                       >
                         {community.membership_tier.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                          community.is_active
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.is_active
                             ? 'bg-green-100 text-green-700'
                             : 'bg-red-100 text-red-700'
-                        }`}
+                          }`}
                       >
                         {community.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </span>
@@ -493,6 +505,26 @@ export const AdminDashboard: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Membership Tier
+                  </label>
+                  <select
+                    value={communityFormData.membership_tier}
+                    onChange={(e) =>
+                      setCommunityFormData({
+                        ...communityFormData,
+                        membership_tier: e.target.value as 'silver' | 'gold',
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    required
+                  >
+                    <option value="silver">Silver</option>
+                    <option value="gold">Gold</option>
+                  </select>
                 </div>
 
                 <div className="flex items-center">
