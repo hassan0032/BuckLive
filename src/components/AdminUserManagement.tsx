@@ -1,11 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Search, Mail, User as UserIcon, Calendar, Trash2, Building2, Shield } from 'lucide-react';
+import { Building2, Calendar, Edit, Mail, Plus, Search, Shield, Trash2, User as UserIcon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
+import { PAYMENT_TIER, ROLE, Role } from '../types';
+import { cn } from '../utils/helper';
+
+interface FormData {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  community_id: string;
+  role: Role;
+}
+
+const initialFormData: FormData = {
+  email: '',
+  password: '',
+  first_name: '',
+  last_name: '',
+  community_id: '',
+  role: ROLE.MEMBER,
+};
 
 export const AdminUserManagement: React.FC = () => {
   const [communityFilter, setCommunityFilter] = useState<string>('');
-  const [roleFilter, setRoleFilter] = useState<'member' | 'admin' | 'community_manager' | ''>('');
+  const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
@@ -27,24 +47,17 @@ export const AdminUserManagement: React.FC = () => {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    first_name: '',
-    last_name: '',
-    community_id: '',
-    role: 'member' as 'member' | 'admin' | 'community_manager',
-  });
+  const [formData, setFormData] = useState<FormData>(initialFormData);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const stats = {
     totalUsers: users.length,
-    admins: users.filter(u => u.role === 'admin').length,
-    communityManagers: users.filter(u => u.role === 'community_manager').length,
-    members: users.filter(u => u.role === 'member').length,
-    goldTier: users.filter(u => u.payment_tier === 'gold').length,
-    silverTier: users.filter(u => u.payment_tier === 'silver').length,
+    admins: users.filter(u => u.role === ROLE.ADMIN).length,
+    communityManagers: users.filter(u => u.role === ROLE.COMMUNITY_MANAGER).length,
+    members: users.filter(u => u.role === ROLE.MEMBER).length,
+    goldTier: users.filter(u => u.payment_tier === PAYMENT_TIER.GOLD).length,
+    silverTier: users.filter(u => u.payment_tier === PAYMENT_TIER.SILVER).length,
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,7 +105,7 @@ export const AdminUserManagement: React.FC = () => {
         first_name: '',
         last_name: '',
         community_id: '',
-        role: 'member',
+        role: ROLE.MEMBER,
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -155,7 +168,7 @@ export const AdminUserManagement: React.FC = () => {
               first_name: '',
               last_name: '',
               community_id: '',
-              role: 'member',
+              role: ROLE.MEMBER,
             });
             setShowCreateForm(true);
           }}
@@ -220,13 +233,13 @@ export const AdminUserManagement: React.FC = () => {
             </select>
             <select
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as any)}
+              onChange={(e) => setRoleFilter(e.target.value as Role)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="community_manager">Community Manager</option>
-              <option value="member">Member</option>
+              <option value={ROLE.ADMIN}>Admin</option>
+              <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
+              <option value={ROLE.MEMBER}>Member</option>
             </select>
           </div>
         </div>
@@ -263,18 +276,14 @@ export const AdminUserManagement: React.FC = () => {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <div
-                        className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          user.role === 'admin'
-                            ? 'bg-red-100'
-                            : user.role === 'community_manager'
-                            ? 'bg-blue-100'
-                            : 'bg-brand-beige-light'
-                        }`}
-                      >
-                        {user.role === 'admin' ? (
+                      <div className={cn(
+                        'h-10 w-10 rounded-full flex items-center justify-center bg-brand-beige-light',
+                        { 'bg-red-100': user.role === ROLE.ADMIN },
+                        { 'bg-blue-100': user.role === ROLE.COMMUNITY_MANAGER },
+                      )}>
+                        {user.role === ROLE.ADMIN ? (
                           <Shield className="h-5 w-5 text-red-600" />
-                        ) : user.role === 'community_manager' ? (
+                        ) : user.role === ROLE.COMMUNITY_MANAGER ? (
                           <Building2 className="h-5 w-5 text-blue-600" />
                         ) : (
                           <UserIcon className="h-5 w-5 text-brand-primary" />
@@ -294,16 +303,11 @@ export const AdminUserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                        user.role === 'admin'
-                          ? 'bg-red-100 text-red-700'
-                          : user.role === 'community_manager'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}
-                    >
-                      {user.role === 'community_manager' ? 'MANAGER' : user.role.toUpperCase()}
+                    <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700',
+                      { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },
+                      { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER }
+                    )}>
+                      {user.role === ROLE.COMMUNITY_MANAGER ? 'MANAGER' : user.role.toUpperCase()}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -314,11 +318,9 @@ export const AdminUserManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     {user.payment_tier ? (
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                          user.payment_tier === 'gold'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
+                        className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700',
+                          { 'bg-yellow-100 text-yellow-700': user.payment_tier === PAYMENT_TIER.GOLD }
+                        )}
                       >
                         {user.payment_tier.toUpperCase()}
                       </span>
@@ -463,15 +465,15 @@ export const AdminUserManagement: React.FC = () => {
                   </label>
                   <select
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     required
                   >
-                    <option value="member">Member</option>
-                    <option value="community_manager">Community Manager</option>
+                    <option value={ROLE.MEMBER}>Member</option>
+                    <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
                     <option value="admin">Admin</option>
                   </select>
-                  {formData.role === 'admin' && (
+                  {formData.role === ROLE.ADMIN && (
                     <p className="mt-1 text-xs text-amber-600">
                       Warning: Admin users have full system access
                     </p>
