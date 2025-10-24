@@ -1,14 +1,38 @@
+export const ROLE = {
+  MEMBER: 'member',
+  ADMIN: 'admin',
+  COMMUNITY_MANAGER: 'community_manager',
+} as const;
+
+export const REGISTRATION_TYPE = {
+  ACCESS_CODE: 'access_code',
+  SELF_REGISTERED: 'self_registered',
+} as const;
+
+export const SUBSCRIPTION_STATUS = {
+  ACTIVE: 'active',
+  CANCELED: 'canceled',
+  PAST_DUE: 'past_due',
+  TRIALING: 'trialing',
+  INCOMPLETE: 'incomplete',
+} as const;
+
+export const PAYMENT_TIER = {
+  SILVER: 'silver',
+  GOLD: 'gold',
+} as const;
+
 export interface User {
   id: string;
   email: string;
-  role: 'member' | 'admin' | 'community_manager';
+  role: typeof ROLE[keyof typeof ROLE];
   created_at: string;
   community_id?: string;
-  registration_type?: 'access_code' | 'self_registered';
+  registration_type?: typeof REGISTRATION_TYPE[keyof typeof REGISTRATION_TYPE];
   stripe_customer_id?: string;
   subscription_id?: string;
-  subscription_status?: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete';
-  payment_tier?: 'silver' | 'gold';
+  subscription_status?: typeof SUBSCRIPTION_STATUS[keyof typeof SUBSCRIPTION_STATUS];
+  payment_tier?: typeof PAYMENT_TIER[keyof typeof PAYMENT_TIER];
   subscription_started_at?: string;
   subscription_ends_at?: string;
   profile?: {
