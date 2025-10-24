@@ -1,22 +1,20 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
-import { Auth } from './components/Auth';
-import { ResetPassword } from './components/ResetPassword';
-import { Layout } from './components/Layout';
-import { ContentLibrary } from './components/ContentLibrary';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AdminDashboard } from './components/AdminDashboard';
+import { Auth } from './components/Auth';
 import { CommunityManagerDashboard } from './components/CommunityManagerDashboard';
-import { UserProfile } from './components/UserProfile';
 import { ContentDetail } from './components/ContentDetail';
+import { ContentLibrary } from './components/ContentLibrary';
+import { Layout } from './components/Layout';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { ResetPassword } from './components/ResetPassword';
+import { UserProfile } from './components/UserProfile';
+import { useAuth } from './hooks/useAuth';
 
 function App() {
   const { user, loading, isAdmin, isCommunityManager } = useAuth();
 
   // Check if we're on the reset password page
-  const isResetPasswordPage = window.location.pathname === '/reset-password' ||
-                              window.location.hash.includes('type=recovery');
+  const isResetPasswordPage = window.location.pathname === '/reset-password' || window.location.hash.includes('type=recovery');
 
   if (loading) {
     return (
