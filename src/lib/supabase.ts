@@ -1,10 +1,36 @@
 import { createClient, PostgrestError } from '@supabase/supabase-js';
 import { ROLE } from '../types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Function to create Supabase client with proper error handling
+const createSupabaseClient = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('❌ Missing environment variables:');
+    console.error('  URL:', supabaseUrl);
+    console.error('  Key:', supabaseAnonKey);
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  console.log('✅ Environment variables loaded successfully');
+
+  try {
+    console.log('🔍 Creating Supabase client with:');
+    console.log('  URL:', supabaseUrl);
+    console.log('  Key (first 20 chars):', supabaseAnonKey?.substring(0, 20) + '...');
+
+    const client = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('✅ Supabase client created successfully');
+    return client;
+  } catch (error) {
+    console.error('❌ Error creating Supabase client:', error);
+    console.error('❌ Error details:', error);
+    throw error;
+  }
+};
+
+export const supabase = createSupabaseClient();
 
 interface ValidateAccessCodeResponse {
   communityId: string;
@@ -69,7 +95,7 @@ export const getThumbnailUrl = (content: { thumbnail_url?: string; storage_thumb
   if (content.thumbnail_url) {
     return content.thumbnail_url;
   }
-  
+
   // Otherwise, generate public URL from storage path
   if (content.storage_thumbnail_path) {
     const { data } = supabase.storage
@@ -77,7 +103,7 @@ export const getThumbnailUrl = (content: { thumbnail_url?: string; storage_thumb
       .getPublicUrl(content.storage_thumbnail_path);
     return data.publicUrl;
   }
-  
+
   return '';
 };
 
@@ -87,7 +113,7 @@ export const getPDFUrl = (content: { url?: string; storage_pdf_path?: string }):
   if (content.url) {
     return content.url;
   }
-  
+
   // Otherwise, generate public URL from storage path
   if (content.storage_pdf_path) {
     const { data } = supabase.storage
@@ -95,6 +121,6 @@ export const getPDFUrl = (content: { url?: string; storage_pdf_path?: string }):
       .getPublicUrl(content.storage_pdf_path);
     return data.publicUrl;
   }
-  
+
   return '';
 };

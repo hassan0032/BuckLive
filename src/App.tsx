@@ -5,6 +5,7 @@ import { CommunityManagerDashboard } from './components/CommunityManagerDashboar
 import { ContentDetail } from './components/ContentDetail';
 import { ContentLibrary } from './components/ContentLibrary';
 import { Layout } from './components/Layout';
+import { PaymentSelection } from './components/PaymentSelection';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { ResetPassword } from './components/ResetPassword';
 import { UserProfile } from './components/UserProfile';
@@ -31,6 +32,23 @@ function App() {
 
   if (!user) {
     return <Auth />;
+  }
+
+  // Show payment selection for users who need to complete payment
+  if (user.needsPayment) {
+    return (
+      <PaymentSelection
+        email={user.email}
+        firstName={user.profile?.first_name || ''}
+        lastName={user.profile?.last_name || ''}
+        onBack={() => {
+          // Sign out the user so they can start fresh
+          import('./lib/supabase').then(({ supabase }) => {
+            supabase.auth.signOut();
+          });
+        }}
+      />
+    );
   }
 
   return (

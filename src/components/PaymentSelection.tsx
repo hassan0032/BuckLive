@@ -1,5 +1,5 @@
+import { ArrowLeft, Check, CreditCard } from 'lucide-react';
 import React, { useState } from 'react';
-import { Check, CreditCard, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface PaymentSelectionProps {
@@ -126,11 +126,10 @@ export const PaymentSelection: React.FC<PaymentSelectionProps> = ({
             <div
               key={tier.value}
               onClick={() => setSelectedTier(tier.value)}
-              className={`relative cursor-pointer rounded-xl border-2 p-6 transition-all ${
-                selectedTier === tier.value
+              className={`relative cursor-pointer rounded-xl border-2 p-6 transition-all ${selectedTier === tier.value
                   ? 'border-brand-primary bg-brand-beige-light shadow-lg'
                   : 'border-gray-200 hover:border-gray-300'
-              }`}
+                }`}
             >
               {tier.popular && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -143,11 +142,10 @@ export const PaymentSelection: React.FC<PaymentSelectionProps> = ({
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-2xl font-bold text-gray-900">{tier.name}</h3>
                 <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    selectedTier === tier.value
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedTier === tier.value
                       ? 'border-brand-primary bg-brand-primary'
                       : 'border-gray-300'
-                  }`}
+                    }`}
                 >
                   {selectedTier === tier.value && (
                     <Check className="h-4 w-4 text-white" />

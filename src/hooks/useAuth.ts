@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { User } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as AppUser } from '../types';
 
@@ -50,6 +49,7 @@ export const useAuth = () => {
             payment_tier: profile?.payment_tier,
             subscription_started_at: profile?.subscription_started_at,
             subscription_ends_at: profile?.subscription_ends_at,
+            needsPayment: profile?.registration_type === 'self_registered' && !profile?.subscription_id,
             profile: {
               first_name: profile?.first_name || session.user.user_metadata?.first_name || '',
               last_name: profile?.last_name || session.user.user_metadata?.last_name || '',
@@ -79,7 +79,7 @@ export const useAuth = () => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         (async () => {
           try {
             if (session?.user) {
@@ -115,6 +115,7 @@ export const useAuth = () => {
                 payment_tier: profile?.payment_tier,
                 subscription_started_at: profile?.subscription_started_at,
                 subscription_ends_at: profile?.subscription_ends_at,
+                needsPayment: profile?.registration_type === 'self_registered' && !profile?.subscription_id,
                 profile: {
                   first_name: profile?.first_name || session.user.user_metadata?.first_name || '',
                   last_name: profile?.last_name || session.user.user_metadata?.last_name || '',

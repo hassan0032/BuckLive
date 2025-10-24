@@ -17,19 +17,54 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+    
+    console.log("🔍 Stripe Environment Check:");
+    console.log("  STRIPE_SECRET_KEY exists:", !!stripeSecretKey);
+    console.log("  STRIPE_SECRET_KEY (first 10 chars):", stripeSecretKey?.substring(0, 10) + "...");
+    
+    if (!stripeSecretKey) {
+      throw new Error("Missing STRIPE_SECRET_KEY environment variable in Edge Function");
+    }
+
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2024-10-28.acacia",
     });
+    
+    console.log("✅ Stripe client created successfully");
+
+    // In Supabase Edge Functions, these should be available automatically
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    console.log("🔍 Edge Function Environment Check:");
+    console.log("  SUPABASE_URL:", supabaseUrl);
+    console.log("  SUPABASE_ANON_KEY exists:", !!supabaseAnonKey);
+    console.log("  STRIPE_SECRET_KEY exists:", !!Deno.env.get("STRIPE_SECRET_KEY"));
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("❌ Missing environment variables:");
+      console.error("  SUPABASE_URL:", supabaseUrl);
+      console.error("  SUPABASE_ANON_KEY:", supabaseAnonKey);
+      throw new Error("Missing Supabase environment variables in Edge Function");
+    }
+
+    console.log("🔍 Creating Supabase client in Edge Function:");
+    console.log("  URL:", supabaseUrl);
+    console.log("  Key (first 20 chars):", supabaseAnonKey?.substring(0, 20) + "...");
+    console.log("  Authorization header:", req.headers.get("Authorization"));
 
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      supabaseUrl,
+      supabaseAnonKey,
       {
         global: {
           headers: { Authorization: req.headers.get("Authorization")! },
         },
       }
     );
+    
+    console.log("✅ Supabase client created successfully in Edge Function");
 
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     

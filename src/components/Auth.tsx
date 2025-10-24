@@ -1,15 +1,13 @@
+import { ArrowLeft, CreditCard, Eye, EyeOff, Key, Lock, Mail, User } from 'lucide-react';
 import React, { useState } from 'react';
-import { signUp, signIn, validateAccessCode } from '../lib/supabase';
-import { Eye, EyeOff, User, Mail, Lock, ArrowLeft, CreditCard, Key } from 'lucide-react';
+import { signIn, signUp, validateAccessCode } from '../lib/supabase';
+import { REGISTRATION_TYPE, RegistrationType } from '../types';
 import { ForgotPassword } from './ForgotPassword';
-import { PaymentSelection } from './PaymentSelection';
-
-type RegistrationType = 'access_code' | 'payment' | null;
 
 export const Auth: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [registrationType, setRegistrationType] = useState<RegistrationType>(null);
+  const [registrationType, setRegistrationType] = useState<RegistrationType | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -26,7 +24,7 @@ export const Auth: React.FC = () => {
 
     try {
       if (isSignUp) {
-        if (registrationType === 'access_code') {
+        if (registrationType === REGISTRATION_TYPE.ACCESS_CODE) {
           const { data, error: codeError } = await validateAccessCode(accessCode);
 
           if (codeError || !data) {
@@ -37,7 +35,7 @@ export const Auth: React.FC = () => {
 
           const { error } = await signUp(email, password, firstName, lastName, communityId, is_admin);
           if (error) throw error;
-        } else if (registrationType === 'payment') {
+        } else if (registrationType === REGISTRATION_TYPE.SELF_REGISTERED) {
           const { error } = await signUp(email, password, firstName, lastName, null);
           if (error) throw error;
         }
@@ -54,17 +52,6 @@ export const Auth: React.FC = () => {
 
   if (showForgotPassword) {
     return <ForgotPassword onBack={() => setShowForgotPassword(false)} />;
-  }
-
-  if (isSignUp && registrationType === 'payment' && email && password && firstName && lastName) {
-    return (
-      <PaymentSelection
-        email={email}
-        firstName={firstName}
-        lastName={lastName}
-        onBack={() => setRegistrationType(null)}
-      />
-    );
   }
 
   if (isSignUp && !registrationType) {
@@ -90,7 +77,7 @@ export const Auth: React.FC = () => {
 
           <div className="grid md:grid-cols-2 gap-6">
             <button
-              onClick={() => setRegistrationType('access_code')}
+              onClick={() => setRegistrationType(REGISTRATION_TYPE.ACCESS_CODE)}
               className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
             >
               <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
@@ -105,7 +92,7 @@ export const Auth: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setRegistrationType('payment')}
+              onClick={() => setRegistrationType(REGISTRATION_TYPE.SELF_REGISTERED)}
               className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
             >
               <div className="absolute -top-3 right-6">
@@ -154,7 +141,7 @@ export const Auth: React.FC = () => {
           </h2>
           <p className="text-gray-600">
             {isSignUp
-              ? registrationType === 'access_code'
+              ? registrationType === REGISTRATION_TYPE.ACCESS_CODE
                 ? 'Enter your details and access code'
                 : 'Create your account to continue'
               : 'Sign in to access your library.'
@@ -196,7 +183,7 @@ export const Auth: React.FC = () => {
             </div>
           )}
 
-          {isSignUp && registrationType === 'access_code' && (
+          {isSignUp && registrationType === REGISTRATION_TYPE.ACCESS_CODE && (
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
@@ -249,7 +236,7 @@ export const Auth: React.FC = () => {
           >
             {loading
               ? 'Please wait...'
-              : isSignUp && registrationType === 'payment'
+              : isSignUp && registrationType === REGISTRATION_TYPE.SELF_REGISTERED
                 ? 'Continue to Payment'
                 : isSignUp
                   ? 'Create Account'
