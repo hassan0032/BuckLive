@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { getThumbnailUrl } from '../lib/supabase';
@@ -18,10 +18,13 @@ export const ContentLibrary: React.FC = () => {
   const [selectedAutocompleteIndex, setSelectedAutocompleteIndex] = useState(-1);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
 
-  const categories = useMemo(() => {
-    const cats = new Set(content.map(item => item.category));
-    return Array.from(cats);
+  useEffect(() => {
+    if (content && content.length > 0 && allCategories.length === 0) {
+      const cats = Array.from(new Set(content.map(item => item.category)));
+      setAllCategories(cats);
+    }
   }, [content]);
 
   useEffect(() => {
@@ -275,9 +278,8 @@ export const ContentLibrary: React.FC = () => {
                   <button
                     key={`${result.type}-${result.value}-${index}`}
                     onClick={() => handleAutocompleteSelect(result)}
-                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${
-                      index === selectedAutocompleteIndex ? 'bg-brand-primary bg-opacity-10' : ''
-                    }`}
+                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${index === selectedAutocompleteIndex ? 'bg-brand-primary bg-opacity-10' : ''
+                      }`}
                   >
                     {result.type === 'title' && (
                       <>
@@ -330,8 +332,8 @@ export const ContentLibrary: React.FC = () => {
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
+              {allCategories.map((category) => (
+               <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </div>
@@ -366,12 +368,12 @@ export const ContentLibrary: React.FC = () => {
                     <ContentIcon className="h-16 w-16 text-gray-400" />
                   </div>
                 )}
-                
+
                 {/* Type Badge */}
                 <div className={`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`}>
                   {item.type.toUpperCase()}
                 </div>
-                
+
                 {/* Tier Badge */}
                 {item.required_tier === 'gold' && (
                   <div className="absolute top-3 left-20 bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-medium">
@@ -416,11 +418,10 @@ export const ContentLibrary: React.FC = () => {
                           e.stopPropagation();
                           handleTagClick(tag);
                         }}
-                        className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${
-                          selectedTags.includes(tag)
+                        className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${selectedTags.includes(tag)
                             ? 'bg-brand-primary text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         <Tag className="h-3 w-3 mr-1" />
                         {tag}
