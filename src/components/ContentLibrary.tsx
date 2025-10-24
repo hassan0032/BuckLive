@@ -275,9 +275,8 @@ export const ContentLibrary: React.FC = () => {
                   <button
                     key={`${result.type}-${result.value}-${index}`}
                     onClick={() => handleAutocompleteSelect(result)}
-                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${
-                      index === selectedAutocompleteIndex ? 'bg-brand-primary bg-opacity-10' : ''
-                    }`}
+                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${index === selectedAutocompleteIndex ? 'bg-brand-primary bg-opacity-10' : ''
+                      }`}
                   >
                     {result.type === 'title' && (
                       <>
@@ -366,12 +365,12 @@ export const ContentLibrary: React.FC = () => {
                     <ContentIcon className="h-16 w-16 text-gray-400" />
                   </div>
                 )}
-                
+
                 {/* Type Badge */}
                 <div className={`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`}>
                   {item.type.toUpperCase()}
                 </div>
-                
+
                 {/* Tier Badge */}
                 {item.required_tier === 'gold' && (
                   <div className="absolute top-3 left-20 bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-medium">
@@ -380,21 +379,21 @@ export const ContentLibrary: React.FC = () => {
                 )}
 
                 {/* Duration/Size Badge */}
-                {((item.type === 'video' && item.duration && item.duration > 0) || (item.file_size && item.file_size > 0)) && (
+                {((item.type === 'video' && (item.duration ?? 0) > 0) || ((item.file_size ?? 0) > 0)) ? (
                   <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded-md text-xs">
-                    {item.type === 'video' && item.duration && item.duration > 0 ? (
+                    {item.type === 'video' && (item.duration ?? 0) > 0 ? (
                       <div className="flex items-center space-x-1">
                         <Clock className="h-3 w-3" />
-                        <span>{formatDuration(item.duration)}</span>
+                        <span>{formatDuration(item.duration ?? 0)}</span>
                       </div>
-                    ) : item.file_size && item.file_size > 0 ? (
+                    ) : (item.file_size ?? 0) > 0 ? (
                       <div className="flex items-center space-x-1">
                         <Download className="h-3 w-3" />
                         <span>{formatFileSize(item.file_size)}</span>
                       </div>
                     ) : null}
                   </div>
-                )}
+                ) : null}
               </div>
 
               {/* Content */}
@@ -416,11 +415,10 @@ export const ContentLibrary: React.FC = () => {
                           e.stopPropagation();
                           handleTagClick(tag);
                         }}
-                        className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${
-                          selectedTags.includes(tag)
-                            ? 'bg-brand-primary text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                        className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${selectedTags.includes(tag)
+                          ? 'bg-brand-primary text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
                       >
                         <Tag className="h-3 w-3 mr-1" />
                         {tag}
