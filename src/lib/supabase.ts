@@ -1,5 +1,5 @@
 import { createClient, PostgrestError } from '@supabase/supabase-js';
-import { Role } from '../types';
+import { ROLE } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -24,7 +24,7 @@ export const signUp = async (email: string, password: string, firstName: string,
       data: {
         first_name: firstName,
         last_name: lastName,
-        role: is_admin ? Role.ADMIN : Role.MEMBER,
+        role: is_admin ? ROLE.ADMIN : ROLE.MEMBER,
         community_id: communityId,
       },
     },
