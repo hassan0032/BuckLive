@@ -27,7 +27,7 @@ export const CommunityManagerDashboard: React.FC = () => {
 
   if (communitiesLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
@@ -35,7 +35,8 @@ export const CommunityManagerDashboard: React.FC = () => {
 
   if (communities.length === 0) {
     return (
-      <div className="text-center py-12">
+      <div className="flex flex-col items-center justify-center text-center min-h-screen">
+
         <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-[#363f49] mb-2">No Communities Yet</h2>
         <p className="text-gray-600 mb-6">Create your first community to get started managing users and content.</p>

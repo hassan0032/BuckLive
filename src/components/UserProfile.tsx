@@ -6,6 +6,14 @@ export const UserProfile: React.FC = () => {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
 
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+      </div>
+    );
+  }
+
   if (!user) return null;
 
   const isIndividualMember = user.registration_type === 'self_registered';
@@ -103,9 +111,8 @@ export const UserProfile: React.FC = () => {
               <User className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm font-medium text-gray-700">Account Status</p>
-                <p className={`text-sm font-medium ${
-                  subscriptionActive || user.profile?.community ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <p className={`text-sm font-medium ${subscriptionActive || user.profile?.community ? 'text-green-600' : 'text-red-600'
+                  }`}>
                   {subscriptionActive || user.profile?.community ? 'Active' : 'Inactive'}
                 </p>
               </div>
