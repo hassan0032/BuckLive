@@ -20,7 +20,7 @@ export const AdminUserManagement: React.FC = () => {
   const { users, loading, createUser, updateUser, deleteUser } = useAllUsers({
     communityId: communityFilter || undefined,
     role: roleFilter || undefined,
-    searchTerm: debouncedSearch || undefined, // ✅ Use debounced search term
+    searchTerm: debouncedSearch || undefined,
   });
 
   const { communities } = useCommunities();
