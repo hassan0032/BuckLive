@@ -19,10 +19,13 @@ export const ContentLibrary: React.FC = () => {
   const [selectedAutocompleteIndex, setSelectedAutocompleteIndex] = useState(-1);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
 
-  const categories = useMemo(() => {
-    const cats = new Set(content.map(item => item.category));
-    return Array.from(cats);
+  useEffect(() => {
+    if (content && content.length > 0 && allCategories.length === 0) {
+      const cats = Array.from(new Set(content.map(item => item.category)));
+      setAllCategories(cats);
+    }
   }, [content]);
 
   useEffect(() => {
@@ -330,8 +333,8 @@ export const ContentLibrary: React.FC = () => {
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
+              {allCategories.map((category) => (
+               <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </div>
