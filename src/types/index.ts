@@ -1,7 +1,13 @@
+export const Role = {
+  MEMBER: 'member',
+  ADMIN: 'admin',
+  COMMUNITY_MANAGER: 'community_manager',
+} as const;
+
 export interface User {
   id: string;
   email: string;
-  role: 'member' | 'admin' | 'community_manager';
+  role: typeof Role[keyof typeof Role];
   created_at: string;
   community_id?: string;
   registration_type?: 'access_code' | 'self_registered';
