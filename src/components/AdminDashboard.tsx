@@ -2,7 +2,7 @@ import { BarChart3, Edit, FileText, Image as ImageIcon, Plus, Trash2, Upload } f
 import React, { useState } from 'react';
 import { useCommunities } from '../hooks/useCommunities';
 import { useContent } from '../hooks/useContent';
-import { Community, Content } from '../types';
+import { Community, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier } from '../types';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import { AdminUserManagement } from './AdminUserManagement';
 import { EnhancedContentForm } from './EnhancedContentForm';
@@ -29,10 +29,10 @@ export const AdminDashboard: React.FC = () => {
     description: '',
     access_code: '',
     is_active: true,
-    membership_tier: 'silver',
+    membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
   });
 
-  const handleContentSubmit = async (contentData: any, isDraft: boolean) => {
+  const handleContentSubmit = async (contentData: Content, isDraft: boolean) => {
     try {
       let result;
       if (editingContent) {
@@ -48,11 +48,11 @@ export const AdminDashboard: React.FC = () => {
 
       setShowForm(false);
       setEditingContent(null);
-      
+
       // Show success message
       const action = editingContent ? 'updated' : 'created';
-      const status = isDraft ? 'draft' : 'published';
-      alert(`Content ${action} successfully as ${status}!`);
+      const status = isDraft ? CONTENT_STATUS.DRAFT : CONTENT_STATUS.PUBLISHED;
+      alert(`Content ${action} successfully as ${status.toUpperCase()}!`);
     } catch (error) {
       console.error('Error submitting content:', error);
       alert(`Failed to save content: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -75,7 +75,7 @@ export const AdminDashboard: React.FC = () => {
       description: '',
       access_code: '',
       is_active: true,
-      membership_tier: 'silver',
+      membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
     });
   };
 
@@ -153,8 +153,8 @@ export const AdminDashboard: React.FC = () => {
           <button
             onClick={() => setActiveTab('content')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'content'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
           >
             Content Management
@@ -162,8 +162,8 @@ export const AdminDashboard: React.FC = () => {
           <button
             onClick={() => setActiveTab('communities')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'communities'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
           >
             Communities
@@ -171,8 +171,8 @@ export const AdminDashboard: React.FC = () => {
           <button
             onClick={() => setActiveTab('users')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'users'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
           >
             User Management
@@ -180,8 +180,8 @@ export const AdminDashboard: React.FC = () => {
           <button
             onClick={() => setActiveTab('analytics')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'analytics'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
           >
             Analytics
@@ -233,7 +233,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'content' ? (
+      {activeTab === 'content' && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-[#363f49]">Content Management</h2>
@@ -294,10 +294,10 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${item.type === 'video'
-                            ? 'bg-blue-100 text-blue-700'
-                            : item.type === 'pdf'
-                              ? 'bg-brand-beige-light text-brand-secondary'
-                              : 'bg-green-100 text-green-700'
+                          ? 'bg-blue-100 text-blue-700'
+                          : item.type === 'pdf'
+                            ? 'bg-brand-beige-light text-brand-secondary'
+                            : 'bg-green-100 text-green-700'
                           }`}
                       >
                         {item.type.toUpperCase()}
@@ -306,8 +306,8 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${item.status === 'published'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'
                           }`}
                       >
                         {(item.status || 'published').toUpperCase()}
@@ -338,7 +338,9 @@ export const AdminDashboard: React.FC = () => {
             </table>
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'communities' && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-[#363f49]">
@@ -392,8 +394,8 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.membership_tier === 'gold'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-700'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-gray-100 text-gray-700'
                           }`}
                       >
                         {community.membership_tier.toUpperCase()}
@@ -402,8 +404,8 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.is_active
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
                           }`}
                       >
                         {community.is_active ? 'ACTIVE' : 'INACTIVE'}
@@ -516,14 +518,14 @@ export const AdminDashboard: React.FC = () => {
                     onChange={(e) =>
                       setCommunityFormData({
                         ...communityFormData,
-                        membership_tier: e.target.value as 'silver' | 'gold',
+                        membership_tier: e.target.value as PaymentTier,
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     required
                   >
-                    <option value="silver">Silver</option>
-                    <option value="gold">Gold</option>
+                    <option value={PAYMENT_TIER.SILVER}>{PAYMENT_TIER.SILVER.toUpperCase()}</option>
+                    <option value={PAYMENT_TIER.GOLD}>{PAYMENT_TIER.GOLD.toUpperCase()}</option>
                   </select>
                 </div>
 
