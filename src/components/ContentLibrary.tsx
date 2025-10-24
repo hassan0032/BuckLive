@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { BookOpen, Clock, Download, FileText, Loader2, Search, Tag, Video, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { getThumbnailUrl } from '../lib/supabase';
-import { Content } from '../types';
-import { Search, Video, FileText, BookOpen, Clock, Download, Tag, X, Loader2 } from 'lucide-react';
+import { Content, CONTENT_TYPE, ContentType, PAYMENT_TIER } from '../types';
+import { cn } from '../utils/helper';
 
 export const ContentLibrary: React.FC = () => {
   const { content, loading, searching, searchContent } = useContent();
@@ -194,20 +195,20 @@ export const ContentLibrary: React.FC = () => {
     return `${mb.toFixed(1)} MB`;
   };
 
-  const getContentIcon = (type: string) => {
+  const getContentIcon = (type: ContentType) => {
     switch (type) {
-      case 'video': return Video;
-      case 'pdf': return FileText;
-      case 'blog': return BookOpen;
+      case CONTENT_TYPE.VIDEO: return Video;
+      case CONTENT_TYPE.PDF: return FileText;
+      case CONTENT_TYPE.BLOG: return BookOpen;
       default: return FileText;
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type: ContentType) => {
     switch (type) {
-      case 'video': return 'bg-blue-100 text-blue-700';
-      case 'pdf': return 'bg-brand-beige-light text-brand-secondary';
-      case 'blog': return 'bg-green-100 text-green-700';
+      case CONTENT_TYPE.VIDEO: return 'bg-blue-100 text-blue-700';
+      case CONTENT_TYPE.PDF: return 'bg-brand-beige-light text-brand-secondary';
+      case CONTENT_TYPE.BLOG: return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -367,14 +368,14 @@ export const ContentLibrary: React.FC = () => {
                 )}
 
                 {/* Type Badge */}
-                <div className={`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`}>
+                <div className={cn(`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`)}>
                   {item.type.toUpperCase()}
                 </div>
 
                 {/* Tier Badge */}
-                {item.required_tier === 'gold' && (
+                {item.required_tier === PAYMENT_TIER.GOLD && (
                   <div className="absolute top-3 left-20 bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-medium">
-                    GOLD
+                    {PAYMENT_TIER.GOLD.toUpperCase()}
                   </div>
                 )}
 
@@ -416,8 +417,8 @@ export const ContentLibrary: React.FC = () => {
                           handleTagClick(tag);
                         }}
                         className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${selectedTags.includes(tag)
-                          ? 'bg-brand-primary text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-brand-primary text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                       >
                         <Tag className="h-3 w-3 mr-1" />
