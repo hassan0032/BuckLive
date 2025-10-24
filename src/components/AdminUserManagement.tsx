@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Search, Mail, User as UserIcon, Calendar, Trash2, Building2, Shield } from 'lucide-react';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
@@ -7,12 +7,22 @@ export const AdminUserManagement: React.FC = () => {
   const [communityFilter, setCommunityFilter] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<'member' | 'admin' | 'community_manager' | ''>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 700);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const { users, loading, createUser, updateUser, deleteUser } = useAllUsers({
     communityId: communityFilter || undefined,
     role: roleFilter || undefined,
-    searchTerm: searchTerm || undefined,
+    searchTerm: debouncedSearch || undefined, // ✅ Use debounced search term
   });
+
   const { communities } = useCommunities();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -253,9 +263,15 @@ export const AdminUserManagement: React.FC = () => {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                        user.role === 'admin' ? 'bg-red-100' : user.role === 'community_manager' ? 'bg-blue-100' : 'bg-brand-beige-light'
-                      }`}>
+                      <div
+                        className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                          user.role === 'admin'
+                            ? 'bg-red-100'
+                            : user.role === 'community_manager'
+                            ? 'bg-blue-100'
+                            : 'bg-brand-beige-light'
+                        }`}
+                      >
                         {user.role === 'admin' ? (
                           <Shield className="h-5 w-5 text-red-600" />
                         ) : user.role === 'community_manager' ? (
@@ -278,13 +294,15 @@ export const AdminUserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                      user.role === 'admin'
-                        ? 'bg-red-100 text-red-700'
-                        : user.role === 'community_manager'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-green-100 text-green-700'
-                    }`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                        user.role === 'admin'
+                          ? 'bg-red-100 text-red-700'
+                          : user.role === 'community_manager'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}
+                    >
                       {user.role === 'community_manager' ? 'MANAGER' : user.role.toUpperCase()}
                     </span>
                   </td>
