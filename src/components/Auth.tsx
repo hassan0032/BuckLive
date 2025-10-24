@@ -27,12 +27,15 @@ export const Auth: React.FC = () => {
     try {
       if (isSignUp) {
         if (registrationType === 'access_code') {
-          const { data: communityId, error: codeError } = await validateAccessCode(accessCode);
-          if (codeError) {
-            throw new Error('Invalid access code');
+          const { data, error: codeError } = await validateAccessCode(accessCode);
+
+          if (codeError || !data) {
+            throw new Error('Invalid access code. Please check and try again.');
           }
 
-          const { error } = await signUp(email, password, firstName, lastName, communityId);
+          const { communityId, is_admin } = data;
+
+          const { error } = await signUp(email, password, firstName, lastName, communityId, is_admin);
           if (error) throw error;
         } else if (registrationType === 'payment') {
           const { error } = await signUp(email, password, firstName, lastName, null);
