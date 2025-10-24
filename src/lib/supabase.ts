@@ -1,16 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, PostgrestError } from '@supabase/supabase-js';
+import { ROLE } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+interface ValidateAccessCodeResponse {
+  communityId: string;
+  is_admin: boolean;
+}
+
 export const validateAccessCode = async (accessCode: string) => {
-  const { data, error } = await supabase.rpc('validate_access_code', { code: accessCode });
+  const { data, error }: { data: ValidateAccessCodeResponse | null; error: PostgrestError | null } = await supabase.rpc('validate_access_code', { code: accessCode });
   return { data, error };
 };
 
-export const signUp = async (email: string, password: string, firstName: string, lastName: string, communityId: string) => {
+export const signUp = async (email: string, password: string, firstName: string, lastName: string, communityId: string | null, is_admin?: boolean) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -18,6 +24,7 @@ export const signUp = async (email: string, password: string, firstName: string,
       data: {
         first_name: firstName,
         last_name: lastName,
+        role: is_admin ? ROLE.ADMIN : ROLE.MEMBER,
         community_id: communityId,
       },
     },
