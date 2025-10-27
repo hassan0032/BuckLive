@@ -10,7 +10,7 @@ import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { communities, loading: communitiesLoading } = useManagedCommunities(user?.id);
+  const { communities, loading: communitiesLoading, refetch } = useManagedCommunities(user?.id);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities'>('overview');
 
@@ -232,7 +232,7 @@ export const CommunityManagerDashboard: React.FC = () => {
       )}
 
       {activeTab === 'communities' && (
-        <CommunityManagement userId={user?.id} />
+        <CommunityManagement userId={user?.id} onCommunityUpdate={refetch} />
       )}
     </div>
   );
