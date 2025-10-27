@@ -1,4 +1,4 @@
-import { ArrowLeft, CreditCard, Eye, EyeOff, Key, Lock, Mail, User } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import React, { useState } from 'react';
 import { signIn, signUp, validateAccessCode } from '../lib/supabase';
 import { REGISTRATION_TYPE, RegistrationType } from '../types';
@@ -54,77 +54,81 @@ export const Auth: React.FC = () => {
     return <ForgotPassword onBack={() => setShowForgotPassword(false)} />;
   }
 
-  if (isSignUp && !registrationType) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8">
-          <button
-            onClick={() => setIsSignUp(false)}
-            className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-semibold"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Back to sign in
-          </button>
+  // if (isSignUp && !registrationType) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige flex items-center justify-center p-4">
+  //       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8">
+  //         <button
+  //           onClick={() => setIsSignUp(false)}
+  //           className="mb-6 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-semibold"
+  //         >
+  //           <ArrowLeft className="h-5 w-5 mr-2" />
+  //           Back to sign in
+  //         </button>
 
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-[#363f49] mb-2">
-              How would you like to join?
-            </h2>
-            <p className="text-gray-600">
-              Choose the registration method that works best for you.
-            </p>
-          </div>
+  //         <div className="text-center mb-8">
+  //           <h2 className="text-3xl font-bold text-[#363f49] mb-2">
+  //             How would you like to join?
+  //           </h2>
+  //           <p className="text-gray-600">
+  //             Choose the registration method that works best for you.
+  //           </p>
+  //         </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <button
-              onClick={() => setRegistrationType(REGISTRATION_TYPE.ACCESS_CODE)}
-              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
-            >
-              <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
-                <Key className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-xl font-bold text-[#363f49] mb-2">
-                Join with Access Code
-              </h3>
-              <p className="text-gray-600">
-                Have an access code from your organization? join an existing community with instant access.
-              </p>
-            </button>
+  //         <div className="grid md:grid-cols-2 gap-6">
+  //           <button
+  //             onClick={() => setRegistrationType(REGISTRATION_TYPE.ACCESS_CODE)}
+  //             className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
+  //           >
+  //             <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
+  //               <Key className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
+  //             </div>
+  //             <h3 className="text-xl font-bold text-[#363f49] mb-2">
+  //               Join with Access Code
+  //             </h3>
+  //             <p className="text-gray-600">
+  //               Have an access code from your organization? join an existing community with instant access.
+  //             </p>
+  //           </button>
 
-            <button
-              onClick={() => setRegistrationType(REGISTRATION_TYPE.SELF_REGISTERED)}
-              className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
-            >
-              <div className="absolute -top-3 right-6">
-                <span className="bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-medium">
-                  Popular
-                </span>
-              </div>
-              <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
-                <CreditCard className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-xl font-bold text-[#363f49] mb-2">
-                Purchase Individual Membership
-              </h3>
-              <p className="text-gray-600">
-                Get immediate access with a monthly subscription. choose between Silver or Gold tiers.
-              </p>
-              <div className="mt-4 flex items-center gap-4 text-sm">
-                <span className="text-gray-700 font-medium">Starting at $19/month</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  //           <button
+  //             onClick={() => setRegistrationType(REGISTRATION_TYPE.SELF_REGISTERED)}
+  //             className="group relative p-8 border-2 border-gray-200 rounded-xl hover:border-brand-primary hover:shadow-lg transition-all text-left"
+  //           >
+  //             <div className="absolute -top-3 right-6">
+  //               <span className="bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-medium">
+  //                 Popular
+  //               </span>
+  //             </div>
+  //             <div className="flex items-center justify-center w-12 h-12 bg-brand-beige-light rounded-lg mb-4 group-hover:bg-brand-primary transition-colors">
+  //               <CreditCard className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
+  //             </div>
+  //             <h3 className="text-xl font-bold text-[#363f49] mb-2">
+  //               Purchase Individual Membership
+  //             </h3>
+  //             <p className="text-gray-600">
+  //               Get immediate access with a monthly subscription. choose between Silver or Gold tiers.
+  //             </p>
+  //             <div className="mt-4 flex items-center gap-4 text-sm">
+  //               <span className="text-gray-700 font-medium">Starting at $19/month</span>
+  //             </div>
+  //           </button>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         {isSignUp && registrationType && (
           <button
-            onClick={() => setRegistrationType(null)}
+            onClick={() => {
+              setIsSignUp(false);
+              setRegistrationType(null);
+              setError('');
+            }}
             className="mb-4 flex items-center text-brand-primary hover:text-brand-d-blue transition-colors font-semibold"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
@@ -183,7 +187,7 @@ export const Auth: React.FC = () => {
             </div>
           )}
 
-          {isSignUp && registrationType === REGISTRATION_TYPE.ACCESS_CODE && (
+          {(isSignUp && registrationType === REGISTRATION_TYPE.ACCESS_CODE) && (
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
@@ -259,7 +263,7 @@ export const Auth: React.FC = () => {
           <button
             onClick={() => {
               setIsSignUp(!isSignUp);
-              setRegistrationType(null);
+              setRegistrationType(REGISTRATION_TYPE.ACCESS_CODE);
               setError('');
             }}
             className="text-brand-primary hover:text-brand-d-blue font-semibold"
