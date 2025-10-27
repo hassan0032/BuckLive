@@ -21,7 +21,7 @@ interface AnalyticsData {
     last_login: string;
     login_count: number;
   }>;
-  recentViews: ContentView[];
+  recentViews: Array<ContentView & { user_name?: string }>;
 }
 
 export const useCommunityAnalytics = (communityId?: string) => {
@@ -156,6 +156,14 @@ export const useCommunityAnalytics = (communityId?: string) => {
         login_count: userLoginMap.get(user.id)?.count || 0,
       })) || [];
 
+      const recentViewsWithNames = (views || []).map(view => {
+        const user = users?.find(u => u.id === view.user_id);
+        const user_name = user 
+          ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email
+          : 'Unknown User';
+        return { ...view, user_name };
+      });
+
       setAnalytics({
         totalViews,
         totalUsers,
@@ -163,7 +171,7 @@ export const useCommunityAnalytics = (communityId?: string) => {
         averageSessionDuration: Math.round(avgDuration),
         topContent,
         userActivity,
-        recentViews: views || [],
+        recentViews: recentViewsWithNames,
       });
       setError(null);
     } catch (err) {
