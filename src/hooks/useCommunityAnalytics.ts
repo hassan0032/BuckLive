@@ -21,7 +21,7 @@ interface AnalyticsData {
     last_login: string;
     login_count: number;
   }>;
-  recentViews: Array<ContentView & { user_name?: string }>;
+  recentViews: Array<ContentView & { user_name?: string; user_email?: string }>;
 }
 
 export const useCommunityAnalytics = (communityId?: string) => {
@@ -161,7 +161,8 @@ export const useCommunityAnalytics = (communityId?: string) => {
         const user_name = user 
           ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email
           : 'Unknown User';
-        return { ...view, user_name };
+        const user_email = user?.email || 'Unknown Email';
+        return { ...view, user_name, user_email };
       });
 
       setAnalytics({

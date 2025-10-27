@@ -163,8 +163,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ communit
             <tbody className="bg-white divide-y divide-gray-200">
               {analytics.recentViews.slice(0, 10).map((view) => (
                 <tr key={view.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-900">{view.user_name}</td>
-                  {/* <td className="px-4 py-3 text-sm text-gray-900">{view.user_id.slice(0, 8)}...</td> */}
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                  {view.user_name} <span className='text-xs'>({view.user_email})</span>
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-900">{view.content_id.slice(0, 8)}...</td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {Math.floor(view.view_duration / 60)}m {view.view_duration % 60}s
