@@ -12,6 +12,11 @@ interface CommunityPerformance {
   engagement_rate: number;
 }
 
+interface EnrichedContentView extends ContentView {
+  user_name?: string;
+  content_title?: string;
+}
+
 interface SystemAnalyticsData {
   totalViews: number;
   totalUsers: number;
@@ -32,7 +37,7 @@ interface SystemAnalyticsData {
     last_login: string;
     login_count: number;
   }>;
-  recentViews: ContentView[];
+  recentViews: EnrichedContentView[];
   communityPerformance: CommunityPerformance[];
   usersByRole: {
     admin: number;
@@ -68,7 +73,10 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       let usersQuery = supabase
         .from('user_profiles')
-        .select('id, email, first_name, last_name, role, payment_tier, community_id, communities(name)');
+        .select(`
+          *,
+          communities:user_profiles_community_id_fkey(*)
+        `)
 
       if (communityFilter) {
         usersQuery = usersQuery.eq('community_id', communityFilter);
@@ -123,6 +131,34 @@ export const useSystemAnalytics = (communityFilter?: string) => {
       if (viewsError) throw viewsError;
 
       const totalViews = views?.length || 0;
+
+      // Enrich recent views with user names and content titles
+      const enrichedViews: EnrichedContentView[] = [];
+      if (views && views.length > 0) {
+        const viewUserIds = [...new Set(views.map(v => v.user_id))];
+        const viewContentIds = [...new Set(views.map(v => v.content_id))];
+
+        const { data: viewUsers } = await supabase
+          .from('user_profiles')
+          .select('id, first_name, last_name')
+          .in('id', viewUserIds);
+
+        const { data: viewContent } = await supabase
+          .from('content')
+          .select('id, title')
+          .in('id', viewContentIds);
+
+        for (const view of views) {
+          const user = viewUsers?.find(u => u.id === view.user_id);
+          const content = viewContent?.find(c => c.id === view.content_id);
+          
+          enrichedViews.push({
+            ...view,
+            user_name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User' : 'Unknown User',
+            content_title: content?.title || 'Unknown Content',
+          });
+        }
+      }
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -267,7 +303,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         averageSessionDuration: Math.round(avgDuration),
         topContent,
         userActivity,
-        recentViews: views || [],
+        recentViews: enrichedViews,
         communityPerformance,
         usersByRole,
         usersByTier,
