@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Search, Mail, User as UserIcon, Calendar, Trash2 } from 'lucide-react';
 import { useCommunityUsers } from '../hooks/useCommunityUsers';
+import { useAuth } from '../hooks/useAuth';
 
 interface UserManagementProps {
   communityId: string;
@@ -8,6 +9,7 @@ interface UserManagementProps {
 }
 
 export const UserManagement: React.FC<UserManagementProps> = ({ communityId, communityName }) => {
+  const { user: currentUser } = useAuth();
   const { users, loading, createUser, updateUser, deleteUser } = useCommunityUsers(communityId);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -92,6 +94,12 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
   };
 
   const handleDelete = async (userId: string) => {
+    // Prevent deleting own account
+    if (currentUser?.id === userId) {
+      alert('You cannot delete your own account.');
+      return;
+    }
+
     const user = users.find(u => u.id === userId);
     if (!user) return;
 
@@ -177,72 +185,81 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-brand-beige-light flex items-center justify-center">
-                        <UserIcon className="h-5 w-5 text-brand-primary" />
+              {filteredUsers.map((user) => {
+                const isCurrentUser = currentUser?.id === user.id;
+                
+                return (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-brand-beige-light flex items-center justify-center">
+                          <UserIcon className="h-5 w-5 text-brand-primary" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-[#363f49]">
+                            {user.profile?.first_name} {user.profile?.last_name}
+                            {isCurrentUser && (
+                              <span className="ml-2 text-xs text-gray-500">(You)</span>
+                            )}
+                          </p>
+                        </div>
                       </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-[#363f49]">
-                          {user.profile?.first_name} {user.profile?.last_name}
-                        </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                        {user.email}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                      {user.email}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-700">
-                      {user.role.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {user.payment_tier ? (
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                          user.payment_tier === 'gold'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {user.payment_tier.toUpperCase()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-700">
+                        {user.role.toUpperCase()}
                       </span>
-                    ) : (
-                      <span className="text-sm text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleEdit(user.id)}
-                        className="text-brand-primary hover:text-brand-d-blue"
-                        title="Edit user"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="text-red-600 hover:text-red-700"
-                        title="Delete user"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.payment_tier ? (
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                            user.payment_tier === 'gold'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {user.payment_tier.toUpperCase()}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleEdit(user.id)}
+                          className="text-brand-primary hover:text-brand-d-blue"
+                          title="Edit user"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        {!isCurrentUser && (
+                          <button
+                            onClick={() => handleDelete(user.id)}
+                            className="text-red-600 hover:text-red-700"
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
