@@ -7,9 +7,10 @@ import { Community } from '../types';
 
 interface CommunityManagementProps {
   userId?: string;
+  onCommunityUpdate?: () => void;
 }
 
-export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId }) => {
+export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId, onCommunityUpdate }) => {
   const { communities, refetch, deleteCommunity } = useManagedCommunities(userId);
   const { generateAccessCode } = useCommunities();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -71,6 +72,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
       }
 
       await refetch();
+      onCommunityUpdate?.();
       setShowCreateForm(false);
       setEditingCommunity(null);
       setFormData({
