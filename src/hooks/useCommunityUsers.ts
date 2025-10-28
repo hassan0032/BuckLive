@@ -72,6 +72,7 @@ export const useCommunityUsers = (communityId?: string) => {
           data: {
             first_name: userData.first_name,
             last_name: userData.last_name,
+            community_id: userData.community_id,
           },
         },
       });

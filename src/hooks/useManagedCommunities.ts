@@ -6,6 +6,7 @@ export const useManagedCommunities = (userId?: string) => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false)
 
   const fetchManagedCommunities = async () => {
     if (!userId) {
@@ -55,12 +56,36 @@ export const useManagedCommunities = (userId?: string) => {
       setCommunities(communitiesWithCounts);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch communities');
+      setError(err instanceof Error ? err.message : 'Failed to fetch communities')
       setCommunities([]);
     } finally {
       setLoading(false);
     }
   };
+
+  const deleteCommunity = async (communityId: string) => {
+    if (!communityId) return
+
+    try {
+      setDeleting(true)
+      await supabase.from('community_managers').delete().eq('community_id', communityId)
+      await supabase.from('user_profiles').update({ community_id: null }).eq('community_id', communityId)
+
+      const { error: deleteError } = await supabase
+        .from('communities')
+        .delete()
+        .eq('id', communityId)
+
+      if (deleteError) throw deleteError
+
+      setCommunities((prev) => prev.filter((c) => c.id !== communityId))
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete community')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     fetchManagedCommunities();
@@ -71,5 +96,7 @@ export const useManagedCommunities = (userId?: string) => {
     loading,
     error,
     refetch: fetchManagedCommunities,
+    deleting,
+    deleteCommunity,
   };
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Users, Key, Shield } from 'lucide-react';
+import { Plus, Edit, Users, Key, Shield, Trash } from 'lucide-react';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useCommunities } from '../hooks/useCommunities';
 import { supabase } from '../lib/supabase';
@@ -11,7 +11,7 @@ interface CommunityManagementProps {
 }
 
 export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId, onCommunityUpdate }) => {
-  const { communities, refetch } = useManagedCommunities(userId);
+  const { communities, refetch, deleteCommunity } = useManagedCommunities(userId);
   const { generateAccessCode } = useCommunities();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
@@ -101,6 +101,22 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
     setShowCreateForm(true);
   };
 
+  const handleDelete = async (communityId: string, communityName: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete "${communityName}"?`)
+    if (!confirmed) return
+
+    try {
+      setLoading(true)
+      await deleteCommunity(communityId)
+      await refetch()
+    } catch (err) {
+      console.error(err)
+      setError('Failed to delete community')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleGenerateNewCode = () => {
     setFormData({ ...formData, access_code: generateAccessCode() });
   };
@@ -145,6 +161,12 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
               >
                 <Edit className="h-4 w-4" />
               </button>
+              <button
+                onClick={() => handleDelete(community.id, community.name)}
+                className="ml-2 p-2 text-red-700 hover:bg-brand-beige-light rounded-lg transition-colors"
+              >
+                <Trash className="h-4 w-4" />
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -172,11 +194,10 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
                   <span className="text-sm text-gray-600">Tier</span>
                 </div>
                 <span
-                  className={`text-xs font-semibold px-2 py-1 rounded ${
-                    community.membership_tier === 'gold'
+                  className={`text-xs font-semibold px-2 py-1 rounded ${community.membership_tier === 'gold'
                       ? 'bg-yellow-100 text-yellow-700'
                       : 'bg-gray-200 text-gray-700'
-                  }`}
+                    }`}
                 >
                   {community.membership_tier.toUpperCase()}
                 </span>
@@ -185,9 +206,8 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm text-gray-600">Status</span>
                 <span
-                  className={`text-xs font-semibold px-2 py-1 rounded ${
-                    community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}
+                  className={`text-xs font-semibold px-2 py-1 rounded ${community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}
                 >
                   {community.is_active ? 'ACTIVE' : 'INACTIVE'}
                 </span>
