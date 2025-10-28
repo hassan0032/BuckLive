@@ -118,7 +118,18 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       let viewsQuery = supabase
         .from('content_views')
-        .select('*')
+        .select(`
+        *,
+        user_profiles!content_views_user_id_fkey (
+          id,
+          first_name,
+          last_name
+        ),
+        content!content_views_content_id_fkey (
+          id,
+          title
+        )
+      `)
         .order('viewed_at', { ascending: false })
         .limit(100);
 
@@ -132,33 +143,14 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       const totalViews = views?.length || 0;
 
-      // Enrich recent views with user names and content titles
-      const enrichedViews: EnrichedContentView[] = [];
-      if (views && views.length > 0) {
-        const viewUserIds = [...new Set(views.map(v => v.user_id))];
-        const viewContentIds = [...new Set(views.map(v => v.content_id))];
-
-        const { data: viewUsers } = await supabase
-          .from('user_profiles')
-          .select('id, first_name, last_name')
-          .in('id', viewUserIds);
-
-        const { data: viewContent } = await supabase
-          .from('content')
-          .select('id, title')
-          .in('id', viewContentIds);
-
-        for (const view of views) {
-          const user = viewUsers?.find(u => u.id === view.user_id);
-          const content = viewContent?.find(c => c.id === view.content_id);
-          
-          enrichedViews.push({
-            ...view,
-            user_name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User' : 'Unknown User',
-            content_title: content?.title || 'Unknown Content',
-          });
-        }
-      }
+      // Map to enriched views with joined data
+      const enrichedViews: EnrichedContentView[] = views?.map(view => ({
+        ...view,
+        user_name: view.user_profiles
+          ? `${view.user_profiles.first_name || ''} ${view.user_profiles.last_name || ''}`.trim() || 'Unknown User'
+          : 'Unknown User',
+        content_title: view.content?.title || 'Unknown Content',
+      })) || [];
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -243,7 +235,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         last_login: userLoginMap.get(user.id)?.lastLogin || 'Never',
         login_count: userLoginMap.get(user.id)?.count || 0,
       }))
-      .sort((a, b) => b.login_count - a.login_count) || [];
+        .sort((a, b) => b.login_count - a.login_count) || [];
 
       let communityPerformance: CommunityPerformance[] = [];
       if (!communityFilter) {
