@@ -149,7 +149,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      let sessionsQuery = supabase
+      const sessionsQuery = supabase
         .from('user_sessions')
         .select('user_id')
         .in('user_id', userIds)
@@ -159,7 +159,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       const activeUsersToday = new Set(todaySessions?.map(s => s.user_id) || []).size;
 
-      let allSessionsQuery = supabase
+      const allSessionsQuery = supabase
         .from('user_sessions')
         .select('session_duration')
         .in('user_id', userIds)
@@ -196,7 +196,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         .sort((a, b) => b.view_count - a.view_count)
         .slice(0, 10);
 
-      let userSessionsQuery = supabase
+      const userSessionsQuery = supabase
         .from('user_sessions')
         .select('user_id, login_at')
         .in('user_id', userIds)

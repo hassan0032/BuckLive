@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ContentView, UserSession } from '../types';
+import { ContentView } from '../types';
 
 interface AnalyticsData {
   totalViews: number;

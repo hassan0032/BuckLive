@@ -1,5 +1,5 @@
 import { BookOpen, Clock, Download, FileText, Loader2, Search, Tag, Video, X } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { getThumbnailUrl } from '../lib/supabase';

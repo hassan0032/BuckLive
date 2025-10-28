@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Content, ContentVersion } from '../types';
+import { Content, ContentType, ContentVersion, PaymentTier } from '../types';
 import { X, Save, Eye, History, Loader } from 'lucide-react';
 import { ImageUploader } from './ImageUploader';
 import { PDFUploader } from './PDFUploader';
@@ -10,7 +10,7 @@ import { useContent } from '../hooks/useContent';
 interface EnhancedContentFormProps {
   editingContent?: Content | null;
   onClose: () => void;
-  onSubmit: (data: any, isDraft: boolean) => Promise<void>;
+  onSubmit: (data: Content, isDraft: boolean) => Promise<void>;
 }
 
 export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
@@ -160,7 +160,8 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         }
       }
 
-      const contentData: any = {
+      const contentData: Content = {
+        id: editingContent?.id || '',
         title: formData.title.trim(),
         description: formData.description.trim(),
         type: formData.type,
@@ -174,6 +175,8 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         required_tier: formData.required_tier,
         status: isDraft ? 'draft' : 'published',
         vimeo_video_id: formData.vimeo_video_id || '',
+        created_at: editingContent?.created_at || new Date().toISOString(),
+        updated_at: editingContent?.updated_at || new Date().toISOString(),
       };
 
       if (formData.type === 'video' && formData.duration) {
@@ -313,7 +316,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                     <select
                       value={formData.type}
                       onChange={(e) =>
-                        setFormData({ ...formData, type: e.target.value as any })
+                        setFormData({ ...formData, type: e.target.value as ContentType })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     >
@@ -373,7 +376,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                     <select
                       value={formData.required_tier}
                       onChange={(e) =>
-                        setFormData({ ...formData, required_tier: e.target.value as any })
+                        setFormData({ ...formData, required_tier: e.target.value as PaymentTier })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     >

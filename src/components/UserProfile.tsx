@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { User, Mail, Shield, Calendar, CreditCard, AlertCircle } from 'lucide-react';
 
 export const UserProfile: React.FC = () => {
   const { user } = useAuth();
-  const [editing, setEditing] = useState(false);
 
   if (!user) {
     return (

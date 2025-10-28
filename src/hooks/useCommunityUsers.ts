@@ -108,7 +108,7 @@ export const useCommunityUsers = (communityId?: string) => {
 
   const updateUser = async (userId: string, updates: Partial<User>) => {
     try {
-      const profileUpdates: any = {};
+      const profileUpdates: Record<string, unknown> = {};
 
       if (updates.profile?.first_name !== undefined) {
         profileUpdates.first_name = updates.profile.first_name;

@@ -150,7 +150,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
         throw new Error('User not found');
       }
 
-      const profileUpdates: any = {};
+      const profileUpdates: Record<string, unknown> = {};
 
       if (updates.first_name !== undefined) {
         profileUpdates.first_name = updates.first_name;

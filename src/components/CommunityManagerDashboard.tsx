@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useCommunityAnalytics } from '../hooks/useCommunityAnalytics';
-import { useCommunityUsers } from '../hooks/useCommunityUsers';
 import { Users, BarChart3, TrendingUp, Clock, Eye, Building2, Plus } from 'lucide-react';
 import { CommunityManagement } from './CommunityManagement';
 import { UserManagement } from './UserManagement';
@@ -14,8 +13,7 @@ export const CommunityManagerDashboard: React.FC = () => {
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities'>('overview');
 
-  const { analytics, loading: analyticsLoading } = useCommunityAnalytics(selectedCommunityId);
-  const { users, loading: usersLoading } = useCommunityUsers(selectedCommunityId);
+  const { analytics } = useCommunityAnalytics(selectedCommunityId);
 
   useEffect(() => {
     if (communities.length > 0 && !selectedCommunityId) {
