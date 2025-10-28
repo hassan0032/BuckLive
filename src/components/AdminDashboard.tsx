@@ -120,7 +120,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-semibold text-[#363f49]">Admin Dashboard</h1>
