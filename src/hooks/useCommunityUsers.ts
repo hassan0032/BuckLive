@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { User } from '../types';
+import { ROLE, User } from '../types';
 
 export const useCommunityUsers = (communityId?: string) => {
   const [users, setUsers] = useState<User[]>([]);
@@ -65,42 +65,43 @@ export const useCommunityUsers = (communityId?: string) => {
     community_id: string;
   }) => {
     try {
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            community_id: userData.community_id,
-          },
-        },
-      });
-
-      if (signUpError) throw signUpError;
-
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert([
-            {
-              id: authData.user.id,
-              email: userData.email,
-              first_name: userData.first_name,
-              last_name: userData.last_name,
-              community_id: userData.community_id,
-              role: 'member',
-              registration_type: 'access_code',
-            },
-          ]);
-
-        if (profileError) throw profileError;
-
-        await fetchUsers();
-        return { data: authData.user, error: null };
+      // Get the current session to pass auth header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        return { data: null, error: 'Not authenticated' };
       }
 
-      return { data: null, error: 'Failed to create user' };
+      // Call the edge function
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-management`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'create',
+          email: userData.email,
+          password: userData.password,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          community_id: userData.community_id,
+          role: ROLE.MEMBER,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return { data: null, error: result.error || 'Failed to create user' };
+      }
+
+      if (result.error) {
+        return { data: null, error: result.error };
+      }
+
+      await fetchUsers();
+      return result;
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : 'Failed to create user' };
     }
@@ -139,9 +140,35 @@ export const useCommunityUsers = (communityId?: string) => {
 
   const deleteUser = async (userId: string) => {
     try {
-      const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+      // Get the current session to pass auth header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        return { error: 'Not authenticated' };
+      }
 
-      if (deleteError) throw deleteError;
+      // Call the edge function
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-management`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          user_id: userId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return { error: result.error || 'Failed to delete user' };
+      }
+
+      if (result.error) {
+        return { error: result.error };
+      }
 
       await fetchUsers();
       return { error: null };

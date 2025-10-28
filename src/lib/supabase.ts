@@ -142,6 +142,46 @@ export const updatePassword = async (newPassword: string) => {
   return { data, error };
 };
 
+// Admin function to reset user password
+export const adminResetUserPassword = async (userId: string, newPassword: string) => {
+  try {
+    // Get the current session to pass auth header
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return { data: null, error: { message: 'Not authenticated' } };
+    }
+
+    // Call the edge function
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-management`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        action: 'reset_password',
+        user_id: userId,
+        new_password: newPassword,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { data: null, error: { message: result.error || 'Failed to reset password' } };
+    }
+
+    if (result.error) {
+      return { data: null, error: { message: result.error } };
+    }
+
+    return { data: result.data, error: null };
+  } catch (err) {
+    return { data: null, error: { message: err instanceof Error ? err.message : 'Failed to reset password' } };
+  }
+};
+
 // Helper function to get thumbnail URL from content
 export const getThumbnailUrl = (content: { thumbnail_url?: string; storage_thumbnail_path?: string }): string => {
   // If thumbnail_url is set, use it
