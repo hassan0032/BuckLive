@@ -143,14 +143,6 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       const totalViews = views?.length || 0;
 
-      // Map to enriched views with joined data
-      const enrichedViews: EnrichedContentView[] = views?.map(view => ({
-        ...view,
-        user_name: view.user_profiles
-          ? `${view.user_profiles.first_name || ''} ${view.user_profiles.last_name || ''}`.trim() || 'Unknown User'
-          : 'Unknown User',
-        content_title: view.content?.title || 'Unknown Content',
-      })) || [];
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -295,7 +287,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         averageSessionDuration: Math.round(avgDuration),
         topContent,
         userActivity,
-        recentViews: enrichedViews,
+        recentViews: views || [],
         communityPerformance,
         usersByRole,
         usersByTier,
