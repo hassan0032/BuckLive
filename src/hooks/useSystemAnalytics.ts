@@ -14,12 +14,10 @@ interface CommunityPerformance {
 
 interface EnrichedContentView extends ContentView {
   user_profiles?: {
-    id: string;
     first_name: string | null;
     last_name: string | null;
   };
   content?: {
-    id: string;
     title: string | null;
   };
 }
