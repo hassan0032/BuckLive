@@ -13,8 +13,15 @@ interface CommunityPerformance {
 }
 
 interface EnrichedContentView extends ContentView {
-  user_name?: string;
-  content_title?: string;
+  user_profiles?: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+  };
+  content?: {
+    id: string;
+    title: string | null;
+  };
 }
 
 interface SystemAnalyticsData {
@@ -121,12 +128,10 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         .select(`
         *,
         user_profiles!content_views_user_id_fkey (
-          id,
           first_name,
           last_name
         ),
         content!content_views_content_id_fkey (
-          id,
           title
         )
       `)
@@ -142,7 +147,6 @@ export const useSystemAnalytics = (communityFilter?: string) => {
       if (viewsError) throw viewsError;
 
       const totalViews = views?.length || 0;
-
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
