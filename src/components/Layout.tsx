@@ -10,7 +10,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, isAdmin, isCommunityManager } = useAuth();
+  const { user, isAdmin, isCommunityManager, isSharedAccount } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,7 +20,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { id: 'library', label: 'Library', icon: Library, path: '/library' },
-    { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
+    ...(isSharedAccount ? [] : [{ id: 'profile', label: 'Profile', icon: User, path: '/profile' }]),
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }] : []),
     ...(isCommunityManager ? [{ id: 'community-manager', label: 'Manage', icon: Users, path: '/community-manager' }] : []),
   ];

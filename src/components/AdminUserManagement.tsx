@@ -1,7 +1,8 @@
-import { Building2, Calendar, Edit, Mail, Plus, Search, Shield, Trash2, User as UserIcon } from 'lucide-react';
+import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User as UserIcon, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
+import { adminResetUserPassword } from '../lib/supabase';
 import { PAYMENT_TIER, ROLE, Role } from '../types';
 import { cn } from '../utils/helper';
 
@@ -12,6 +13,7 @@ interface FormData {
   last_name: string;
   community_id: string;
   role: Role;
+  is_shared_account: boolean;
 }
 
 const initialFormData: FormData = {
@@ -21,6 +23,7 @@ const initialFormData: FormData = {
   last_name: '',
   community_id: '',
   role: ROLE.MEMBER,
+  is_shared_account: false,
 };
 
 export const AdminUserManagement: React.FC = () => {
@@ -50,6 +53,10 @@ export const AdminUserManagement: React.FC = () => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [passwordResetUserId, setPasswordResetUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
 
   const stats = {
     totalUsers: users.length,
@@ -92,6 +99,7 @@ export const AdminUserManagement: React.FC = () => {
           last_name: formData.last_name,
           community_id: formData.community_id,
           role: formData.role,
+          is_shared_account: formData.is_shared_account,
         });
 
         if (error) throw new Error(error);
@@ -106,12 +114,38 @@ export const AdminUserManagement: React.FC = () => {
         last_name: '',
         community_id: '',
         role: ROLE.MEMBER,
+        is_shared_account: false,
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!passwordResetUserId || !newPassword) return;
+
+    setPasswordResetLoading(true);
+    try {
+      const { error } = await adminResetUserPassword(passwordResetUserId, newPassword);
+      if (error) throw new Error(error.message || 'Failed to reset password');
+
+      setShowPasswordResetModal(false);
+      setPasswordResetUserId(null);
+      setNewPassword('');
+      alert('Password reset successfully');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reset password');
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
+  const openPasswordResetModal = (userId: string) => {
+    setPasswordResetUserId(userId);
+    setNewPassword('');
+    setShowPasswordResetModal(true);
   };
 
   const handleEdit = (userId: string) => {
@@ -125,6 +159,7 @@ export const AdminUserManagement: React.FC = () => {
         last_name: user.profile?.last_name || '',
         community_id: user.community_id || '',
         role: user.role,
+        is_shared_account: user.is_shared_account || false,
       });
       setShowCreateForm(true);
     }
@@ -169,6 +204,7 @@ export const AdminUserManagement: React.FC = () => {
               last_name: '',
               community_id: '',
               role: ROLE.MEMBER,
+              is_shared_account: false,
             });
             setShowCreateForm(true);
           }}
@@ -290,9 +326,17 @@ export const AdminUserManagement: React.FC = () => {
                         )}
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-[#363f49]">
-                          {user.profile?.first_name} {user.profile?.last_name}
-                        </p>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm font-medium text-[#363f49]">
+                            {user.profile?.first_name} {user.profile?.last_name}
+                          </p>
+                          {user.is_shared_account && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                              <Users className="h-3 w-3 mr-1" />
+                              Shared
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -337,6 +381,7 @@ export const AdminUserManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
                       <button
+                        type="button"
                         onClick={() => handleEdit(user.id)}
                         className="text-brand-primary hover:text-brand-d-blue"
                         title="Edit user"
@@ -344,6 +389,15 @@ export const AdminUserManagement: React.FC = () => {
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
+                        type="button"
+                        onClick={() => openPasswordResetModal(user.id)}
+                        className="text-blue-600 hover:text-blue-700"
+                        title="Reset password"
+                      >
+                        <Key className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDelete(user.id)}
                         className="text-red-600 hover:text-red-700"
                         title="Delete user"
@@ -471,7 +525,7 @@ export const AdminUserManagement: React.FC = () => {
                   >
                     <option value={ROLE.MEMBER}>Member</option>
                     <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
-                    <option value="admin">Admin</option>
+                    <option value={ROLE.ADMIN}>Admin</option>
                   </select>
                   {formData.role === ROLE.ADMIN && (
                     <p className="mt-1 text-xs text-amber-600">
@@ -479,6 +533,33 @@ export const AdminUserManagement: React.FC = () => {
                     </p>
                   )}
                 </div>
+
+                {!editingUser && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_shared_account"
+                      checked={formData.is_shared_account}
+                      onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                      className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                    />
+                    <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
+                      Shared Account
+                    </label>
+                    <span className="text-xs text-gray-500">
+                      (Multiple users can use this account)
+                    </span>
+                  </div>
+                )}
+
+                {editingUser && formData.is_shared_account && (
+                  <div className="flex items-center space-x-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <Users className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm text-purple-700">
+                      This is a shared account. The shared account setting cannot be changed after creation.
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
@@ -501,6 +582,57 @@ export const AdminUserManagement: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {showPasswordResetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Reset Password</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Enter a new password for this user. This will immediately update their login credentials.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    New Password * (min. 6 characters)
+                  </label>
+                  <input
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    required
+                    minLength={6}
+                    placeholder="Enter new password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordResetModal(false);
+                    setPasswordResetUserId(null);
+                    setNewPassword('');
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordReset}
+                  disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
+                  className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm disabled:opacity-50"
+                >
+                  {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

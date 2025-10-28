@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { User as AppUser } from '../types';
+import { User as AppUser, REGISTRATION_TYPE, ROLE } from '../types';
 
 export const useAuth = () => {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -39,7 +39,7 @@ export const useAuth = () => {
           const appUser: AppUser = {
             id: session.user.id,
             email: session.user.email!,
-            role: profile?.role || 'member',
+            role: profile?.role || ROLE.MEMBER,
             created_at: session.user.created_at,
             community_id: profile?.community_id,
             registration_type: profile?.registration_type,
@@ -49,7 +49,8 @@ export const useAuth = () => {
             payment_tier: profile?.payment_tier,
             subscription_started_at: profile?.subscription_started_at,
             subscription_ends_at: profile?.subscription_ends_at,
-            needsPayment: profile?.registration_type === 'self_registered' && !profile?.subscription_id,
+            is_shared_account: profile?.is_shared_account || false,
+            needsPayment: !profile?.is_shared_account && profile?.role === ROLE.MEMBER && !profile?.subscription_id && profile?.registration_type === REGISTRATION_TYPE.SELF_REGISTERED,
             profile: {
               first_name: profile?.first_name || session.user.user_metadata?.first_name || '',
               last_name: profile?.last_name || session.user.user_metadata?.last_name || '',
@@ -105,7 +106,7 @@ export const useAuth = () => {
               const appUser: AppUser = {
                 id: session.user.id,
                 email: session.user.email!,
-                role: profile?.role || 'member',
+                role: profile?.role || ROLE.MEMBER,
                 created_at: session.user.created_at,
                 community_id: profile?.community_id,
                 registration_type: profile?.registration_type,
@@ -115,7 +116,8 @@ export const useAuth = () => {
                 payment_tier: profile?.payment_tier,
                 subscription_started_at: profile?.subscription_started_at,
                 subscription_ends_at: profile?.subscription_ends_at,
-                needsPayment: profile?.registration_type === 'self_registered' && !profile?.subscription_id,
+                is_shared_account: profile?.is_shared_account || false,
+                needsPayment: !profile?.is_shared_account && profile?.role === ROLE.MEMBER && !profile?.subscription_id && profile?.registration_type === REGISTRATION_TYPE.SELF_REGISTERED,
                 profile: {
                   first_name: profile?.first_name || session.user.user_metadata?.first_name || '',
                   last_name: profile?.last_name || session.user.user_metadata?.last_name || '',
@@ -152,5 +154,6 @@ export const useAuth = () => {
     loading,
     isAdmin: user?.role === 'admin',
     isCommunityManager: user?.role === 'community_manager',
+    isSharedAccount: user?.is_shared_account || false,
   };
 };

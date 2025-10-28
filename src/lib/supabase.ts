@@ -129,6 +129,23 @@ export const getCurrentUser = async () => {
   return user;
 };
 export const resetPassword = async (email: string) => {
+  // First check if this is a shared account
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('is_shared_account')
+    .eq('email', email)
+    .single();
+  
+  if (profile?.is_shared_account) {
+    return { 
+      data: null, 
+      error: { 
+        message: 'This is a shared account. Please contact your community manager or administrator to reset the password.' 
+      } 
+    };
+  }
+  
+  // Proceed with normal password reset
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/reset-password`,
   });

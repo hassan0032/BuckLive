@@ -52,6 +52,7 @@ export interface User {
   payment_tier?: PaymentTier;
   subscription_started_at?: string;
   subscription_ends_at?: string;
+  is_shared_account?: boolean;
   needsPayment?: boolean;
   profile?: {
     first_name?: string;

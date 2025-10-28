@@ -39,6 +39,7 @@ export const useCommunityUsers = (communityId?: string) => {
         payment_tier: profile.payment_tier,
         subscription_started_at: profile.subscription_started_at,
         subscription_ends_at: profile.subscription_ends_at,
+        is_shared_account: profile.is_shared_account || false,
         profile: {
           first_name: profile.first_name || '',
           last_name: profile.last_name || '',
@@ -63,6 +64,7 @@ export const useCommunityUsers = (communityId?: string) => {
     first_name: string;
     last_name: string;
     community_id: string;
+    is_shared_account?: boolean;
   }) => {
     try {
       // Get the current session to pass auth header
@@ -87,6 +89,7 @@ export const useCommunityUsers = (communityId?: string) => {
           last_name: userData.last_name,
           community_id: userData.community_id,
           role: ROLE.MEMBER,
+          is_shared_account: userData.is_shared_account || false,
         }),
       });
 

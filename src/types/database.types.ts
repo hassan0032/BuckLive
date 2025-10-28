@@ -64,6 +64,7 @@ export interface Database {
           payment_tier: 'silver' | 'gold' | null
           subscription_start_date: string | null
           subscription_end_date: string | null
+          is_shared_account: boolean
           created_at: string
           updated_at: string
         }
@@ -82,6 +83,7 @@ export interface Database {
           payment_tier?: 'silver' | 'gold' | null
           subscription_start_date?: string | null
           subscription_end_date?: string | null
+          is_shared_account?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -100,6 +102,7 @@ export interface Database {
           payment_tier?: 'silver' | 'gold' | null
           subscription_start_date?: string | null
           subscription_end_date?: string | null
+          is_shared_account?: boolean
           created_at?: string
           updated_at?: string
         }

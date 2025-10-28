@@ -12,7 +12,7 @@ import { UserProfile } from './components/UserProfile';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
-  const { user, loading, isAdmin, isCommunityManager } = useAuth();
+  const { user, loading, isAdmin, isCommunityManager, isSharedAccount } = useAuth();
 
   // Check if we're on the reset password page
   const isResetPasswordPage = window.location.pathname === '/reset-password' || window.location.hash.includes('type=recovery');
@@ -58,7 +58,7 @@ function App() {
           <Route path="/" element={<Navigate to="/library" replace />} />
           <Route path="/library" element={<ContentLibrary />} />
           <Route path="/content/:id" element={<ContentDetail />} />
-          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/profile" element={isSharedAccount ? <Navigate to="/library" replace /> : <UserProfile />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />
           <Route path="/community-manager" element={isCommunityManager ? <CommunityManagerDashboard /> : <Navigate to="/library" replace />} />
