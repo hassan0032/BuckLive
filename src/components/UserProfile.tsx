@@ -34,7 +34,7 @@ export const UserProfile: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="min-h-screen max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-semibold text-[#363f49] mb-2">Your Profile</h1>
