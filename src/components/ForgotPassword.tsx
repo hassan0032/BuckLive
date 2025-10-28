@@ -22,7 +22,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
       if (error) throw error;
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError((err instanceof Error || (err as { message?: string })?.message) ? (err as Error).message : 'An error occurred');
     } finally {
       setLoading(false);
     }

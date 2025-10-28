@@ -128,28 +128,33 @@ export const getCurrentUser = async () => {
   const { data: { user } } = await supabase.auth.getUser();
   return user;
 };
+
 export const resetPassword = async (email: string) => {
-  // First check if this is a shared account
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('is_shared_account')
-    .eq('email', email)
-    .single();
-  
-  if (profile?.is_shared_account) {
-    return { 
-      data: null, 
-      error: { 
-        message: 'This is a shared account. Please contact your community manager or administrator to reset the password.' 
-      } 
-    };
+  try {
+    // Call the password-reset edge function
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/password-reset`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { data: null, error: { message: result.error || 'Failed to send password reset email' } };
+    }
+
+    if (result.error) {
+      return { data: null, error: { message: result.error } };
+    }
+
+    return { data: result.data, error: null };
+  } catch (err) {
+    return { data: null, error: { message: err instanceof Error ? err.message : 'Failed to send password reset email' } };
   }
-  
-  // Proceed with normal password reset
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`,
-  });
-  return { data, error };
 };
 
 export const updatePassword = async (newPassword: string) => {
