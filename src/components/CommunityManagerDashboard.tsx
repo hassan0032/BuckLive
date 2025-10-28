@@ -52,7 +52,7 @@ export const CommunityManagerDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen">
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-semibold text-[#363f49]">Community Manager Dashboard</h1>
