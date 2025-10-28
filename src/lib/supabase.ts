@@ -63,13 +63,66 @@ export const signIn = async (email: string, password: string) => {
     email,
     password,
   });
+
+  if (!error && data?.user) {
+    // Record login time in user_sessions
+    const { error: insertError } = await supabase.from('user_sessions').insert({
+      user_id: data.user.id, // FK to user_profiles.id
+      login_at: new Date().toISOString(),
+    });
+    if (insertError) {
+      console.error('❌ Failed to insert login session:', insertError);
+    } else {
+      console.log('✅ Login session recorded for:', data.user.id);
+    }
+  }
+
   return { data, error };
 };
 
 export const signOut = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    // Find the most recent open session (logout_at = null)
+    const { data: openSessions, error: fetchError } = await supabase
+      .from('user_sessions')
+      .select('*')
+      .eq('user_id', user.id)
+      .is('logout_at', null)
+      .order('login_at', { ascending: false })
+      .limit(1);
+
+    if (fetchError) {
+      console.error('Error fetching open session:', fetchError);
+    } else if (openSessions && openSessions.length > 0) {
+      const session = openSessions[0];
+      const logoutTime = new Date();
+      const loginTime = new Date(session.login_at);
+      const durationMs = logoutTime.getTime() - loginTime.getTime();
+      const durationMinutes = Math.round(durationMs / 1000 / 60); // duration in minutes
+
+      // Update logout_at and session_duration
+      const { error: updateError } = await supabase
+        .from('user_sessions')
+        .update({
+          logout_at: logoutTime.toISOString(),
+          session_duration: durationMinutes,
+        })
+        .eq('id', session.id);
+
+      if (updateError) {
+        console.error('Failed to update session logout:', updateError);
+      } else {
+        console.log(`Session closed for ${user.id} (${durationMinutes} minutes)`);
+      }
+    }
+  }
+
   const { error } = await supabase.auth.signOut();
   return { error };
 };
+
 
 export const getCurrentUser = async () => {
   const { data: { user } } = await supabase.auth.getUser();

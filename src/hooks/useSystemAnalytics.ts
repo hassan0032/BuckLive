@@ -12,6 +12,16 @@ interface CommunityPerformance {
   engagement_rate: number;
 }
 
+interface EnrichedContentView extends ContentView {
+  user_profiles?: {
+    first_name: string | null;
+    last_name: string | null;
+  };
+  content?: {
+    title: string | null;
+  };
+}
+
 interface SystemAnalyticsData {
   totalViews: number;
   totalUsers: number;
@@ -32,7 +42,7 @@ interface SystemAnalyticsData {
     last_login: string;
     login_count: number;
   }>;
-  recentViews: ContentView[];
+  recentViews: EnrichedContentView[];
   communityPerformance: CommunityPerformance[];
   usersByRole: {
     admin: number;
@@ -68,7 +78,10 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       let usersQuery = supabase
         .from('user_profiles')
-        .select('id, email, first_name, last_name, role, payment_tier, community_id, communities(name)');
+        .select(`
+          *,
+          communities:user_profiles_community_id_fkey(*)
+        `)
 
       if (communityFilter) {
         usersQuery = usersQuery.eq('community_id', communityFilter);
@@ -110,7 +123,16 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       let viewsQuery = supabase
         .from('content_views')
-        .select('*')
+        .select(`
+        *,
+        user_profiles!content_views_user_id_fkey (
+          first_name,
+          last_name
+        ),
+        content!content_views_content_id_fkey (
+          title
+        )
+      `)
         .order('viewed_at', { ascending: false })
         .limit(100);
 
@@ -207,7 +229,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         last_login: userLoginMap.get(user.id)?.lastLogin || 'Never',
         login_count: userLoginMap.get(user.id)?.count || 0,
       }))
-      .sort((a, b) => b.login_count - a.login_count) || [];
+        .sort((a, b) => b.login_count - a.login_count) || [];
 
       let communityPerformance: CommunityPerformance[] = [];
       if (!communityFilter) {

@@ -350,8 +350,8 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 const community = communities.find(c => c.id === view.community_id);
                 return (
                   <tr key={view.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">{view.user_id.slice(0, 8)}...</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{view.content_id.slice(0, 8)}...</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{`${view.user_profiles?.first_name || ''} ${view.user_profiles?.last_name || ''}`.trim()}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{view.content?.title || ''}</td>
                     {!communityFilter && (
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {community?.name || 'N/A'}
