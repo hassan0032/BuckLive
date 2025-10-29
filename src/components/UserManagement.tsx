@@ -410,12 +410,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                     </span>
                   </div>
 
+                  {/* {editingUser && formData.is_shared_account && (
                   <div className="flex items-center space-x-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                     <Users className="h-4 w-4 text-purple-600" />
                     <span className="text-sm text-purple-700">
                       This is a shared account. The shared account setting cannot be changed after creation.
                     </span>
                   </div>
+                )} */}
 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
