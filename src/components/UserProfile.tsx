@@ -106,7 +106,7 @@ export const UserProfile: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            {/* <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
               <User className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm font-medium text-gray-700">Account Status</p>
@@ -115,7 +115,7 @@ export const UserProfile: React.FC = () => {
                   {subscriptionActive || user.profile?.community ? 'Active' : 'Inactive'}
                 </p>
               </div>
-            </div>
+            </div> */}
 
             {isIndividualMember && user.subscription_ends_at && (
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
