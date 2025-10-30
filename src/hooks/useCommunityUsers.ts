@@ -126,6 +126,9 @@ export const useCommunityUsers = (communityId?: string) => {
       if (updates.email !== undefined) {
         profileUpdates.email = updates.email;
       }
+      if (updates.is_shared_account !== undefined) {
+        profileUpdates.is_shared_account = updates.is_shared_account;
+      }
 
       const { error: updateError } = await supabase
         .from('user_profiles')
