@@ -1,1 +1,131 @@
-"/*\\n  # Add Master Admin Code System\\n\\n  ## Overview\\n  This migration creates a settings table to store system-wide configuration including a master admin access code.\\n\\n  ## New Tables\\n\\n  ### settings\\n  Stores system configuration values.\\n  - `key` (text, primary key) - Configuration key identifier\\n  - `value` (text) - Configuration value\\n  - `description` (text) - Human-readable description of the setting\\n  - `created_at` (timestamptz) - When setting was created\\n  - `updated_at` (timestamptz) - Last update timestamp\\n\\n  ## Initial Data\\n  - Inserts master_admin_code with a secure randomly generated 10-character code\\n  - Initial code: ADMIN2024X (should be changed after first use)\\n\\n  ## Security\\n  - RLS enabled on settings table\\n  - Only admins can view settings\\n  - Only admins can update settings\\n  - Settings cannot be deleted (only updated)\\n\\n  ## Functions\\n  - Updates validate_access_code function to check both community codes and admin code\\n  - When admin code is used, returns a special UUID indicating admin registration\\n*/\\n\\n-- Create settings table\\nCREATE TABLE IF NOT EXISTS settings (\\n  key text PRIMARY KEY,\\n  value text NOT NULL,\\n  description text DEFAULT '',\\n  created_at timestamptz DEFAULT now(),\\n  updated_at timestamptz DEFAULT now()\\n)","\\n\\n-- Enable RLS\\nALTER TABLE settings ENABLE ROW LEVEL SECURITY","\\n\\n-- Settings policies\\nCREATE POLICY \"Admins can view settings\"\\n  ON settings FOR SELECT\\n  TO authenticated\\n  USING (\\n    EXISTS (\\n      SELECT 1 FROM user_profiles\\n      WHERE user_profiles.id = auth.uid()\\n      AND user_profiles.role = 'admin'\\n    )\\n  )","\\n\\nCREATE POLICY \"Admins can update settings\"\\n  ON settings FOR UPDATE\\n  TO authenticated\\n  USING (\\n    EXISTS (\\n      SELECT 1 FROM user_profiles\\n      WHERE user_profiles.id = auth.uid()\\n      AND user_profiles.role = 'admin'\\n    )\\n  )\\n  WITH CHECK (\\n    EXISTS (\\n      SELECT 1 FROM user_profiles\\n      WHERE user_profiles.id = auth.uid()\\n      AND user_profiles.role = 'admin'\\n    )\\n  )","\\n\\n-- Insert initial master admin code\\nINSERT INTO settings (key, value, description)\\nVALUES (\\n  'master_admin_code',\\n  'ADMIN2024X',\\n  'Master access code for creating admin accounts. Change this after first use.'\\n)\\nON CONFLICT (key) DO NOTHING","\\n\\n-- Create trigger for updated_at\\nCREATE TRIGGER update_settings_updated_at\\n  BEFORE UPDATE ON settings\\n  FOR EACH ROW\\n  EXECUTE FUNCTION update_updated_at_column()","\\n\\n-- Update validate_access_code function to handle both community and admin codes\\nCREATE OR REPLACE FUNCTION validate_access_code(code text)\\nRETURNS jsonb\\nLANGUAGE plpgsql\\nSECURITY DEFINER\\nAS $$\\nDECLARE\\n  community_id uuid","\\n  admin_code text","\\n  result jsonb","\\nBEGIN\\n  -- First check if it's the admin code\\n  SELECT value INTO admin_code\\n  FROM settings\\n  WHERE key = 'master_admin_code'","\\n\\n  IF code = admin_code THEN\\n    -- Return special response indicating admin registration\\n    result := jsonb_build_object(\\n      'is_admin', true,\\n      'community_id', NULL\\n    )","\\n    RETURN result","\\n  END IF","\\n\\n  -- Otherwise, check if it's a community code\\n  SELECT id INTO community_id\\n  FROM communities\\n  WHERE access_code = code AND is_active = true","\\n\\n  IF community_id IS NOT NULL THEN\\n    -- Return community registration response\\n    result := jsonb_build_object(\\n      'is_admin', false,\\n      'community_id', community_id\\n    )","\\n    RETURN result","\\n  END IF","\\n\\n  -- Invalid code\\n  RETURN NULL","\\nEND","\\n$$",""
+/*
+  # Add Master Admin Code System
+
+  ## Overview
+  This migration creates a settings table to store system-wide configuration including a master admin access code.
+
+  ## New Tables
+
+  ### settings
+  Stores system configuration values.
+  - `key` (text, primary key) - Configuration key identifier
+  - `value` (text) - Configuration value
+  - `description` (text) - Human-readable description of the setting
+  - `created_at` (timestamptz) - When setting was created
+  - `updated_at` (timestamptz) - Last update timestamp
+
+  ## Initial Data
+  - Inserts master_admin_code with a secure randomly generated 10-character code
+  - Initial code: ADMIN2024X (should be changed after first use)
+
+  ## Security
+  - RLS enabled on settings table
+  - Only admins can view settings
+  - Only admins can update settings
+  - Settings cannot be deleted (only updated)
+
+  ## Functions
+  - Updates validate_access_code function to check both community codes and admin code
+  - When admin code is used, returns a special response indicating admin registration
+*/
+
+-- Create settings table
+CREATE TABLE IF NOT EXISTS settings (
+  key text PRIMARY KEY,
+  value text NOT NULL,
+  description text DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+
+-- Settings policies
+CREATE POLICY "Admins can view settings"
+  ON settings FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.role = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins can update settings"
+  ON settings FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.role = 'admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.role = 'admin'
+    )
+  );
+
+-- Insert initial master admin code
+INSERT INTO settings (key, value, description)
+VALUES (
+  'master_admin_code',
+  'ADMIN2024X',
+  'Master access code for creating admin accounts. Change this after first use.'
+)
+ON CONFLICT (key) DO NOTHING;
+
+-- Create trigger for updated_at
+CREATE TRIGGER update_settings_updated_at
+  BEFORE UPDATE ON settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Update validate_access_code function to handle both community and admin codes
+CREATE OR REPLACE FUNCTION validate_access_code(code text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  community_id uuid;
+  admin_code text;
+  result jsonb;
+BEGIN
+  -- First check if it's the admin code
+  SELECT value INTO admin_code
+  FROM settings
+  WHERE key = 'master_admin_code';
+
+  IF code = admin_code THEN
+    -- Return special response indicating admin registration
+    result := jsonb_build_object(
+      'is_admin', true,
+      'community_id', NULL
+    );
+    RETURN result;
+  END IF;
+
+  -- Otherwise, check if it's a community code
+  SELECT id INTO community_id
+  FROM communities
+  WHERE access_code = code AND is_active = true;
+
+  IF community_id IS NOT NULL THEN
+    -- Return community registration response
+    result := jsonb_build_object(
+      'is_admin', false,
+      'community_id', community_id
+    );
+    RETURN result;
+  END IF;
+
+  -- Invalid code
+  RETURN NULL;
+END
+$$;
