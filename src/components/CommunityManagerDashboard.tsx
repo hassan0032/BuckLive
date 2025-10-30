@@ -6,6 +6,8 @@ import { Users, BarChart3, TrendingUp, Clock, Eye, Building2, Plus } from 'lucid
 import { CommunityManagement } from './CommunityManagement';
 import { UserManagement } from './UserManagement';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
+import { Link2 } from 'lucide-react';
+import { PublicShareLinkManager } from './PublicShareLinkManager';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -73,45 +75,59 @@ export const CommunityManagerDashboard: React.FC = () => {
         </div>
       </div>
 
+      {selectedCommunityId && (
+        <div className="bg-white rounded-lg shadow-sm p-4 mt-4 border border-gray-100">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-[#363f49] flex items-center gap-2">
+                <Link2 className="h-5 w-5 text-brand-primary" />
+                Public Share Link
+              </h3>
+              <p className="text-sm text-gray-600">
+                Share your community content publicly without requiring login.
+              </p>
+            </div>
+          </div>
+
+          <PublicShareLinkManager communityId={selectedCommunityId} />
+        </div>
+      )}
+
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'overview'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'overview'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             Overview
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'users'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'users'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             User Management
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'analytics'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'analytics'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             Analytics
           </button>
           <button
             onClick={() => setActiveTab('communities')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'communities'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'communities'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             Communities
           </button>
