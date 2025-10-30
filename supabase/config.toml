@@ -1,8 +1,7 @@
 
 [functions.generate_yearly_invoices]
 enabled = true
-verify_jwt = true
-import_map = "./functions/generate_yearly_invoices/deno.json"
+verify_jwt = false
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/generate_yearly_invoices/index.ts"
