@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePublicShare } from '../hooks/usePublicShare';
-import { supabase } from '../lib/supabase';
 import { getThumbnailUrl, getPDFUrl } from '../lib/supabase';
 import { Content } from '../types';
-import { ArrowLeft, Clock, Tag, User, Calendar, Video, FileText, BookOpen, Download, AlertCircle } from 'lucide-react';
+import { 
+  ArrowLeft, Clock, Tag, User, Calendar, Video, FileText, BookOpen, Download, AlertCircle 
+} from 'lucide-react';
 
 export const PublicContentDetail: React.FC = () => {
   const { token, id } = useParams<{ token: string; id: string }>();
@@ -14,63 +15,46 @@ export const PublicContentDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Track view for anonymous user
+  // Fetch specific content via Edge Function
   useEffect(() => {
-    if (!id || !shareInfo) return;
-
-    const trackView = async () => {
-      try {
-        // Set share token before querying
-        await supabase.rpc('set_share_token', { token: token || '' });
-
-        // Insert content view with community_id but no user_id
-        const { error: viewError } = await supabase
-          .from('content_views')
-          .insert([
-            {
-              content_id: id,
-              community_id: shareInfo.community_id,
-              view_duration: 0,
-            },
-          ]);
-
-        if (viewError) {
-          console.error('Error tracking view:', viewError);
-        }
-      } catch (err) {
-        console.error('Error tracking view:', err);
-      }
-    };
-
-    trackView();
-  }, [id, shareInfo, token]);
-
-  // Fetch content
-  useEffect(() => {
-    if (!id || !shareInfo) return;
+    if (!token || !id) return;
 
     const fetchContent = async () => {
       try {
         setLoading(true);
-        await supabase.rpc('set_share_token', { token: token || '' });
+        setError(null);
+        
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-share-link`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ token, contentId: id }),
+        });
 
-        const { data, error: fetchError } = await supabase
-          .from('content')
-          .select('*')
-          .eq('id', id)
-          .eq('status', 'published')
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        // Check if user has access based on tier
-        if (shareInfo.membership_tier === 'silver' && data.required_tier === 'gold') {
-          setError('This content requires a gold tier membership');
-          setContent(null);
-        } else {
-          setContent(data);
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Failed to fetch content: ${text || res.statusText}`);
         }
+
+        const data = await res.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch content');
+        }
+
+        // When contentId is provided, edge function returns single content object
+        if (!data.content) {
+          setError('This content is not available or you do not have access to it.');
+          setContent(null);
+          return;
+        }
+
+        setContent(data.content as Content);
+        setError(null);
       } catch (err) {
+        console.error('Content fetch error:', err);
         setError(err instanceof Error ? err.message : 'Failed to load content');
         setContent(null);
       } finally {
@@ -79,19 +63,17 @@ export const PublicContentDetail: React.FC = () => {
     };
 
     fetchContent();
-  }, [id, shareInfo, token]);
+  }, [token, id]);
 
   const extractVimeoId = (url: string): string | null => {
     const patterns = [
       /vimeo\.com\/(\d+)/,
       /player\.vimeo\.com\/video\/(\d+)/,
     ];
-
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match) return match[1];
     }
-
     return null;
   };
 
@@ -154,7 +136,7 @@ export const PublicContentDetail: React.FC = () => {
         <div className="text-center max-w-md">
           <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-[#363f49] mb-2">Content Not Available</h2>
-          <p className="text-gray-600 mb-4">{error || 'This content is not available.'}</p>
+          <p className="text-gray-600 mb-4">{error || 'This content is not available or you do not have access to it.'}</p>
           <button
             onClick={() => navigate(`/public/${token}`)}
             className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
@@ -175,6 +157,7 @@ export const PublicContentDetail: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
       <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Back Button */}
         <button
           onClick={() => navigate(`/public/${token}`)}
           className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors uppercase font-semibold"
@@ -183,6 +166,7 @@ export const PublicContentDetail: React.FC = () => {
           Back to Library
         </button>
 
+        {/* Content Card */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {content.type === 'video' && vimeoId ? (
             <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
@@ -212,21 +196,20 @@ export const PublicContentDetail: React.FC = () => {
             </div>
           )}
 
+          {/* Content Details */}
           <div className="p-8">
             <div className="flex items-center gap-3 mb-4">
               <span className={`px-3 py-1 rounded-md text-sm font-medium ${getTypeColor(content.type)}`}>
                 {content.type.toUpperCase()}
               </span>
-              {content.required_tier === 'gold' && (
+              {content.required_tier.toLowerCase() === 'gold' && (
                 <span className="bg-yellow-500 text-white px-3 py-1 rounded-md text-sm font-medium">
                   GOLD TIER
                 </span>
               )}
             </div>
 
-            <h1 className="text-4xl font-bold text-[#363f49] mb-4">
-              {content.title}
-            </h1>
+            <h1 className="text-4xl font-bold text-[#363f49] mb-4">{content.title}</h1>
 
             <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
               <div className="flex items-center">
@@ -235,11 +218,7 @@ export const PublicContentDetail: React.FC = () => {
               </div>
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2" />
-                <span>{new Date(content.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}</span>
+                <span>{new Date(content.created_at).toLocaleDateString()}</span>
               </div>
               {content.type === 'video' && content.duration && (
                 <div className="flex items-center">
@@ -256,9 +235,7 @@ export const PublicContentDetail: React.FC = () => {
             </div>
 
             <div className="prose max-w-none mb-6">
-              <p className="text-gray-700 text-lg leading-relaxed">
-                {content.description}
-              </p>
+              <p className="text-gray-700 text-lg leading-relaxed">{content.description}</p>
             </div>
 
             {content.type === 'blog' && content.blog_content && (
@@ -270,21 +247,7 @@ export const PublicContentDetail: React.FC = () => {
               </div>
             )}
 
-            {content.type === 'blog' && content.url && (
-              <div className="mb-6">
-                <a
-                  href={content.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
-                >
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Read Full Article
-                </a>
-              </div>
-            )}
-
-            {content.tags.length > 0 && (
+            {content.tags && content.tags.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-[#363f49] mb-3">Tags</h3>
                 <div className="flex flex-wrap gap-2">
@@ -301,24 +264,22 @@ export const PublicContentDetail: React.FC = () => {
               </div>
             )}
 
-            <div className="border-t border-gray-200 pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-[#363f49]">Category</p>
-                  <p className="text-gray-600">{content.category}</p>
-                </div>
-                {content.type === 'pdf' && getPDFUrl(content) && (
-                  <a
-                    href={getPDFUrl(content)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download PDF
-                  </a>
-                )}
+            <div className="border-t border-gray-200 pt-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+              <div>
+                <p className="text-sm font-semibold text-[#363f49]">Category</p>
+                <p className="text-gray-600">{content.category}</p>
               </div>
+              {content.type === 'pdf' && getPDFUrl(content) && (
+                <a
+                  href={getPDFUrl(content)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -326,4 +287,3 @@ export const PublicContentDetail: React.FC = () => {
     </div>
   );
 };
-

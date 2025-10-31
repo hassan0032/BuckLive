@@ -13,16 +13,14 @@ const tierLevels: Record<string, number> = {
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { token } = await req.json();
+    const { token, contentId } = await req.json();
 
     if (!token) {
       return new Response(JSON.stringify({ success: false, error: "Missing token" }), {
@@ -39,7 +37,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (communityError || !community) {
-      console.error("Community error:", communityError);
       return new Response(
         JSON.stringify({ success: false, error: "Invalid or disabled share link" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -56,37 +53,46 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2️⃣ Determine accessible tiers
-    const allowedTiers = Object.entries(tierLevels)
-      .filter(([_, level]) => level <= tierLevel)
-      .map(([tier]) => tier);
+    // 2️⃣ Determine allowed tiers - ONLY show content for the exact tier
+    const allowedTiers = [membershipTier];
 
-    console.log("Allowed tiers for community:", allowedTiers);
-
-    // 3️⃣ Fetch content matching allowed tiers
-    const { data: content, error: contentError } = await supabase
+    // 3️⃣ Fetch content
+    let query = supabase
       .from("content")
-      .select("id, title, description, required_tier")
-      .in("required_tier", allowedTiers);
+      .select("*")
+      .eq("status", "published")
+      .in("required_tier", allowedTiers)
+      .order("created_at", { ascending: false });
+
+    if (contentId) query = query.eq("id", contentId);
+
+    const { data: contentData, error: contentError } = await query;
 
     if (contentError) {
-      console.error("Content fetch error:", contentError);
       return new Response(
         JSON.stringify({ success: false, error: "Error fetching content" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // 4️⃣ Ensure updated_at exists
+    const contentWithUpdatedAt = (contentData || []).map(item => ({
+      ...item,
+      updated_at: item.updated_at || item.created_at,
+    }));
+
+    // If contentId was sent, return single object
+    const contentResult = contentId ? contentWithUpdatedAt[0] || null : contentWithUpdatedAt;
+
     return new Response(
       JSON.stringify({
         success: true,
         community,
-        content,
+        content: contentResult,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Edge Function error:", error);
     return new Response(
       JSON.stringify({ success: false, error: "Server error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

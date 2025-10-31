@@ -2,7 +2,6 @@ import { BookOpen, Clock, Download, FileText, Loader2, Search, Tag, Video, X, Al
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePublicShare } from '../hooks/usePublicShare';
-import { supabase } from '../lib/supabase';
 import { getThumbnailUrl } from '../lib/supabase';
 import { Content, CONTENT_TYPE, ContentType, PAYMENT_TIER } from '../types';
 import { cn } from '../utils/helper';
@@ -11,148 +10,69 @@ export const PublicShareView: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { shareInfo, loading: shareLoading, error: shareError } = usePublicShare(token || '');
-  const [content, setContent] = useState<Content[]>([]);
+  
+  const [filteredContent, setFilteredContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
 
-  // Fetch content for the community
+  // Initialize content from shareInfo
   useEffect(() => {
     if (!shareInfo) return;
+    const data = shareInfo.content || [];
+    setFilteredContent(data as Content[]);
 
-    const fetchContent = async () => {
-      try {
-        setLoading(true);
-        
-        console.log('ShareInfo:', shareInfo);
-        console.log('Community Tier:', shareInfo.membership_tier);
-        
-        // Build query for content
-        let query = supabase
-          .from('content')
-          .select('*')
-          .eq('status', 'published');
-
-        // Normalize tier to lowercase for comparison
-        const communityTier = shareInfo.membership_tier.toLowerCase();
-        console.log('Normalized community tier:', communityTier);
-        
-        // Filter by tier - show ONLY the content matching the community tier
-        query = query.eq('required_tier', communityTier);
-
-        const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching content:', error);
-          throw error;
-        }
-
-        console.log('Fetched content count:', data?.length || 0);
-        console.log('Fetched content:', data);
-        
-        // Debug: Log the required_tier of each content item
-        if (data && data.length > 0) {
-          data.forEach(item => {
-            console.log(`Content "${item.title}" - required_tier: "${item.required_tier}"`);
-          });
-        }
-        
-        setContent(data || []);
-        
-        // Extract categories
-        if (data && data.length > 0) {
-          const cats = Array.from(new Set(data.map(item => item.category).filter(Boolean)));
-          setAllCategories(cats);
-        }
-      } catch (err) {
-        console.error('Error fetching content:', err);
-        setContent([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchContent();
+    const cats = Array.from(new Set(data.map(item => item.category).filter(Boolean)));
+    setAllCategories(cats);
+    setLoading(false);
   }, [shareInfo]);
 
-  const searchContent = useCallback(async (query: string, type?: string, category?: string, tags?: string[]) => {
+  // Client-side filtering
+  const filterContent = useCallback(() => {
     if (!shareInfo) return;
+    let data = shareInfo.content || [];
 
-    try {
-      setSearching(true);
-      
-      let queryBuilder = supabase
-        .from('content')
-        .select('*')
-        .eq('status', 'published');
-
-      // Normalize tier to lowercase for comparison
-      const communityTier = shareInfo.membership_tier.toLowerCase();
-      
-      // Filter by tier - show ONLY the content matching the community tier
-      queryBuilder = queryBuilder.eq('required_tier', communityTier);
-
-      if (query) {
-        queryBuilder = queryBuilder.or(`title.ilike.%${query}%,description.ilike.%${query}%,tags.cs.{${query}}`);
-      }
-
-      if (type) {
-        queryBuilder = queryBuilder.eq('type', type);
-      }
-
-      if (category) {
-        queryBuilder = queryBuilder.eq('category', category);
-      }
-
-      if (tags && tags.length > 0) {
-        queryBuilder = queryBuilder.contains('tags', tags);
-      }
-
-      const { data, error } = await queryBuilder.order('created_at', { ascending: false });
-
-      if (error) throw error;
-      console.log('Search results:', data?.length || 0);
-      setContent(data || []);
-    } catch (err) {
-      console.error('Error searching content:', err);
-    } finally {
-      setSearching(false);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      data = data.filter(
+        (item) =>
+          item.title.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q) ||
+          (item.tags && item.tags.some(tag => tag.toLowerCase().includes(q)))
+      );
     }
-  }, [shareInfo]);
 
-  const performSearch = useCallback(async (query: string, type: string, category: string, tags: string[]) => {
-    await searchContent(query, type, category, tags);
-  }, [searchContent]);
+    if (selectedType) {
+      data = data.filter(item => item.type === selectedType);
+    }
 
-  const handleSearchQueryChange = (value: string) => {
-    setSearchQuery(value);
-    performSearch(value, selectedType, selectedCategory, selectedTags);
+    if (selectedCategory) {
+      data = data.filter(item => item.category === selectedCategory);
+    }
+
+    if (selectedTags.length > 0) {
+      data = data.filter(item =>
+        selectedTags.every(tag => item.tags?.includes(tag))
+      );
+    }
+
+    setFilteredContent(data as Content[]);
+  }, [searchQuery, selectedType, selectedCategory, selectedTags, shareInfo]);
+
+  useEffect(() => {
+    filterContent();
+  }, [filterContent]);
+
+  const handleSearchQueryChange = (value: string) => setSearchQuery(value);
+  const handleTypeChange = (value: string) => setSelectedType(value);
+  const handleCategoryChange = (value: string) => setSelectedCategory(value);
+  const handleTagClick = (tag: string) => {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [tag]);
   };
-
-  const handleTypeChange = (value: string) => {
-    setSelectedType(value);
-    performSearch(searchQuery, value, selectedCategory, selectedTags);
-  };
-
-  const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    performSearch(searchQuery, selectedType, value, selectedTags);
-  };
-
-  const handleTagClick = async (tag: string) => {
-    const newTags = selectedTags.includes(tag) ? selectedTags.filter(t => t !== tag) : [tag];
-    setSelectedTags(newTags);
-    await searchContent(searchQuery, selectedType, selectedCategory, newTags);
-  };
-
-  const clearTagFilter = async () => {
-    setSelectedTags([]);
-    await searchContent(searchQuery, selectedType, selectedCategory, []);
-  };
+  const clearTagFilter = () => setSelectedTags([]);
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '';
@@ -185,33 +105,23 @@ export const PublicShareView: React.FC = () => {
     }
   };
 
-  const handleContentClick = (contentId: string) => {
-    navigate(`/public/${token}/content/${contentId}`);
-  };
+  const handleContentClick = (contentId: string) => navigate(`/public/${token}/content/${contentId}`);
 
-  // Show loading only while validating share token
-  if (shareLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-      </div>
-    );
-  }
+  if (shareLoading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+    </div>
+  );
 
-  // Show error if share token is invalid
-  if (shareError) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
-        <div className="text-center max-w-md">
-          <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-[#363f49] mb-2">Invalid Share Link</h2>
-          <p className="text-gray-600">
-            {shareError || 'This share link is invalid or has been disabled.'}
-          </p>
-        </div>
+  if (shareError) return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
+      <div className="text-center max-w-md">
+        <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-[#363f49] mb-2">Invalid Share Link</h2>
+        <p className="text-gray-600">{shareError || 'This share link is invalid or has been disabled.'}</p>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
@@ -224,22 +134,13 @@ export const PublicShareView: React.FC = () => {
 
         {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
-          {/* Active Tag Filter */}
           {selectedTags.length > 0 && (
             <div className="flex items-center gap-2 pb-4 border-b border-gray-200">
               <span className="text-sm text-gray-600">Filtered by tag:</span>
-              {selectedTags.map((tag) => (
-                <div
-                  key={tag}
-                  className="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary text-white rounded-md text-sm font-medium"
-                >
-                  <Tag className="h-3 w-3" />
-                  {tag}
-                  <button
-                    onClick={clearTagFilter}
-                    className="hover:bg-white hover:bg-opacity-20 rounded-full p-0.5 transition-colors"
-                    aria-label="Clear tag filter"
-                  >
+              {selectedTags.map(tag => (
+                <div key={tag} className="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary text-white rounded-md text-sm font-medium">
+                  <Tag className="h-3 w-3" /> {tag}
+                  <button onClick={clearTagFilter} className="hover:bg-white hover:bg-opacity-20 rounded-full p-0.5 transition-colors" aria-label="Clear tag filter">
                     <X className="h-3 w-3" />
                   </button>
                 </div>
@@ -249,9 +150,6 @@ export const PublicShareView: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
-              {searching && (
-                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-brand-primary animate-spin z-10" />
-              )}
               <input
                 type="text"
                 placeholder="Search content..."
@@ -280,7 +178,7 @@ export const PublicShareView: React.FC = () => {
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
               >
                 <option value="">All Categories</option>
-                {allCategories.map((category) => (
+                {allCategories.map(category => (
                   <option key={category} value={category}>{category}</option>
                 ))}
               </select>
@@ -288,40 +186,33 @@ export const PublicShareView: React.FC = () => {
           </div>
         </div>
 
-        {/* Loading State for Content */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-2 text-brand-primary">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span className="text-sm font-medium">Loading content...</span>
-            </div>
-          </div>
-        )}
-
         {/* Content Grid */}
-        {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
-            {searching && (
-              <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10 rounded-lg">
-                <div className="flex items-center gap-2 text-brand-primary">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <span className="text-sm font-medium">Searching...</span>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative mt-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-2 text-brand-primary">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="text-sm font-medium">Loading content...</span>
               </div>
-            )}
-            {content.map((item) => {
+            </div>
+          ) : filteredContent.length === 0 ? (
+            <div className="text-center py-12 col-span-full">
+              <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-[#363f49] mb-2">No content found</h3>
+              <p className="text-gray-600">
+                {shareInfo ? `No content available for ${shareInfo.membership_tier} tier or matching your filters` : 'Try adjusting your search filters'}
+              </p>
+            </div>
+          ) : (
+            filteredContent.map((item) => {
               const ContentIcon = getContentIcon(item.type);
               const thumbnailUrl = getThumbnailUrl(item);
               return (
-                <div key={item.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                <div key={item.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer" onClick={() => handleContentClick(item.id)}>
                   {/* Thumbnail */}
                   <div className="relative h-48 bg-gray-200">
                     {thumbnailUrl ? (
-                      <img
-                        src={thumbnailUrl}
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ContentIcon className="h-16 w-16 text-gray-400" />
@@ -330,7 +221,7 @@ export const PublicShareView: React.FC = () => {
 
                     {/* Type Badge */}
                     <div className={cn(`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`)}>
-                      {item.type.toUpperCase()}
+                      {item.type}
                     </div>
 
                     {/* Tier Badge */}
@@ -341,42 +232,35 @@ export const PublicShareView: React.FC = () => {
                     )}
 
                     {/* Duration/Size Badge */}
-                    {((item.type === 'video' && (item.duration ?? 0) > 0) || ((item.file_size ?? 0) > 0)) ? (
+                    {((item.type === 'video' && (item.duration ?? 0) > 0) || ((item.file_size ?? 0) > 0)) && (
                       <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded-md text-xs">
                         {item.type === 'video' && (item.duration ?? 0) > 0 ? (
                           <div className="flex items-center space-x-1">
                             <Clock className="h-3 w-3" />
                             <span>{formatDuration(item.duration ?? 0)}</span>
                           </div>
-                        ) : (item.file_size ?? 0) > 0 ? (
+                        ) : (
                           <div className="flex items-center space-x-1">
                             <Download className="h-3 w-3" />
                             <span>{formatFileSize(item.file_size)}</span>
                           </div>
-                        ) : null}
+                        )}
                       </div>
-                    ) : null}
+                    )}
                   </div>
 
                   {/* Content */}
                   <div className="p-4">
-                    <h3 className="font-semibold text-lg text-[#363f49] mb-2 line-clamp-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-3">
-                      {item.description}
-                    </p>
+                    <h3 className="font-semibold text-lg text-[#363f49] mb-2 line-clamp-2">{item.title}</h3>
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-3">{item.description}</p>
 
                     {/* Tags */}
-                    {item.tags.length > 0 && (
+                    {item.tags && (
                       <div className="flex flex-wrap gap-1 mb-3">
                         {item.tags.slice(0, 3).map((tag, index) => (
                           <button
                             key={index}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTagClick(tag);
-                            }}
+                            onClick={(e) => { e.stopPropagation(); handleTagClick(tag); }}
                             className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${
                               selectedTags.includes(tag)
                                 ? 'bg-brand-primary text-white'
@@ -387,19 +271,15 @@ export const PublicShareView: React.FC = () => {
                             {tag}
                           </button>
                         ))}
-                        {item.tags.length > 3 && (
-                          <span className="text-xs text-gray-500">+{item.tags.length - 3} more</span>
-                        )}
+                        {item.tags.length > 3 && <span className="text-xs text-gray-500">+{item.tags.length - 3} more</span>}
                       </div>
                     )}
 
-                    {/* Footer */}
                     <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
                       <span>By {item.author}</span>
                       <span>{new Date(item.created_at).toLocaleDateString()}</span>
                     </div>
 
-                    {/* Action Button */}
                     <button
                       onClick={() => handleContentClick(item.id)}
                       className="w-full bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
@@ -409,19 +289,9 @@ export const PublicShareView: React.FC = () => {
                   </div>
                 </div>
               );
-            })}
-          </div>
-        )}
-
-        {!loading && content.length === 0 && (
-          <div className="text-center py-12">
-            <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-[#363f49] mb-2">No content found</h3>
-            <p className="text-gray-600">
-              {shareInfo ? `No content available for ${shareInfo.membership_tier} tier` : 'Try adjusting your search filters'}
-            </p>
-          </div>
-        )}
+            })
+          )}
+        </div>
       </div>
     </div>
   );
