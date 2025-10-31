@@ -27,58 +27,74 @@ export const PublicShareView: React.FC = () => {
     const fetchContent = async () => {
       try {
         setLoading(true);
-        // Set share token before querying (for RLS)
-        await supabase.rpc('set_share_token', { token: token || '' });
         
-        // Filter content based on community tier
+        console.log('ShareInfo:', shareInfo);
+        console.log('Community Tier:', shareInfo.membership_tier);
+        
+        // Build query for content
         let query = supabase
           .from('content')
           .select('*')
           .eq('status', 'published');
 
-        // Filter by tier - silver content is visible to all, gold only to gold communities
-        if (shareInfo.membership_tier === 'silver') {
-          query = query.eq('required_tier', 'silver');
-        }
-        // For gold communities, both silver and gold content are visible
+        // Normalize tier to lowercase for comparison
+        const communityTier = shareInfo.membership_tier.toLowerCase();
+        console.log('Normalized community tier:', communityTier);
+        
+        // Filter by tier - show ONLY the content matching the community tier
+        query = query.eq('required_tier', communityTier);
 
         const { data, error } = await query.order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching content:', error);
+          throw error;
+        }
+
+        console.log('Fetched content count:', data?.length || 0);
+        console.log('Fetched content:', data);
+        
+        // Debug: Log the required_tier of each content item
+        if (data && data.length > 0) {
+          data.forEach(item => {
+            console.log(`Content "${item.title}" - required_tier: "${item.required_tier}"`);
+          });
+        }
+        
         setContent(data || []);
+        
+        // Extract categories
+        if (data && data.length > 0) {
+          const cats = Array.from(new Set(data.map(item => item.category).filter(Boolean)));
+          setAllCategories(cats);
+        }
       } catch (err) {
         console.error('Error fetching content:', err);
+        setContent([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchContent();
-  }, [shareInfo, token]);
-
-  useEffect(() => {
-    if (content && content.length > 0 && allCategories.length === 0) {
-      const cats = Array.from(new Set(content.map(item => item.category).filter(Boolean)));
-      setAllCategories(cats);
-    }
-  }, [content]);
+  }, [shareInfo]);
 
   const searchContent = useCallback(async (query: string, type?: string, category?: string, tags?: string[]) => {
     if (!shareInfo) return;
 
     try {
       setSearching(true);
-      await supabase.rpc('set_share_token', { token: token || '' });
       
       let queryBuilder = supabase
         .from('content')
         .select('*')
         .eq('status', 'published');
 
-      // Filter by tier
-      if (shareInfo.membership_tier === 'silver') {
-        queryBuilder = queryBuilder.eq('required_tier', 'silver');
-      }
+      // Normalize tier to lowercase for comparison
+      const communityTier = shareInfo.membership_tier.toLowerCase();
+      
+      // Filter by tier - show ONLY the content matching the community tier
+      queryBuilder = queryBuilder.eq('required_tier', communityTier);
 
       if (query) {
         queryBuilder = queryBuilder.or(`title.ilike.%${query}%,description.ilike.%${query}%,tags.cs.{${query}}`);
@@ -99,13 +115,14 @@ export const PublicShareView: React.FC = () => {
       const { data, error } = await queryBuilder.order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Search results:', data?.length || 0);
       setContent(data || []);
     } catch (err) {
       console.error('Error searching content:', err);
     } finally {
       setSearching(false);
     }
-  }, [shareInfo, token]);
+  }, [shareInfo]);
 
   const performSearch = useCallback(async (query: string, type: string, category: string, tags: string[]) => {
     await searchContent(query, type, category, tags);
@@ -113,12 +130,7 @@ export const PublicShareView: React.FC = () => {
 
   const handleSearchQueryChange = (value: string) => {
     setSearchQuery(value);
-
-    if (value.trim()) {
-      performSearch(value, selectedType, selectedCategory, selectedTags);
-    } else {
-      performSearch('', selectedType, selectedCategory, selectedTags);
-    }
+    performSearch(value, selectedType, selectedCategory, selectedTags);
   };
 
   const handleTypeChange = (value: string) => {
@@ -177,7 +189,8 @@ export const PublicShareView: React.FC = () => {
     navigate(`/public/${token}/content/${contentId}`);
   };
 
-  if (shareLoading || loading) {
+  // Show loading only while validating share token
+  if (shareLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
@@ -185,7 +198,8 @@ export const PublicShareView: React.FC = () => {
     );
   }
 
-  if (shareError || !shareInfo) {
+  // Show error if share token is invalid
+  if (shareError) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
         <div className="text-center max-w-md">
@@ -204,8 +218,8 @@ export const PublicShareView: React.FC = () => {
       <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-semibold text-[#363f49] mb-2">{shareInfo.name}</h1>
-          <p className="text-gray-600">Public Content Library</p>
+          <h1 className="text-3xl font-semibold text-[#363f49] mb-2">{shareInfo?.name}'s Library</h1>
+          <p className="text-base text-[#363f49]">Membership Tier: {shareInfo?.membership_tier.toUpperCase()}</p>
         </div>
 
         {/* Search and Filters */}
@@ -274,128 +288,141 @@ export const PublicShareView: React.FC = () => {
           </div>
         </div>
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
-          {searching && (
-            <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10 rounded-lg">
-              <div className="flex items-center gap-2 text-brand-primary">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="text-sm font-medium">Searching...</span>
-              </div>
+        {/* Loading State for Content */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-2 text-brand-primary">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-sm font-medium">Loading content...</span>
             </div>
-          )}
-          {content.map((item) => {
-            const ContentIcon = getContentIcon(item.type);
-            const thumbnailUrl = getThumbnailUrl(item);
-            return (
-              <div key={item.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                {/* Thumbnail */}
-                <div className="relative h-48 bg-gray-200">
-                  {thumbnailUrl ? (
-                    <img
-                      src={thumbnailUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ContentIcon className="h-16 w-16 text-gray-400" />
-                    </div>
-                  )}
+          </div>
+        )}
 
-                  {/* Type Badge */}
-                  <div className={cn(`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`)}>
-                    {item.type.toUpperCase()}
-                  </div>
-
-                  {/* Tier Badge */}
-                  {item.required_tier === PAYMENT_TIER.GOLD && (
-                    <div className="absolute top-3 left-20 bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-medium">
-                      {PAYMENT_TIER.GOLD.toUpperCase()}
-                    </div>
-                  )}
-
-                  {/* Duration/Size Badge */}
-                  {((item.type === 'video' && (item.duration ?? 0) > 0) || ((item.file_size ?? 0) > 0)) ? (
-                    <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded-md text-xs">
-                      {item.type === 'video' && (item.duration ?? 0) > 0 ? (
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatDuration(item.duration ?? 0)}</span>
-                        </div>
-                      ) : (item.file_size ?? 0) > 0 ? (
-                        <div className="flex items-center space-x-1">
-                          <Download className="h-3 w-3" />
-                          <span>{formatFileSize(item.file_size)}</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-
-                {/* Content */}
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg text-[#363f49] mb-2 line-clamp-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-3">
-                    {item.description}
-                  </p>
-
-                  {/* Tags */}
-                  {item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {item.tags.slice(0, 3).map((tag, index) => (
-                        <button
-                          key={index}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTagClick(tag);
-                          }}
-                          className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${
-                            selectedTags.includes(tag)
-                              ? 'bg-brand-primary text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          <Tag className="h-3 w-3 mr-1" />
-                          {tag}
-                        </button>
-                      ))}
-                      {item.tags.length > 3 && (
-                        <span className="text-xs text-gray-500">+{item.tags.length - 3} more</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Footer */}
-                  <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
-                    <span>By {item.author}</span>
-                    <span>{new Date(item.created_at).toLocaleDateString()}</span>
-                  </div>
-
-                  {/* Action Button */}
-                  <button
-                    onClick={() => handleContentClick(item.id)}
-                    className="w-full bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
-                  >
-                    {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download PDF' : 'Read Article'}
-                  </button>
+        {/* Content Grid */}
+        {!loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+            {searching && (
+              <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10 rounded-lg">
+                <div className="flex items-center gap-2 text-brand-primary">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="text-sm font-medium">Searching...</span>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            )}
+            {content.map((item) => {
+              const ContentIcon = getContentIcon(item.type);
+              const thumbnailUrl = getThumbnailUrl(item);
+              return (
+                <div key={item.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                  {/* Thumbnail */}
+                  <div className="relative h-48 bg-gray-200">
+                    {thumbnailUrl ? (
+                      <img
+                        src={thumbnailUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ContentIcon className="h-16 w-16 text-gray-400" />
+                      </div>
+                    )}
 
-        {content.length === 0 && (
+                    {/* Type Badge */}
+                    <div className={cn(`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`)}>
+                      {item.type.toUpperCase()}
+                    </div>
+
+                    {/* Tier Badge */}
+                    {item.required_tier === PAYMENT_TIER.GOLD && (
+                      <div className="absolute top-3 left-20 bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-medium">
+                        {PAYMENT_TIER.GOLD.toUpperCase()}
+                      </div>
+                    )}
+
+                    {/* Duration/Size Badge */}
+                    {((item.type === 'video' && (item.duration ?? 0) > 0) || ((item.file_size ?? 0) > 0)) ? (
+                      <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded-md text-xs">
+                        {item.type === 'video' && (item.duration ?? 0) > 0 ? (
+                          <div className="flex items-center space-x-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{formatDuration(item.duration ?? 0)}</span>
+                          </div>
+                        ) : (item.file_size ?? 0) > 0 ? (
+                          <div className="flex items-center space-x-1">
+                            <Download className="h-3 w-3" />
+                            <span>{formatFileSize(item.file_size)}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg text-[#363f49] mb-2 line-clamp-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-3">
+                      {item.description}
+                    </p>
+
+                    {/* Tags */}
+                    {item.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {item.tags.slice(0, 3).map((tag, index) => (
+                          <button
+                            key={index}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTagClick(tag);
+                            }}
+                            className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${
+                              selectedTags.includes(tag)
+                                ? 'bg-brand-primary text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            <Tag className="h-3 w-3 mr-1" />
+                            {tag}
+                          </button>
+                        ))}
+                        {item.tags.length > 3 && (
+                          <span className="text-xs text-gray-500">+{item.tags.length - 3} more</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
+                      <span>By {item.author}</span>
+                      <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      onClick={() => handleContentClick(item.id)}
+                      className="w-full bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
+                    >
+                      {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download PDF' : 'Read Article'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && content.length === 0 && (
           <div className="text-center py-12">
             <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-[#363f49] mb-2">No content found</h3>
-            <p className="text-gray-600">Try adjusting your search filters</p>
+            <p className="text-gray-600">
+              {shareInfo ? `No content available for ${shareInfo.membership_tier} tier` : 'Try adjusting your search filters'}
+            </p>
           </div>
         )}
       </div>
     </div>
   );
 };
-
