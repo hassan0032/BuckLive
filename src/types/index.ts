@@ -73,6 +73,8 @@ export interface Community {
   updated_at: string;
   created_by_manager_id?: string;
   member_count?: number;
+  is_sharable?: boolean;
+  sharable_token?: string | null;
 }
 
 export interface CommunityManager {

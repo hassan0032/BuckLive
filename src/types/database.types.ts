@@ -23,9 +23,11 @@ export interface Database {
           description: string | null
           access_code: string
           is_active: boolean
+          is_sharable: boolean
           membership_tier: 'silver' | 'gold'
           created_at: string
           updated_at: string
+          sharable_token: string | null
         }
         Insert: {
           id?: string
@@ -33,9 +35,11 @@ export interface Database {
           description?: string | null
           access_code: string
           is_active?: boolean
+          is_sharable?: boolean
           membership_tier: 'silver' | 'gold'
           created_at?: string
           updated_at?: string
+          sharable_token?: string | null
         }
         Update: {
           id?: string
@@ -43,9 +47,11 @@ export interface Database {
           description?: string | null
           access_code?: string
           is_active?: boolean
+          is_sharable?: boolean
           membership_tier?: 'silver' | 'gold'
           created_at?: string
           updated_at?: string
+          sharable_token?: string | null
         }
       }
       user_profiles: {

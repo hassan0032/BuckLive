@@ -7,8 +7,6 @@ import { Users, BarChart3, TrendingUp, Clock, Eye, Building2, Plus, Link2, Copy,
 import { CommunityManagement } from './CommunityManagement';
 import { UserManagement } from './UserManagement';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
-import CommunityManagerInvoices from './CommunityManagerInvoices';
-import { PublicShareLinkManager } from './PublicShareLinkManager';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -151,23 +149,90 @@ export const CommunityManagerDashboard: React.FC = () => {
         </div>
       </div>
 
-      {selectedCommunityId && (
-        <div className="bg-white rounded-lg shadow-sm p-4 mt-4 border border-gray-100">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-[#363f49] flex items-center gap-2">
-                <Link2 className="h-5 w-5 text-brand-primary" />
+         {/* Share Link Management */}
+         {selectedCommunity && (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-[#363f49] mb-4 flex items-center">
+                <Link2 className="h-5 w-5 mr-2 text-brand-primary" />
                 Public Share Link
               </h3>
-              <p className="text-sm text-gray-600">
-                Share your community content publicly without requiring login.
-              </p>
-            </div>
-          </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">
+                      Allow anonymous users to view your community's content without logging in.
+                    </p>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedCommunity.is_sharable || false}
+                        onChange={(e) => handleToggleShareLink(e.target.checked)}
+                        disabled={updatingShareLink}
+                        className="sr-only"
+                      />
+                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        (selectedCommunity.is_sharable || false) ? 'bg-brand-primary' : 'bg-gray-300'
+                      } ${updatingShareLink ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          (selectedCommunity.is_sharable || false) ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-700">
+                        {selectedCommunity.is_sharable ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
 
-          <PublicShareLinkManager communityId={selectedCommunityId} />
-        </div>
-      )}
+                {selectedCommunity.is_sharable && selectedCommunity.sharable_token && (
+                  <div className="border-t border-gray-200 pt-4 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Share Link
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={`${window.location.origin}/public/${selectedCommunity.sharable_token}`}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                        />
+                        <button
+                          onClick={handleCopyShareLink}
+                          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors text-sm font-medium"
+                        >
+                          {shareLinkCopied ? (
+                            <>
+                              <Check className="h-4 w-4 mr-2" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <button
+                        onClick={handleRegenerateToken}
+                        disabled={updatingShareLink}
+                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${updatingShareLink ? 'animate-spin' : ''}`} />
+                        Regenerate Token
+                      </button>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Regenerating the token will invalidate the current share link. You'll need to share the new link.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
@@ -255,91 +320,6 @@ export const CommunityManagerDashboard: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Share Link Management */}
-          {selectedCommunity && (
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-[#363f49] mb-4 flex items-center">
-                <Link2 className="h-5 w-5 mr-2 text-brand-primary" />
-                Public Share Link
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-600 mb-1">
-                      Allow anonymous users to view your community's content without logging in.
-                    </p>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedCommunity.is_sharable || false}
-                        onChange={(e) => handleToggleShareLink(e.target.checked)}
-                        disabled={updatingShareLink}
-                        className="sr-only"
-                      />
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        (selectedCommunity.is_sharable || false) ? 'bg-brand-primary' : 'bg-gray-300'
-                      } ${updatingShareLink ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          (selectedCommunity.is_sharable || false) ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-700">
-                        {selectedCommunity.is_sharable ? 'Enabled' : 'Disabled'}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                {selectedCommunity.is_sharable && selectedCommunity.sharable_token && (
-                  <div className="border-t border-gray-200 pt-4 space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Share Link
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          readOnly
-                          value={`${window.location.origin}/public/${selectedCommunity.sharable_token}`}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-                        />
-                        <button
-                          onClick={handleCopyShareLink}
-                          className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors text-sm font-medium"
-                        >
-                          {shareLinkCopied ? (
-                            <>
-                              <Check className="h-4 w-4 mr-2" />
-                              Copied
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-4 w-4 mr-2" />
-                              Copy
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <button
-                        onClick={handleRegenerateToken}
-                        disabled={updatingShareLink}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <RefreshCw className={`h-4 w-4 mr-2 ${updatingShareLink ? 'animate-spin' : ''}`} />
-                        Regenerate Token
-                      </button>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Regenerating the token will invalidate the current share link. You'll need to share the new link.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
