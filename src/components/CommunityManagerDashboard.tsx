@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useCommunityAnalytics } from '../hooks/useCommunityAnalytics';
+import { supabase } from '../lib/supabase';
 import { Users, BarChart3, TrendingUp, Clock, Eye, Building2, Plus, Link2, Copy, RefreshCw, Check } from 'lucide-react';
 import { CommunityManagement } from './CommunityManagement';
 import { UserManagement } from './UserManagement';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
-import { Link2 } from 'lucide-react';
+import CommunityManagerInvoices from './CommunityManagerInvoices';
 import { PublicShareLinkManager } from './PublicShareLinkManager';
 
 export const CommunityManagerDashboard: React.FC = () => {
@@ -24,6 +25,81 @@ export const CommunityManagerDashboard: React.FC = () => {
   }, [communities, selectedCommunityId]);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  const [updatingShareLink, setUpdatingShareLink] = useState(false);
+
+  const generateShareToken = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 32; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleToggleShareLink = async (enabled: boolean) => {
+    if (!selectedCommunityId) return;
+
+    setUpdatingShareLink(true);
+    try {
+      const updates: { is_sharable: boolean; sharable_token?: string | null } = {
+        is_sharable: enabled,
+      };
+
+      if (enabled && !selectedCommunity?.sharable_token) {
+        // Generate token if enabling and no token exists
+        updates.sharable_token = generateShareToken();
+      } else if (!enabled) {
+        // Clear token if disabling
+        updates.sharable_token = null;
+      }
+
+      const { error } = await supabase
+        .from('communities')
+        .update(updates)
+        .eq('id', selectedCommunityId);
+
+      if (error) throw error;
+
+      await refetch();
+    } catch (err) {
+      console.error('Error updating share link:', err);
+      alert('Failed to update share link. Please try again.');
+    } finally {
+      setUpdatingShareLink(false);
+    }
+  };
+
+  const handleRegenerateToken = async () => {
+    if (!selectedCommunityId) return;
+
+    setUpdatingShareLink(true);
+    try {
+      const { error } = await supabase
+        .from('communities')
+        .update({ sharable_token: generateShareToken() })
+        .eq('id', selectedCommunityId);
+
+      if (error) throw error;
+
+      await refetch();
+    } catch (err) {
+      console.error('Error regenerating token:', err);
+      alert('Failed to regenerate token. Please try again.');
+    } finally {
+      setUpdatingShareLink(false);
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    if (!selectedCommunity?.sharable_token) return;
+
+    const shareLink = `${window.location.origin}/public/${selectedCommunity.sharable_token}`;
+    navigator.clipboard.writeText(shareLink).then(() => {
+      setShareLinkCopied(true);
+      setTimeout(() => setShareLinkCopied(false), 2000);
+    });
+  };
 
   if (communitiesLoading) {
     return (
