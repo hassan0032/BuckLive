@@ -80,6 +80,7 @@ export const AdminUserManagement: React.FC = () => {
           last_name: formData.last_name,
           role: formData.role,
           community_id: formData.community_id,
+          is_shared_account: formData.is_shared_account,
         });
 
         if (error) throw new Error(error);
@@ -534,7 +535,6 @@ export const AdminUserManagement: React.FC = () => {
                   )}
                 </div>
 
-                {!editingUser && (
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -550,16 +550,15 @@ export const AdminUserManagement: React.FC = () => {
                       (Multiple users can use this account)
                     </span>
                   </div>
-                )}
 
-                {editingUser && formData.is_shared_account && (
+                  {/* {editingUser && formData.is_shared_account && (
                   <div className="flex items-center space-x-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                     <Users className="h-4 w-4 text-purple-600" />
                     <span className="text-sm text-purple-700">
                       This is a shared account. The shared account setting cannot be changed after creation.
                     </span>
                   </div>
-                )}
+                )} */}
 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button

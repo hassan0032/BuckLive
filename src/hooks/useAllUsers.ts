@@ -135,6 +135,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     last_name?: string;
     role?: 'member' | 'admin' | 'community_manager';
     community_id?: string;
+    is_shared_account?: boolean;
   }) => {
     try {
       const currentUser = users.find(u => u.id === userId);
@@ -158,6 +159,9 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
       }
       if (updates.community_id !== undefined) {
         profileUpdates.community_id = updates.community_id;
+      }
+      if (updates.is_shared_account !== undefined) {
+        profileUpdates.is_shared_account = updates.is_shared_account;
       }
 
       const { error: updateError } = await supabase
