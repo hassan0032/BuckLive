@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
-export const useContentTracking = (contentId: string | undefined, userId: string | undefined, communityId: string | undefined) => {
+export const useContentTracking = (contentId: string | undefined, userId: string | undefined, communityId: string | undefined, isAnonymous: boolean = false) => {
   const startTimeRef = useRef<number>(Date.now());
   const viewIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!contentId || !userId) return;
+    if (!contentId) return;
+    // For anonymous users, userId is null/undefined, which is allowed
+    if (!isAnonymous && !userId) return;
 
     startTimeRef.current = Date.now();
 
@@ -16,7 +18,7 @@ export const useContentTracking = (contentId: string | undefined, userId: string
           .from('content_views')
           .insert([
             {
-              user_id: userId,
+              user_id: isAnonymous ? null : userId,
               content_id: contentId,
               community_id: communityId,
               view_duration: 0,
@@ -73,5 +75,5 @@ export const useContentTracking = (contentId: string | undefined, userId: string
       window.removeEventListener('beforeunload', handleBeforeUnload);
       updateViewDuration();
     };
-  }, [contentId, userId, communityId]);
+  }, [contentId, userId, communityId, isAnonymous]);
 };

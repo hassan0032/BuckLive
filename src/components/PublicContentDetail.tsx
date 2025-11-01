@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePublicShare } from '../hooks/usePublicShare';
+import { useContentTracking } from '../hooks/useContentTracking';
 import { getThumbnailUrl, getPDFUrl } from '../lib/supabase';
 import { Content } from '../types';
 import { 
@@ -64,6 +65,14 @@ export const PublicContentDetail: React.FC = () => {
 
     fetchContent();
   }, [token, id]);
+
+  // Track anonymous user views
+  useContentTracking(
+    content?.id,
+    undefined, // No user_id for anonymous users
+    shareInfo?.community_id,
+    true // isAnonymous = true
+  );
 
   const extractVimeoId = (url: string): string | null => {
     const patterns = [

@@ -24,6 +24,18 @@ interface AnalyticsData {
   recentViews: Array<ContentView & { user_name?: string; user_email?: string }>;
 }
 
+interface AnonymousAnalyticsData {
+  totalViews: number;
+  engagementRate: number;
+  topContent: Array<{
+    content_id: string;
+    title: string;
+    view_count: number;
+    total_duration: number;
+  }>;
+  recentViews: Array<ContentView & { user_name?: string; user_email?: string }>;
+}
+
 export const useCommunityAnalytics = (communityId?: string) => {
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalViews: 0,
@@ -32,6 +44,12 @@ export const useCommunityAnalytics = (communityId?: string) => {
     averageSessionDuration: 0,
     topContent: [],
     userActivity: [],
+    recentViews: [],
+  });
+  const [anonymousAnalytics, setAnonymousAnalytics] = useState<AnonymousAnalyticsData>({
+    totalViews: 0,
+    engagementRate: 0,
+    topContent: [],
     recentViews: [],
   });
   const [loading, setLoading] = useState(true);
@@ -68,16 +86,29 @@ export const useCommunityAnalytics = (communityId?: string) => {
         return;
       }
 
+      // Fetch authenticated user views
       const { data: views, error: viewsError } = await supabase
         .from('content_views')
         .select('*')
         .eq('community_id', communityId)
+        .not('user_id', 'is', null)
         .order('viewed_at', { ascending: false })
         .limit(100);
 
       if (viewsError) throw viewsError;
 
       const totalViews = views?.length || 0;
+
+      // Fetch anonymous user views (where user_id is null)
+      const { data: anonymousViews, error: anonymousViewsError } = await supabase
+        .from('content_views')
+        .select('*')
+        .eq('community_id', communityId)
+        .is('user_id', null)
+        .order('viewed_at', { ascending: false })
+        .limit(100);
+
+      if (anonymousViewsError) throw anonymousViewsError;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -165,6 +196,50 @@ export const useCommunityAnalytics = (communityId?: string) => {
         return { ...view, user_name, user_email };
       });
 
+      // Process anonymous analytics
+      const anonymousTotalViews = anonymousViews?.length || 0;
+
+      // Calculate engagement rate (views today / total views)
+      // Reuse the 'today' variable already defined above
+      const anonymousViewsToday = anonymousViews?.filter(view => 
+        new Date(view.viewed_at) >= today
+      ).length || 0;
+
+      const anonymousEngagementRate = anonymousTotalViews > 0
+        ? Math.round((anonymousViewsToday / anonymousTotalViews) * 100)
+        : 0;
+
+      const anonymousContentViewMap = new Map<string, { count: number; duration: number }>();
+      anonymousViews?.forEach(view => {
+        const existing = anonymousContentViewMap.get(view.content_id) || { count: 0, duration: 0 };
+        anonymousContentViewMap.set(view.content_id, {
+          count: existing.count + 1,
+          duration: existing.duration + (view.view_duration || 0),
+        });
+      });
+
+      const anonymousContentIds = Array.from(anonymousContentViewMap.keys());
+      const { data: anonymousContentData } = await supabase
+        .from('content')
+        .select('id, title')
+        .in('id', anonymousContentIds);
+
+      const anonymousTopContent = Array.from(anonymousContentViewMap.entries())
+        .map(([content_id, stats]) => ({
+          content_id,
+          title: anonymousContentData?.find(c => c.id === content_id)?.title || 'Unknown',
+          view_count: stats.count,
+          total_duration: stats.duration,
+        }))
+        .sort((a, b) => b.view_count - a.view_count)
+        .slice(0, 10);
+
+      const anonymousRecentViews = (anonymousViews || []).map(view => ({
+        ...view,
+        user_name: 'Anonymous User',
+        user_email: 'N/A',
+      }));
+
       setAnalytics({
         totalViews,
         totalUsers,
@@ -173,6 +248,13 @@ export const useCommunityAnalytics = (communityId?: string) => {
         topContent,
         userActivity,
         recentViews: recentViewsWithNames,
+      });
+
+      setAnonymousAnalytics({
+        totalViews: anonymousTotalViews,
+        engagementRate: anonymousEngagementRate,
+        topContent: anonymousTopContent,
+        recentViews: anonymousRecentViews,
       });
       setError(null);
     } catch (err) {
@@ -188,6 +270,7 @@ export const useCommunityAnalytics = (communityId?: string) => {
 
   return {
     analytics,
+    anonymousAnalytics,
     loading,
     error,
     refetch: fetchAnalytics,
