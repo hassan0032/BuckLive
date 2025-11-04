@@ -70,7 +70,7 @@ export function useBilling() {
       }
 
       const normalizedInvoices = invoicesToSet.map((inv) => ({
-        invoice_no: inv.invoice_no,
+        invoice_no: Number(inv.invoice_no),
         userId: inv.user_id,
         issueDate: inv.issue_date,
         periodStart: inv.period_start,
@@ -107,7 +107,7 @@ export function useBilling() {
         }
         setInvoices(
           (data || []).map((inv) => ({
-            invoice_no: inv.invoice_no,
+            invoice_no: Number(inv.invoice_no),
             userId: inv.user_id,
             issueDate: inv.issue_date,
             periodStart: inv.period_start,
