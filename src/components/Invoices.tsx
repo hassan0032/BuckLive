@@ -1,9 +1,10 @@
+import html2pdf from 'html2pdf.js'
+import { Calendar, Download } from 'lucide-react'
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useBilling } from '../hooks/useBilling'
-import { Calendar, Download } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import html2pdf from 'html2pdf.js'
+import { formatInvoiceNumber } from '../utils/helper'
 
 function formatCurrency(cents: number, currency: string) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100)
@@ -33,6 +34,8 @@ function Invoices() {
   const handleDownload = (invoice_no: string) => {
     const inv = invoices.find((i) => i.invoice_no === invoice_no)
     if (!inv || !user) return
+
+    const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no, inv.issueDate)
 
     const html = `
     <style>
@@ -131,7 +134,7 @@ function Invoices() {
     <div class="invoice-wrapper">
       <div class="brand">Buck Live Billing</div>
       <div class="meta">
-        <div><strong>Invoice ID:</strong> ${inv.invoice_no}</div>
+        <div><strong>Invoice ID:</strong> ${formattedInvoiceNo}</div>
         <div><strong>Issued Date:</strong> ${new Date(inv.issueDate).toLocaleDateString()}</div>
       </div>
 
@@ -170,7 +173,7 @@ function Invoices() {
 
     const opt = {
       margin: 0,
-      filename: `invoice-${inv.invoice_no}.pdf`,
+      filename: `invoice-${formattedInvoiceNo}.pdf`,
       image: { type: "jpeg" as const, quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: "pt", format: "a4", orientation: "portrait" as const },
@@ -214,33 +217,36 @@ function Invoices() {
             <div className="text-right">Actions</div>
           </div>
 
-          {rows.map((row) => (
-            <div key={row.invoice_no} className="grid grid-cols-6 gap-4 px-4 py-4 items-center border-b last:border-b-0">
-              <div className="col-span-2">
-                <div className="text-[#363f49]">
-                  {new Date(row.periodStart).toLocaleDateString()} –{' '}
-                  {new Date(row.periodEnd).toLocaleDateString()}
+          {rows.map((row) => {
+            const formattedInvoiceNo = formatInvoiceNumber(row.invoice_no, row.issueDate)
+            return (
+              <div key={formattedInvoiceNo} className="grid grid-cols-6 gap-4 px-4 py-4 items-center border-b last:border-b-0">
+                <div className="col-span-2">
+                  <div className="text-[#363f49]">
+                    {new Date(row.periodStart).toLocaleDateString()} –{' '}
+                    {new Date(row.periodEnd).toLocaleDateString()}
+                  </div>
+                  <div className="text-xs text-gray-500">ID: {formattedInvoiceNo}</div>
                 </div>
-                <div className="text-xs text-gray-500">ID: {row.invoice_no}</div>
-              </div>
 
-              <div className="text-gray-700 flex items-center gap-2">
-                <Calendar className="w-4 h-4" /> {new Date(row.issueDate).toLocaleDateString()}
-              </div>
+                <div className="text-gray-700 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" /> {new Date(row.issueDate).toLocaleDateString()}
+                </div>
 
-              <div className="text-right font-medium">{row.amountDisplay}</div>
-              <div className="text-gray-700 capitalize">{row.status}</div>
+                <div className="text-right font-medium">{row.amountDisplay}</div>
+                <div className="text-gray-700 capitalize">{row.status}</div>
 
-              <div className="text-right">
-                <button
-                  onClick={() => handleDownload(row.invoice_no)}
-                  className="inline-flex items-center gap-2 text-white bg-brand-primary hover:bg-brand-primary/90 px-3 py-2 rounded-md text-sm"
-                >
-                  <Download className="w-4 h-4" /> Download PDF
-                </button>
+                <div className="text-right">
+                  <button
+                    onClick={() => handleDownload(row.invoice_no)}
+                    className="inline-flex items-center gap-2 text-white bg-brand-primary hover:bg-brand-primary/90 px-3 py-2 rounded-md text-sm"
+                  >
+                    <Download className="w-4 h-4" /> Download PDF
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

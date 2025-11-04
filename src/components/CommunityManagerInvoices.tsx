@@ -220,7 +220,7 @@ function CommunityManagerInvoices() {
           {rows.map((row) => {
             const formattedInvoiceNo = formatInvoiceNumber(row.invoice_no, row.issueDate)
             return (
-              <div key={row.invoice_no} className="grid grid-cols-6 gap-4 px-4 py-4 items-center border-b last:border-b-0">
+              <div key={formattedInvoiceNo} className="grid grid-cols-6 gap-4 px-4 py-4 items-center border-b last:border-b-0">
                 <div className="col-span-2">
                   <div className="text-[#363f49]">
                     {new Date(row.periodStart).toLocaleDateString()} –{' '}
