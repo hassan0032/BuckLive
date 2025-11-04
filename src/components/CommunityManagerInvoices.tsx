@@ -181,7 +181,6 @@ function CommunityManagerInvoices() {
     })
   }
 
-
   return (
     <div>
       <div className="mb-6">

@@ -9,61 +9,6 @@ function formatCurrency(cents: number, currency: string) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100)
 }
 
-function buildInvoiceHtml(opts: {
-  invoice_no: string
-  issueDate: string
-  periodStart: string
-  periodEnd: string
-  amountCents: number
-  currency: string
-  userEmail: string
-  userName: string
-}) {
-  const { invoice_no, issueDate, periodStart, periodEnd, amountCents, currency, userEmail, userName } = opts
-  const amount = formatCurrency(amountCents, currency)
-  return `
-  <div class="invoice-container">
-    <header>
-      <div class="brand">Buck Live Billing</div>
-      <div class="invoice-meta">
-        <div><strong>Invoice No:</strong> ${invoice_no}</div>
-        <div><strong>Issued Date:</strong> ${new Date(issueDate).toLocaleDateString()}</div>
-      </div>
-    </header>
-
-    <h1>Annual Membership Invoice</h1>
-
-    <div class="info-grid">
-      <div class="info-box">
-        <div class="info-label">Billed To</div>
-        <div class="info-value info-user">
-          <div><strong>Name:</strong> ${userName}</div>
-          <div><strong>Email:</strong> ${userEmail}</div>
-        </div>
-      </div>
-
-      <div class="info-box">
-        <div class="info-label">Billing Period</div>
-        <div class="info-value period-range">
-          <div><strong>From:</strong> ${new Date(periodStart).toLocaleDateString()}</div>
-          <div><strong>To:</strong> ${new Date(periodEnd).toLocaleDateString()}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="total-box">
-      <div class="total-label">Total Amount</div>
-      <div class="total-amount">${amount}</div>
-    </div>
-
-    <footer>
-      Thank you for your continued partnership with <strong>Buck Live</strong>.<br />
-      For any billing inquiries, contact us at <a href="mailto:billing@bucklive.com">billing@bucklive.com</a>
-    </footer>
-  </div>
-  `
-}
-
 function Invoices() {
   const { user, isAdmin } = useAuth()
   const navigate = useNavigate()
@@ -90,133 +35,145 @@ function Invoices() {
     if (!inv || !user) return
 
     const html = `
-      <style>
-        :root {
-          --primary: #2563eb;
-          --text-dark: #1f2937;
-          --text-muted: #6b7280;
-          --border: #e5e7eb;
-          --bg-card: #ffffff;
-          --bg-page: #f9fafb;
-        }
-        body {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-          background: var(--bg-page);
-          color: var(--text-dark);
-          padding: 24px;
-          margin: 0;
-        }
-        .invoice-container {
-          max-width: 800px;
-          margin: 0 auto;
-          background: var(--bg-card);
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          padding: 32px;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        }
-        header {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-          margin-bottom: 32px;
-          border-bottom: 2px solid var(--border);
-          padding-bottom: 16px;
-        }
-        .brand {
-          font-size: 1.4rem;
-          font-weight: 700;
-          color: var(--primary);
-        }
-        .invoice-meta {
-          text-align: right;
-          font-size: 0.9rem;
-          color: var(--text-muted);
-        }
-        h1 {
-          text-align: center;
-          font-size: 1.5rem;
-          margin: 24px 0 32px;
-          color: var(--text-dark);
-        }
-        .info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 32px;
-        }
-        .info-box {
-          background: #f3f4f6;
-          padding: 16px;
-          border-radius: 8px;
-        }
-        .info-label {
-          font-size: 0.85rem;
-          color: var(--text-muted);
-          margin-bottom: 6px;
-        }
-        .info-value {
-          font-weight: 500;
-          font-size: 0.95rem;
-        }
-        .total-box {
-          margin-top: 32px;
-          border-top: 2px solid var(--border);
-          padding-top: 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .total-label {
-          font-size: 1.1rem;
-          font-weight: 600;
-        }
-        .total-amount {
-          font-size: 1.4rem;
-          font-weight: 700;
-          color: var(--primary);
-        }
-        footer {
-          text-align: center;
-          font-size: 0.8rem;
-          color: var(--text-muted);
-          margin-top: 40px;
-          line-height: 1.6;
-        }
-        a {
-          color: var(--primary);
-          text-decoration: none;
-        }
-        @media (max-width: 768px) {
-          .info-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      </style>
-      ${buildInvoiceHtml({
-        invoice_no: inv.invoice_no,
-        issueDate: inv.issueDate,
-        periodStart: inv.periodStart,
-        periodEnd: inv.periodEnd,
-        amountCents: inv.amountCents,
-        currency: inv.currency,
-        userEmail: user.email,
-        userName: `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim(),
-      })}
-    `
+    <style>
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+        background: #fff;
+        color: #111827;
+        margin: 0;
+        padding: 0;
+      }
+      .invoice-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+      }
+      .brand {
+        color: #2563eb;
+        font-size: 1.3rem;
+        font-weight: 700;
+      }
+      .meta {
+        font-size: 0.9rem;
+        color: #6b7280;
+        margin-top: 4px;
+      }
+      .meta strong {
+        color: #111827;
+      }
+      .divider {
+        height: 1px;
+        background: #e5e7eb;
+        margin: 20px 0;
+      }
+      h1 {
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 24px 0 28px;
+      }
+      .section {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+      .section .label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        margin-bottom: 6px;
+      }
+      .section .value {
+        font-size: 0.95rem;
+        color: #111827;
+      }
+      .bold {
+        font-weight: 600;
+      }
+      .total-section {
+        margin-top: 28px;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 16px;
+      }
+      .total-label {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #111827;
+      }
+      .total-amount {
+        font-weight: 700;
+        font-size: 1.2rem;
+        color: #2563eb;
+        margin-top: 4px;
+      }
+      footer {
+        text-align: center;
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 40px;
+        line-height: 1.6;
+      }
+      a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+    </style>
 
+    <div class="invoice-wrapper">
+      <div class="brand">Buck Live Billing</div>
+      <div class="meta">
+        <div><strong>Invoice ID:</strong> ${inv.invoice_no}</div>
+        <div><strong>Issued Date:</strong> ${new Date(inv.issueDate).toLocaleDateString()}</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h1>Annual Membership Invoice</h1>
+
+      <div class="info-grid">
+        <div class="section">
+          <div class="label">Billed To</div>
+          <div class="value"><span class="bold">Name:</span> ${user.profile?.first_name || ''} ${user.profile?.last_name || ''}</div>
+        <div class="value"><span class="bold">Email:</span> ${user.email}</div>
+      </div>
+
+      <div class="section">
+        <div class="label">Billing Period</div>
+          <div class="value"><span class="bold">From:</span> ${new Date(inv.periodStart).toLocaleDateString()}</div>
+          <div class="value"><span class="bold">To:</span> ${new Date(inv.periodEnd).toLocaleDateString()}</div>
+        </div>
+      </div>
+
+      <div class="total-section">
+        <div class="total-label">Total Amount</div>
+        <div class="total-amount">${formatCurrency(inv.amountCents, inv.currency)}</div>
+      </div>
+
+      <footer>
+        Thank you for your continued partnership with <strong>Buck Live</strong>.<br/>
+        For any billing inquiries, contact us at <a href="mailto:billing@bucklive.com">billing@bucklive.com</a>
+      </footer>
+    </div>
+  `
     const container = document.createElement('div')
     container.innerHTML = html
     document.body.appendChild(container)
 
     const opt = {
-      margin: 0.5,
+      margin: 0,
       filename: `invoice-${inv.invoice_no}.pdf`,
       image: { type: "jpeg" as const, quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: "in", format: "letter", orientation: "portrait" as const },
+      jsPDF: { unit: "pt", format: "a4", orientation: "portrait" as const },
     }
 
     html2pdf().set(opt).from(container).save().then(() => {
