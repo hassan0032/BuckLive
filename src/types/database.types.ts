@@ -20,6 +20,7 @@ export interface Database {
         Row: {
           id: string
           user_id: string | null
+          invoice_no: string
           issue_date: string | null
           period_start: string
           period_end: string
@@ -31,6 +32,7 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string | null
+          invoice_no?: string
           issue_date?: string | null
           period_start: string
           period_end: string
@@ -42,6 +44,7 @@ export interface Database {
         Update: {
           id?: string
           user_id?: string | null
+          invoice_no?: string
           issue_date?: string | null
           period_start?: string
           period_end?: string
