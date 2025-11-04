@@ -53,8 +53,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2️⃣ Determine allowed tiers - ONLY show content for the exact tier
-    const allowedTiers = [membershipTier];
+    // 2️⃣ Determine allowed tiers
+    const allowedTiers = Object.entries(tierLevels)
+      .filter(([_, level]) => level <= tierLevel)
+      .map(([tier]) => tier);
 
     // 3️⃣ Fetch content
     let query = supabase
