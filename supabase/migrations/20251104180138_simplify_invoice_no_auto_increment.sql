@@ -19,48 +19,11 @@ CREATE SEQUENCE IF NOT EXISTS public.invoice_no_seq
   NO MAXVALUE
   CACHE 1;
 
--- Step 5: Fix any duplicate invoice_no values by assigning new sequential numbers
-DO $$
-DECLARE
-  inv_record RECORD;
-  new_invoice_no INTEGER;
-  max_invoice_no INTEGER;
-BEGIN
-  -- Get the current maximum invoice_no
-  SELECT COALESCE(MAX(invoice_no), 0) INTO max_invoice_no FROM public.invoices;
-  
-  -- Find and fix duplicates by assigning new sequential numbers
-  FOR inv_record IN 
-    SELECT id, invoice_no
-    FROM public.invoices
-    WHERE id IN (
-      SELECT id FROM (
-        SELECT id, 
-               ROW_NUMBER() OVER (PARTITION BY invoice_no ORDER BY created_at ASC) as rn
-        FROM public.invoices
-        WHERE invoice_no IS NOT NULL
-      ) sub
-      WHERE rn > 1
-    )
-    ORDER BY created_at ASC
-  LOOP
-    max_invoice_no := max_invoice_no + 1;
-    UPDATE public.invoices
-    SET invoice_no = max_invoice_no
-    WHERE id = inv_record.id;
-  END LOOP;
-END $$;
+-- Step 5: Delete existing invoices
+DELETE FROM public.invoices;
 
--- Step 6: Set the sequence to the current max invoice_no + 1 (if any invoices exist)
-DO $$
-DECLARE
-  max_invoice_no INTEGER;
-BEGIN
-  SELECT COALESCE(MAX(invoice_no), 0) INTO max_invoice_no FROM public.invoices;
-  IF max_invoice_no > 0 THEN
-    PERFORM setval('public.invoice_no_seq', max_invoice_no, true);
-  END IF;
-END $$;
+-- Step 6: Reset sequence to start from 1
+SELECT setval('public.invoice_no_seq', 1, false);
 
 -- Step 7: Set default value for invoice_no to use sequence
 ALTER TABLE public.invoices
