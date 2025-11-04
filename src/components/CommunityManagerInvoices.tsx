@@ -10,7 +10,7 @@ function formatCurrency(cents: number, currency: string) {
 }
 
 function buildInvoiceHtml(opts: {
-  id: string
+  invoice_no: string
   issueDate: string
   periodStart: string
   periodEnd: string
@@ -19,14 +19,14 @@ function buildInvoiceHtml(opts: {
   userEmail: string
   userName: string
 }) {
-  const { id, issueDate, periodStart, periodEnd, amountCents, currency, userEmail, userName } = opts
+  const { invoice_no, issueDate, periodStart, periodEnd, amountCents, currency, userEmail, userName } = opts
   const amount = formatCurrency(amountCents, currency)
   return `
   <div class="invoice-container">
     <header>
       <div class="brand">Buck Live Billing</div>
       <div class="invoice-meta">
-        <div><strong>Invoice ID:</strong> ${id}</div>
+        <div><strong>Invoice No:</strong> ${invoice_no}</div>
         <div><strong>Issued Date:</strong> ${new Date(issueDate).toLocaleDateString()}</div>
       </div>
     </header>
@@ -85,11 +85,10 @@ function CommunityManagerInvoices() {
     return null
   }
 
-  const handleDownload = (id: string) => {
-    const inv = invoices.find((i) => i.id === id)
+  const handleDownload = (invoice_no: string) => {
+    const inv = invoices.find((i) => i.invoice_no === invoice_no)
     if (!inv || !user) return
 
-    // ✅ Build HTML
     const html = `
       <style>
         :root {
@@ -197,26 +196,24 @@ function CommunityManagerInvoices() {
         }
       </style>
       ${buildInvoiceHtml({
-      id: inv.id,
-      issueDate: inv.issueDate,
-      periodStart: inv.periodStart,
-      periodEnd: inv.periodEnd,
-      amountCents: inv.amountCents,
-      currency: inv.currency,
-      userEmail: user.email,
-      userName: `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim(),
-    })}
+        invoice_no: inv.invoice_no,
+        issueDate: inv.issueDate,
+        periodStart: inv.periodStart,
+        periodEnd: inv.periodEnd,
+        amountCents: inv.amountCents,
+        currency: inv.currency,
+        userEmail: user.email,
+        userName: `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim(),
+      })}
     `
 
-    // ✅ Create a temporary DOM element
     const container = document.createElement('div')
     container.innerHTML = html
     document.body.appendChild(container)
 
-    // ✅ Type-safe options (fixed error here)
     const opt = {
       margin: 0.5,
-      filename: `invoice-${inv.id}.pdf`,
+      filename: `invoice-${inv.invoice_no}.pdf`,
       image: { type: "jpeg" as const, quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "letter", orientation: "portrait" as const },
@@ -225,9 +222,7 @@ function CommunityManagerInvoices() {
     html2pdf().set(opt).from(container).save().then(() => {
       document.body.removeChild(container)
     })
-
   }
-
 
   return (
     <div>
@@ -263,13 +258,13 @@ function CommunityManagerInvoices() {
           </div>
 
           {rows.map((row) => (
-            <div key={row.id} className="grid grid-cols-6 gap-4 px-4 py-4 items-center border-b last:border-b-0">
+            <div key={row.invoice_no} className="grid grid-cols-6 gap-4 px-4 py-4 items-center border-b last:border-b-0">
               <div className="col-span-2">
                 <div className="text-[#363f49]">
                   {new Date(row.periodStart).toLocaleDateString()} –{' '}
                   {new Date(row.periodEnd).toLocaleDateString()}
                 </div>
-                <div className="text-xs text-gray-500">ID: {row.id.slice(0, 8)}…</div>
+                <div className="text-xs text-gray-500">ID: {row.invoice_no}</div>
               </div>
 
               <div className="text-gray-700 flex items-center gap-2">
@@ -281,7 +276,7 @@ function CommunityManagerInvoices() {
 
               <div className="text-right">
                 <button
-                  onClick={() => handleDownload(row.id)}
+                  onClick={() => handleDownload(row.invoice_no)}
                   className="inline-flex items-center gap-2 text-white bg-brand-primary hover:bg-brand-primary/90 px-3 py-2 rounded-md text-sm"
                 >
                   <Download className="w-4 h-4" /> Download PDF

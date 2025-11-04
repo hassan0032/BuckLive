@@ -29,7 +29,6 @@ export function useBilling() {
     async function loadInvoices() {
       const today = formatYMD(new Date())
 
-      // Fetch existing invoices for the current user
       const { data: existingInvoices, error } = await client
         .from('invoices')
         .select('*')
@@ -43,7 +42,6 @@ export function useBilling() {
 
       let invoicesToSet = existingInvoices || []
 
-      // 🧠 If no invoices exist → first login
       if (invoicesToSet.length === 0) {
         const currentStart = today
         const currentEnd = addYears(today, 1)
@@ -71,9 +69,8 @@ export function useBilling() {
         invoicesToSet = inserted || []
       }
 
-      // 🧾 Normalize invoices for UI
       const normalizedInvoices = invoicesToSet.map((inv) => ({
-        id: inv.id,
+        invoice_no: inv.invoice_no,
         userId: inv.user_id,
         issueDate: inv.issue_date,
         periodStart: inv.period_start,
@@ -91,7 +88,6 @@ export function useBilling() {
     loadInvoices()
   }, [enabled, user?.id])
 
-  // Refresh helper
   return useMemo(
     () => ({
       enabled,
@@ -111,7 +107,7 @@ export function useBilling() {
         }
         setInvoices(
           (data || []).map((inv) => ({
-            id: inv.id,
+            invoice_no: inv.invoice_no,
             userId: inv.user_id,
             issueDate: inv.issue_date,
             periodStart: inv.period_start,
