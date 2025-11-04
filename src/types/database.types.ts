@@ -16,6 +16,44 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      invoices: {
+        Row: {
+          id: string
+          user_id: string | null
+          invoice_no: string
+          issue_date: string | null
+          period_start: string
+          period_end: string
+          amount_cents: number
+          currency: string
+          status: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string | null
+          invoice_no?: string
+          issue_date?: string | null
+          period_start: string
+          period_end: string
+          amount_cents: number
+          currency: string
+          status: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          invoice_no?: string
+          issue_date?: string | null
+          period_start?: string
+          period_end?: string
+          amount_cents?: number
+          currency?: string
+          status?: string
+          created_at?: string | null
+        }
+      }
       communities: {
         Row: {
           id: string
@@ -25,6 +63,8 @@ export interface Database {
           is_active: boolean
           is_sharable: boolean
           membership_tier: 'silver' | 'gold'
+          is_sharable: boolean
+          sharable_token: string | null
           created_at: string
           updated_at: string
           sharable_token: string | null
@@ -37,6 +77,8 @@ export interface Database {
           is_active?: boolean
           is_sharable?: boolean
           membership_tier: 'silver' | 'gold'
+          is_sharable?: boolean
+          sharable_token?: string | null
           created_at?: string
           updated_at?: string
           sharable_token?: string | null
@@ -49,6 +91,8 @@ export interface Database {
           is_active?: boolean
           is_sharable?: boolean
           membership_tier?: 'silver' | 'gold'
+          is_sharable?: boolean
+          sharable_token?: string | null
           created_at?: string
           updated_at?: string
           sharable_token?: string | null

@@ -7,12 +7,13 @@ import { Users, BarChart3, TrendingUp, Clock, Eye, Building2, Plus, Link2, Copy,
 import { CommunityManagement } from './CommunityManagement';
 import { UserManagement } from './UserManagement';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
+import CommunityManagerInvoices from './CommunityManagerInvoices';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
   const { communities, loading: communitiesLoading, refetch } = useManagedCommunities(user?.id);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices'>('overview');
 
   const { analytics } = useCommunityAnalytics(selectedCommunityId);
 
@@ -263,6 +264,16 @@ export const CommunityManagerDashboard: React.FC = () => {
           >
             Communities
           </button>
+          <button
+            onClick={() => setActiveTab('invoices')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
+              activeTab === 'invoices'
+                ? 'border-brand-primary text-brand-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">Invoices</span>
+          </button>
         </nav>
       </div>
 
@@ -380,6 +391,10 @@ export const CommunityManagerDashboard: React.FC = () => {
 
       {activeTab === 'communities' && (
         <CommunityManagement userId={user?.id} onCommunityUpdate={refetch} />
+      )}
+
+      {activeTab === 'invoices' && (
+        <CommunityManagerInvoices />
       )}
     </div>
   );
