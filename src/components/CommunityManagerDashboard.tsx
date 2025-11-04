@@ -37,28 +37,16 @@ export const CommunityManagerDashboard: React.FC = () => {
 
   const handleToggleShareLink = async (enabled: boolean) => {
     if (!selectedCommunityId) return;
-
+  
     setUpdatingShareLink(true);
     try {
-      const updates: { is_sharable: boolean; sharable_token?: string | null } = {
-        is_sharable: enabled,
-      };
-
-      if (enabled && !selectedCommunity?.sharable_token) {
-        // Generate token if enabling and no token exists
-        updates.sharable_token = generateShareToken();
-      } else if (!enabled) {
-        // Clear token if disabling
-        updates.sharable_token = null;
-      }
-
       const { error } = await supabase
         .from('communities')
-        .update(updates)
+        .update({ is_sharable: enabled })
         .eq('id', selectedCommunityId);
-
+  
       if (error) throw error;
-
+  
       await refetch();
     } catch (err) {
       console.error('Error updating share link:', err);
@@ -67,6 +55,7 @@ export const CommunityManagerDashboard: React.FC = () => {
       setUpdatingShareLink(false);
     }
   };
+  
 
   const handleRegenerateToken = async () => {
     if (!selectedCommunityId) return;
