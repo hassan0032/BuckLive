@@ -1,9 +1,11 @@
+import { AlertCircle, Calendar, CreditCard, Mail, Shield, User } from 'lucide-react';
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { User, Mail, Shield, Calendar, CreditCard, AlertCircle } from 'lucide-react';
+import { useBilling } from '../hooks/useBilling';
 
 export const UserProfile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, isCommunityManager } = useAuth();
+  const { startDate, renewalDate } = useBilling();
 
   if (!user) {
     return (
@@ -54,81 +56,100 @@ export const UserProfile: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <Mail className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Email</p>
-                <p className="text-sm text-[#363f49]">{user.email}</p>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <Mail className="h-5 w-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-700">Email</p>
+              <p className="text-sm text-[#363f49]">{user.email}</p>
             </div>
-
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <Shield className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Role</p>
-                <p className="text-sm text-[#363f49] capitalize">
-                  {user.role || 'Member'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <Shield className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Membership Tier</p>
-                <p className={`text-sm font-medium ${getTierColor()}`}>
-                  {getTierDisplay()}
-                </p>
-              </div>
-            </div>
-
-            {isIndividualMember && (
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <CreditCard className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Subscription Type</p>
-                  <p className="text-sm text-[#363f49]">Individual Membership</p>
-                </div>
-              </div>
-            )}
           </div>
 
-          <div className="space-y-4">
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <Shield className="h-5 w-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-700">Role</p>
+              <p className="text-sm text-[#363f49] capitalize">
+                {user.role || 'Member'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <Shield className="h-5 w-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-700">Membership Tier</p>
+              <p className={`text-sm font-medium ${getTierColor()}`}>
+                {getTierDisplay()}
+              </p>
+            </div>
+          </div>
+
+          {isIndividualMember && (
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <CreditCard className="h-5 w-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Subscription Type</p>
+                <p className="text-sm text-[#363f49]">Individual Membership</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <Calendar className="h-5 w-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-700">Member Since</p>
+              <p className="text-sm text-[#363f49]">
+                {new Date(user.created_at).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+
+          {/* <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <User className="h-5 w-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-700">Account Status</p>
+              <p className={`text-sm font-medium ${subscriptionActive || user.profile?.community ? 'text-green-600' : 'text-red-600'
+                }`}>
+                {subscriptionActive || user.profile?.community ? 'Active' : 'Inactive'}
+              </p>
+            </div>
+          </div> */}
+
+          {isIndividualMember && user.subscription_ends_at && (
             <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
               <Calendar className="h-5 w-5 text-gray-400" />
               <div>
-                <p className="text-sm font-medium text-gray-700">Member Since</p>
+                <p className="text-sm font-medium text-gray-700">Next Billing Date</p>
                 <p className="text-sm text-[#363f49]">
-                  {new Date(user.created_at).toLocaleDateString()}
+                  {new Date(user.subscription_ends_at).toLocaleDateString()}
                 </p>
               </div>
             </div>
+          )}
 
-            {/* <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <User className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Account Status</p>
-                <p className={`text-sm font-medium ${subscriptionActive || user.profile?.community ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                  {subscriptionActive || user.profile?.community ? 'Active' : 'Inactive'}
-                </p>
-              </div>
-            </div> */}
-
-            {isIndividualMember && user.subscription_ends_at && (
+          {!isIndividualMember && (isAdmin || isCommunityManager) && (
+            <>
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                 <Calendar className="h-5 w-5 text-gray-400" />
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Next Billing Date</p>
+                  <p className="text-sm font-medium text-gray-700">Billing Start</p>
                   <p className="text-sm text-[#363f49]">
-                    {new Date(user.subscription_ends_at).toLocaleDateString()}
+                    {startDate ? new Date(startDate).toLocaleDateString() : '-'}
                   </p>
                 </div>
               </div>
-            )}
-          </div>
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <Calendar className="h-5 w-5 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Next Renewal</p>
+                  <p className="text-sm text-[#363f49]">
+                    {renewalDate ? new Date(renewalDate).toLocaleDateString() : '-'}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {isIndividualMember && !subscriptionActive && (
