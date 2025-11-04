@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useCommunityAnalytics } from '../hooks/useCommunityAnalytics';
-import { Users, BarChart3, TrendingUp, Clock, Eye, Building2, Plus } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Users, BarChart3, TrendingUp, Clock, Eye, Building2, Plus, Link2, Copy, RefreshCw, Check } from 'lucide-react';
 import { CommunityManagement } from './CommunityManagement';
 import { UserManagement } from './UserManagement';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -22,6 +23,74 @@ export const CommunityManagerDashboard: React.FC = () => {
   }, [communities, selectedCommunityId]);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  const [updatingShareLink, setUpdatingShareLink] = useState(false);
+
+  const generateShareToken = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 10; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleToggleShareLink = async (enabled: boolean) => {
+    if (!selectedCommunityId) return;
+
+    setUpdatingShareLink(true);
+    try {
+      const updateData: any = { is_sharable: enabled };
+      if (enabled && !selectedCommunity?.sharable_token) {
+        updateData.sharable_token = generateShareToken();
+      }
+
+      const { error } = await supabase
+        .from('communities')
+        .update(updateData)
+        .eq('id', selectedCommunityId);
+
+      if (error) throw error;
+
+      await refetch();
+    } catch (err) {
+      console.error('Error updating share link:', err);
+      alert('Failed to update share link. Please try again.');
+    } finally {
+      setUpdatingShareLink(false);
+    }
+  };
+
+  const handleRegenerateToken = async () => {
+    if (!selectedCommunityId) return;
+
+    setUpdatingShareLink(true);
+    try {
+      const { error } = await supabase
+        .from('communities')
+        .update({ sharable_token: generateShareToken() })
+        .eq('id', selectedCommunityId);
+
+      if (error) throw error;
+
+      await refetch();
+    } catch (err) {
+      console.error('Error regenerating token:', err);
+      alert('Failed to regenerate token. Please try again.');
+    } finally {
+      setUpdatingShareLink(false);
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    if (!selectedCommunity?.sharable_token) return;
+
+    const shareLink = `${window.location.origin}/public/${selectedCommunity.sharable_token}`;
+    navigator.clipboard.writeText(shareLink).then(() => {
+      setShareLinkCopied(true);
+      setTimeout(() => setShareLinkCopied(false), 2000);
+    });
+  };
 
   if (communitiesLoading) {
     return (
@@ -73,45 +142,124 @@ export const CommunityManagerDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Share Link Management */}
+      {selectedCommunity && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-[#363f49] mb-4 flex items-center">
+            <Link2 className="h-5 w-5 mr-2 text-brand-primary" />
+            Public Share Link
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 mb-1">
+                  Allow anonymous users to view your community's content without logging in.
+                </p>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedCommunity.is_sharable || false}
+                    onChange={(e) => handleToggleShareLink(e.target.checked)}
+                    disabled={updatingShareLink}
+                    className="sr-only"
+                  />
+                  <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${(selectedCommunity.is_sharable || false) ? 'bg-brand-primary' : 'bg-gray-300'
+                    } ${updatingShareLink ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${(selectedCommunity.is_sharable || false) ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                  </div>
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    {selectedCommunity.is_sharable ? 'Enabled' : 'Disabled'}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {selectedCommunity.is_sharable && selectedCommunity.sharable_token && (
+              <div className="border-t border-gray-200 pt-4 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Share Link
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${window.location.origin}/public/${selectedCommunity.sharable_token}`}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                    />
+                    <button
+                      onClick={handleCopyShareLink}
+                      className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors text-sm font-medium"
+                    >
+                      {shareLinkCopied ? (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <button
+                    onClick={handleRegenerateToken}
+                    disabled={updatingShareLink}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${updatingShareLink ? 'animate-spin' : ''}`} />
+                    Regenerate Token
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Regenerating the token will invalidate the current share link. You'll need to share the new link.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'overview'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'overview'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             Overview
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'users'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'users'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             User Management
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'analytics'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'analytics'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             Analytics
           </button>
           <button
             onClick={() => setActiveTab('communities')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'communities'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'communities'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             Communities
           </button>
