@@ -129,7 +129,6 @@ export const PublicShareView: React.FC = () => {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-semibold text-[#363f49] mb-2">{shareInfo?.name}'s Library</h1>
-          <p className="text-base text-[#363f49]">Membership Tier: {shareInfo?.membership_tier.toUpperCase()}</p>
         </div>
 
         {/* Search and Filters */}
