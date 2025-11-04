@@ -166,7 +166,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ communit
                   <td className="px-4 py-3 text-sm text-gray-900">
                   {view.user_name} <span className='text-xs'>({view.user_email})</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{view.content_id.slice(0, 8)}...</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {/* {analytics.topContent.find(c => c.content_id === view.content_id)?.title || (view.content_id ? `${view.content_id.slice(0, 8)}...` : 'N/A')} */}
+                    {
+                    analytics.topContent.find(c => c.content_id === view.content_id)?.title 
+                    }
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {Math.floor(view.view_duration / 60)}m {view.view_duration % 60}s
                   </td>
@@ -274,7 +279,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ communit
                     {view.user_name || 'Anonymous User'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {view.content_id ? `${view.content_id.slice(0, 8)}...` : 'N/A'}
+                    {anonymousAnalytics.topContent.find(c => c.content_id === view.content_id)?.title || (view.content_id ? `${view.content_id.slice(0, 8)}...` : 'N/A')}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {Math.floor((view.view_duration || 0) / 60)}m {(view.view_duration || 0) % 60}s
