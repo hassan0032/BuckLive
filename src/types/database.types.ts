@@ -61,11 +61,13 @@ export interface Database {
           description: string | null
           access_code: string
           is_active: boolean
+          is_sharable: boolean
           membership_tier: 'silver' | 'gold'
           is_sharable: boolean
           sharable_token: string | null
           created_at: string
           updated_at: string
+          sharable_token: string | null
         }
         Insert: {
           id?: string
@@ -73,11 +75,13 @@ export interface Database {
           description?: string | null
           access_code: string
           is_active?: boolean
+          is_sharable?: boolean
           membership_tier: 'silver' | 'gold'
           is_sharable?: boolean
           sharable_token?: string | null
           created_at?: string
           updated_at?: string
+          sharable_token?: string | null
         }
         Update: {
           id?: string
@@ -85,11 +89,13 @@ export interface Database {
           description?: string | null
           access_code?: string
           is_active?: boolean
+          is_sharable?: boolean
           membership_tier?: 'silver' | 'gold'
           is_sharable?: boolean
           sharable_token?: string | null
           created_at?: string
           updated_at?: string
+          sharable_token?: string | null
         }
       }
       user_profiles: {
@@ -271,7 +277,7 @@ export interface Database {
       content_views: {
         Row: {
           id: string
-          user_id: string
+          user_id: string | null
           content_id: string
           view_duration: number | null
           viewed_at: string
@@ -279,7 +285,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id: string
+          user_id?: string | null
           content_id: string
           view_duration?: number | null
           viewed_at?: string
@@ -287,7 +293,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
+          user_id?: string | null
           content_id?: string
           view_duration?: number | null
           viewed_at?: string
@@ -377,6 +383,30 @@ export interface Database {
           user_id: string
         }
         Returns: string
+      }
+      validate_share_token: {
+        Args: {
+          token: string
+        }
+        Returns: Array<{
+          community_id: string
+          membership_tier: string
+          name: string
+        }>
+      }
+      set_share_token: {
+        Args: {
+          token: string
+        }
+        Returns: void
+      }
+      get_share_token_community_tier: {
+        Args: Record<string, never>
+        Returns: string
+      }
+      get_share_token_community_id: {
+        Args: Record<string, never>
+        Returns: string | null
       }
     }
     Enums: {
