@@ -1,10 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from './useAuth'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const client = createClient(supabaseUrl, supabaseAnonKey)
+import { supabase } from '../lib/supabase'
 
 function formatYMD(date: Date) {
   return date.toISOString().slice(0, 10)
@@ -29,7 +25,7 @@ export function useBilling() {
     async function loadInvoices() {
       const today = formatYMD(new Date())
 
-      const { data: existingInvoices, error } = await client
+      const { data: existingInvoices, error } = await supabase
         .from('invoices')
         .select('*')
         .eq('user_id', user?.id)
@@ -46,7 +42,7 @@ export function useBilling() {
         const currentStart = today
         const currentEnd = addYears(today, 1)
 
-        const { data: inserted, error: insertError } = await client
+        const { data: inserted, error: insertError } = await supabase
           .from('invoices')
           .insert([
             {
@@ -96,7 +92,7 @@ export function useBilling() {
       invoices,
       refresh: async () => {
         if (!user) return
-        const { data, error } = await client
+        const { data, error } = await supabase
           .from('invoices')
           .select('*')
           .eq('user_id', user.id)
