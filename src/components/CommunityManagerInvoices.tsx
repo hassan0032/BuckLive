@@ -1,6 +1,6 @@
 import html2pdf from 'html2pdf.js'
-import { Calendar, Download } from 'lucide-react'
-import { useMemo } from 'react'
+import { Calendar, Download, Loader2 } from 'lucide-react'
+import { useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useBilling } from '../hooks/useBilling'
@@ -11,9 +11,9 @@ function formatCurrency(cents: number, currency: string) {
 }
 
 function CommunityManagerInvoices() {
-  const { user, isAdmin, isCommunityManager } = useAuth()
+  const { user, isAdmin, isCommunityManager, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const { invoices, startDate, renewalDate } = useBilling()
+  const { invoices, startDate, renewalDate, isLoading: invoicesLoading } = useBilling()
 
   const canView = isAdmin || isCommunityManager
 
@@ -26,10 +26,20 @@ function CommunityManagerInvoices() {
     [invoices]
   )
 
-  if (!user || !canView) {
-    navigate('/library')
-    return null
+  useEffect(() => {
+    if (!authLoading && (!user || !canView)) {
+      navigate('/library')
+    }
+  }, [authLoading, user, canView, navigate])
+  if (authLoading || invoicesLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+      </div>
+    )
   }
+
+  if (!user || !canView) return null
 
   const handleDownload = (invoice_no: number) => {
     const inv = invoices.find((i) => i.invoice_no === invoice_no)

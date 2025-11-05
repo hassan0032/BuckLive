@@ -17,16 +17,25 @@ function addYears(ymd: string, years: number) {
 }
 
 export function useBilling() {
-  const { user, isAdmin, isCommunityManager } = useAuth()
+  const { user, isAdmin, isCommunityManager, loading: authLoading } = useAuth()
   const enabled = !!user && (isAdmin || isCommunityManager)
   const [invoices, setInvoices] = useState<any[]>([])
   const [startDate, setStartDate] = useState<string | null>(null)
   const [renewalDate, setRenewalDate] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!enabled || !user) return
+    if (authLoading) {
+      setIsLoading(true)
+      return
+    }
+    if (!enabled || !user) {
+      setIsLoading(false)
+      return
+    }
 
     async function loadInvoices() {
+      setIsLoading(true)
       const today = formatYMD(new Date())
 
       const { data: existingInvoices, error } = await client
@@ -37,6 +46,7 @@ export function useBilling() {
 
       if (error) {
         console.error('Error fetching invoices:', error)
+        setIsLoading(false)
         return
       }
 
@@ -63,6 +73,7 @@ export function useBilling() {
 
         if (insertError) {
           console.error('Error inserting invoice:', insertError)
+          setIsLoading(false)
           return
         }
 
@@ -83,10 +94,11 @@ export function useBilling() {
       setInvoices(normalizedInvoices)
       setStartDate(normalizedInvoices[normalizedInvoices.length - 1]?.periodStart || today)
       setRenewalDate(normalizedInvoices[0]?.periodEnd || addYears(today, 1))
+      setIsLoading(false)
     }
 
     loadInvoices()
-  }, [enabled, user?.id])
+  }, [authLoading, enabled, user?.id])
 
   return useMemo(
     () => ({
@@ -94,8 +106,10 @@ export function useBilling() {
       startDate,
       renewalDate,
       invoices,
+      isLoading,
       refresh: async () => {
         if (!user) return
+        setIsLoading(true)
         const { data, error } = await client
           .from('invoices')
           .select('*')
@@ -103,6 +117,7 @@ export function useBilling() {
           .order('period_start', { ascending: false })
         if (error) {
           console.error('Error refreshing invoices:', error)
+          setIsLoading(false)
           return
         }
         setInvoices(
@@ -117,8 +132,9 @@ export function useBilling() {
             status: inv.status,
           }))
         )
+        setIsLoading(false)
       },
     }),
-    [enabled, startDate, renewalDate, invoices, user?.id]
+    [enabled, startDate, renewalDate, invoices, isLoading, user?.id]
   )
 }
