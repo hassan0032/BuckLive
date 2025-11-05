@@ -6,6 +6,7 @@ import { Community, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier } from '.
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import { AdminUserManagement } from './AdminUserManagement';
 import { EnhancedContentForm } from './EnhancedContentForm';
+import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
 
 interface CommunityFormData {
@@ -23,7 +24,7 @@ export const AdminDashboard: React.FC = () => {
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'feedback'>('content');
 
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>({
     name: '',
@@ -128,7 +129,8 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-gray-600">
             {activeTab === 'users' ? 'Manage all users across the platform' :
               activeTab === 'analytics' ? 'Platform-wide analytics and insights' :
-                'Manage content and communities'}
+                activeTab === 'feedback' ? 'View and manage content feedback' :
+                  'Manage content and communities'}
           </p>
         </div>
         {(activeTab === 'content' || activeTab === 'communities') && (
@@ -195,6 +197,15 @@ export const AdminDashboard: React.FC = () => {
               }`}
           >
             Invoices
+          </button>
+          <button
+            onClick={() => setActiveTab('feedback')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'feedback'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            Feedback
           </button>
         </nav>
       </div>
@@ -451,6 +462,8 @@ export const AdminDashboard: React.FC = () => {
       {activeTab === 'analytics' && <AdminAnalyticsDashboard />}
 
       {activeTab === 'invoices' && <Invoices />}
+
+      {activeTab === 'feedback' && <FeedbackManagement />}
 
       {showForm && (
         <EnhancedContentForm

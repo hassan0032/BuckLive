@@ -138,6 +138,17 @@ export interface ContentVersion {
   created_at: string;
 }
 
+export interface ContentFeedback {
+  id: string;
+  content_id: string;
+  user_id: string | null;
+  name: string;
+  email: string;
+  comment: string | null;
+  was_helpful: boolean;
+  created_at: string;
+}
+
 export interface AuthState {
   user: User | null;
   loading: boolean;
