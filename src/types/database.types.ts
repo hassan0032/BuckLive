@@ -16,6 +16,26 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          created_at?: string
+        }
+      }
       invoices: {
         Row: {
           id: string
