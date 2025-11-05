@@ -26,8 +26,7 @@ export const useFeedback = () => {
       setError(null);
       const { data, error: insertError } = await supabase
         .from('content_feedback')
-        .insert([feedbackData])
-        .single();
+        .insert([feedbackData]);
 
       if (insertError) throw insertError;
       return { data, error: null };
