@@ -43,9 +43,29 @@ export function useBilling() {
       let invoicesToSet = existingInvoices || []
 
       if (invoicesToSet.length === 0) {
+        const { data: cmRow, error: cmError } = await client
+          .from('community_managers')
+          .select('community_id, communities:community_id(membership_tier)')
+          .eq('user_id', user?.id)
+          .maybeSingle()
+      
+        if (cmError) {
+          console.error('Error fetching community tier:', cmError)
+        }
+        let tier = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
+        if (!tier && cmRow?.community_id) {
+          const { data: communityRow } = await client
+            .from('communities')
+            .select('membership_tier')
+            .eq('id', cmRow.community_id)
+            .maybeSingle()
+          tier = (communityRow?.membership_tier as 'gold' | 'silver' | undefined) ?? undefined
+        }
+        const amount = tier === 'gold' ? 500000 : 250000
+      
         const currentStart = today
         const currentEnd = addYears(today, 1)
-
+      
         const { data: inserted, error: insertError } = await client
           .from('invoices')
           .insert([
@@ -54,20 +74,21 @@ export function useBilling() {
               issue_date: today,
               period_start: currentStart,
               period_end: currentEnd,
-              amount_cents: 10000,
+              amount_cents: amount,
               currency: 'USD',
               status: 'issued',
             },
           ])
           .select()
-
+      
         if (insertError) {
           console.error('Error inserting invoice:', insertError)
           return
         }
-
+      
         invoicesToSet = inserted || []
       }
+      
 
       const normalizedInvoices = invoicesToSet.map((inv) => ({
         invoice_no: Number(inv.invoice_no),
