@@ -309,23 +309,7 @@ function CommunityManagerInvoices() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-[#363f49]">Invoices</h1>
-        <div className="text-sm text-gray-600 mt-2">
-          <div>
-            Billing start:{' '}
-            <span className="font-medium">
-              {startDate ? new Date(startDate).toLocaleDateString() : '-'}
-            </span>
-          </div>
-          <div>
-            Next renewal:{' '}
-            <span className="font-medium">
-              {renewalDate ? new Date(renewalDate).toLocaleDateString() : '-'}
-            </span>
-          </div>
-        </div>
-      </div>
+        <h1 className="text-2xl font-semibold text-[#363f49] mb-6">Invoices</h1>
 
       {rows.length === 0 ? (
         <div className="p-6 bg-white rounded-lg shadow-sm text-gray-600">No invoices yet.</div>
