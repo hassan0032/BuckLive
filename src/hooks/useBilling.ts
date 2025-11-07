@@ -45,7 +45,7 @@ export function useBilling() {
       if (invoicesToSet.length === 0) {
         const { data: cmRow, error: cmError } = await client
           .from('community_managers')
-          .select('community_id, communities:community_id(membership_tier)')
+          .select('community_id, communities:community_id(name, membership_tier)')
           .eq('user_id', user?.id)
           .maybeSingle()
       
@@ -53,13 +53,15 @@ export function useBilling() {
           console.error('Error fetching community tier:', cmError)
         }
         let tier = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
+        let communityName = cmRow?.communities?.[0]?.name as string | undefined
         if (!tier && cmRow?.community_id) {
           const { data: communityRow } = await client
             .from('communities')
-            .select('membership_tier')
+            .select('name, membership_tier')
             .eq('id', cmRow.community_id)
             .maybeSingle()
           tier = (communityRow?.membership_tier as 'gold' | 'silver' | undefined) ?? undefined
+          communityName = communityRow?.name as string | undefined
         }
         const amount = tier === 'gold' ? 500000 : 250000
       
@@ -90,6 +92,32 @@ export function useBilling() {
       }
       
 
+      // Fetch community info for all invoices
+      let communityName: string | undefined
+      let communityTier: 'gold' | 'silver' | undefined
+      
+      const { data: cmRow, error: cmError } = await client
+        .from('community_managers')
+        .select('community_id, communities:community_id(name, membership_tier)')
+        .eq('user_id', user?.id)
+        .maybeSingle()
+    
+      if (cmError) {
+        console.error('Error fetching community info:', cmError)
+      } else {
+        communityTier = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
+        communityName = cmRow?.communities?.[0]?.name as string | undefined
+        if (!communityTier && cmRow?.community_id) {
+          const { data: communityRow } = await client
+            .from('communities')
+            .select('name, membership_tier')
+            .eq('id', cmRow.community_id)
+            .maybeSingle()
+          communityTier = (communityRow?.membership_tier as 'gold' | 'silver' | undefined) ?? undefined
+          communityName = communityRow?.name as string | undefined
+        }
+      }
+
       const normalizedInvoices = invoicesToSet.map((inv) => ({
         invoice_no: Number(inv.invoice_no),
         userId: inv.user_id,
@@ -99,6 +127,8 @@ export function useBilling() {
         amountCents: Number(inv.amount_cents),
         currency: inv.currency,
         status: inv.status,
+        communityName,
+        communityTier,
       }))
 
       setInvoices(normalizedInvoices)
@@ -126,6 +156,33 @@ export function useBilling() {
           console.error('Error refreshing invoices:', error)
           return
         }
+        
+        // Fetch community info
+        let communityName: string | undefined
+        let communityTier: 'gold' | 'silver' | undefined
+        
+        const { data: cmRow, error: cmError } = await client
+          .from('community_managers')
+          .select('community_id, communities:community_id(name, membership_tier)')
+          .eq('user_id', user.id)
+          .maybeSingle()
+      
+        if (cmError) {
+          console.error('Error fetching community info:', cmError)
+        } else {
+          communityTier = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
+          communityName = cmRow?.communities?.[0]?.name as string | undefined
+          if (!communityTier && cmRow?.community_id) {
+            const { data: communityRow } = await client
+              .from('communities')
+              .select('name, membership_tier')
+              .eq('id', cmRow.community_id)
+              .maybeSingle()
+            communityTier = (communityRow?.membership_tier as 'gold' | 'silver' | undefined) ?? undefined
+            communityName = communityRow?.name as string | undefined
+          }
+        }
+        
         setInvoices(
           (data || []).map((inv) => ({
             invoice_no: Number(inv.invoice_no),
@@ -136,6 +193,8 @@ export function useBilling() {
             amountCents: Number(inv.amount_cents),
             currency: inv.currency,
             status: inv.status,
+            communityName,
+            communityTier,
           }))
         )
       },

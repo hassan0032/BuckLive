@@ -39,133 +39,256 @@ function CommunityManagerInvoices() {
 
     const html = `
     <style>
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-        background: #fff;
-        color: #111827;
-        margin: 0;
-        padding: 0;
-      }
-      .invoice-wrapper {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 40px;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-      }
-      .brand {
-        color: #2563eb;
-        font-size: 1.3rem;
-        font-weight: 700;
-      }
-      .meta {
-        font-size: 0.9rem;
-        color: #6b7280;
-        margin-top: 4px;
-      }
-      .meta strong {
-        color: #111827;
-      }
-      .divider {
-        height: 1px;
-        background: #e5e7eb;
-        margin: 20px 0;
-      }
-      h1 {
-        text-align: center;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #111827;
-        margin: 24px 0 28px;
-      }
-      .section {
-        background: #f9fafb;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 20px;
-      }
-      .section .label {
-        font-size: 0.9rem;
-        color: #6b7280;
-        margin-bottom: 6px;
-      }
-      .section .value {
-        font-size: 0.95rem;
-        color: #111827;
-      }
-      .bold {
-        font-weight: 600;
-      }
-      .total-section {
-        margin-top: 28px;
-        border-top: 1px solid #e5e7eb;
-        padding-top: 16px;
-      }
-      .total-label {
-        font-weight: 600;
-        font-size: 1rem;
-        color: #111827;
-      }
-      .total-amount {
-        font-weight: 700;
-        font-size: 1.2rem;
-        color: #2563eb;
-        margin-top: 4px;
-      }
-      footer {
-        text-align: center;
-        font-size: 0.85rem;
-        color: #6b7280;
-        margin-top: 40px;
-        line-height: 1.6;
-      }
-      a {
-        color: #2563eb;
-        text-decoration: none;
-      }
-      .info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-bottom: 20px;
-      }
+        body {
+            font-family: Arial, sans-serif;
+            background: #fff;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        .invoice-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 50px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 60px;
+        }
+
+        .brand {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #000;
+        }
+
+        .brand-address {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .invoice-title-section {
+            text-align: right;
+        }
+
+        .invoice-title {
+            font-size: 2.5rem;
+            font-weight: 400;
+            letter-spacing: 2px;
+            color: #000;
+            margin: 0;
+        }
+
+        .invoice-number {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .main-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+
+        .bill-to {
+            width: 400px;
+        }
+
+        .bill-to-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .bill-to-name {
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 2px;
+        }
+
+        .bill-to-email {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .date-balance {
+            flex: 1;
+            text-align: right;
+            padding: 20px;
+        }
+
+        .date-row {
+            display: flex;
+            justify-content: end;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+
+        .date-label {
+            color: #666;
+            margin-right: 20px;
+        }
+
+        .date-value {
+            color: #000;
+        }
+
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-left: 15px;
+            padding-right: 15px;
+            padding-bottom: 15px;
+            background: #f5f5f5;
+        }
+
+        .balance-label {
+            font-weight: 700;
+            color: #000;
+        }
+
+        .balance-amount {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #000;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        thead {
+            background: #4a4a4a;
+            color: #fff;
+        }
+
+        thead th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        thead th:last-child,
+        tbody td:last-child {
+            text-align: right;
+        }
+
+        tbody td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e5e5;
+            color: #000;
+            font-size: 0.9rem;
+        }
+
+        .totals-section {
+            text-align: right;
+            margin-top: 30px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .community-name {
+            font-weight: 600;
+        }
+
+        .total-label {
+            margin-right: 40px;
+            color: #666;
+        }
+
+        .total-value {
+            min-width: 120px;
+            color: #000;
+        }
+
+        .final-total {
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        .final-total .total-label {
+            color: #000;
+            font-size: 1.05rem;
+        }
     </style>
 
     <div class="invoice-wrapper">
-      <div class="brand">Buck Live Billing</div>
-      <div class="meta">
-        <div><strong>Invoice ID:</strong> ${formattedInvoiceNo}</div>
-        <div><strong>Issued Date:</strong> ${new Date(inv.issueDate).toLocaleDateString()}</div>
-      </div>
-
-      <div class="divider"></div>
-
-      <h1>Annual Membership Invoice</h1>
-
-      <div class="info-grid">
-        <div class="section">
-          <div class="label">Billed To</div>
-          <div class="value"><span class="bold">Name:</span> ${user.profile?.first_name || ''} ${user.profile?.last_name || ''}</div>
-        <div class="value"><span class="bold">Email:</span> ${user.email}</div>
-      </div>
-
-      <div class="section">
-        <div class="label">Billing Period</div>
-          <div class="value"><span class="bold">From:</span> ${new Date(inv.periodStart).toLocaleDateString()}</div>
-          <div class="value"><span class="bold">To:</span> ${new Date(inv.periodEnd).toLocaleDateString()}</div>
+      <div class="header">
+        <div>
+          <p class="brand">Buck LIVE</p>
+          <p class="brand-address">8001 Redwood Blvd. Novato, CA 94945</p>
+        </div>
+        <div class="invoice-title-section">
+          <p class="invoice-title">INVOICE</p>
+          <div class="invoice-number"># ${formattedInvoiceNo}</div>
         </div>
       </div>
 
-      <div class="total-section">
-        <div class="total-label">Total Amount</div>
-        <div class="total-amount">${formatCurrency(inv.amountCents, inv.currency)}</div>
+      <div class="main-info">
+        <div class="bill-to">
+          <p class="bill-to-label">Bill To:</p>
+          <p class="bill-to-name">${user.profile?.first_name || ''} ${user.profile?.last_name || ''}</p>
+          <p class="bill-to-email">${user.email}</p>
+        </div>
+        <div class="date-balance">
+          <div class="date-row">
+            <p class="date-label">Date:</p>
+            <p class="date-value">${new Date(inv.issueDate).toLocaleDateString('en-US', {year: 'numeric', month: '2-digit', day: '2-digit' })}</p>
+          </div>
+          <div class="balance-row">
+            <p class="balance-label">Balance Due:</p>
+            <p class="balance-amount">${formatCurrency(inv.amountCents, inv.currency)}</p>
+          </div>
+        </div>
       </div>
 
-      <footer>
-        Thank you for your continued partnership with <strong>Buck Live</strong>.<br/>
-        For any billing inquiries, contact us at <a href="mailto:billing@bucklive.com">billing@bucklive.com</a>
-      </footer>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="community-name">${inv.communityName || 'Community'} - ${inv.communityTier ? inv.communityTier.charAt(0).toUpperCase() + inv.communityTier.slice(1) : 'Tier'} - ${new Date(inv.periodStart).toLocaleDateString()} - ${new Date(inv.periodEnd).toLocaleDateString()}</td>
+            <td>1</td>
+            <td>${formatCurrency(inv.amountCents, inv.currency)}</td>
+            <td>${formatCurrency(inv.amountCents, inv.currency)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="totals-section">
+        <div class="total-row">
+          <p class="total-label">Subtotal:</p>
+          <p class="total-value">${formatCurrency(inv.amountCents, inv.currency)}</p>
+        </div>
+        <div class="total-row final-total">
+          <p class="total-label">Total:</p>
+          <p class="total-value">${formatCurrency(inv.amountCents, inv.currency)}</p>
+        </div>
+      </div>
     </div>
+
   `
     const container = document.createElement('div')
     container.innerHTML = html
@@ -226,6 +349,15 @@ function CommunityManagerInvoices() {
                     {new Date(row.periodEnd).toLocaleDateString()}
                   </div>
                   <div className="text-xs text-gray-500">ID: {formattedInvoiceNo}</div>
+                  {(row.communityName || row.communityTier) && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      {row.communityName && <span className="font-medium">{row.communityName}</span>}
+                      {row.communityName && row.communityTier && <span> • </span>}
+                      {row.communityTier && (
+                        <span className="capitalize">{row.communityTier}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-gray-700 flex items-center gap-2">

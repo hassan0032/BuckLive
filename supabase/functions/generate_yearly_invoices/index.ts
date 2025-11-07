@@ -81,26 +81,28 @@ Deno.serve(async (req: Request) => {
     for (const inv of expiringInvoices) {
       const { data: cmRow, error: cmError } = await supabase
         .from('community_managers')
-        .select('community_id, communities:community_id(membership_tier)')
+        .select('community_id, communities:community_id(name, membership_tier)')
         .eq('user_id', inv.user_id)
         .maybeSingle();
 
       if (cmError) {
-        console.error(`Error fetching community tier for user ${inv.user_id}:`, cmError);
+        console.error(`Error fetching community info for user ${inv.user_id}:`, cmError);
       }
 
       let tier: 'gold' | 'silver' | undefined = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
+      let communityName: string | undefined = cmRow?.communities?.[0]?.name as string | undefined
       if (!tier && cmRow?.community_id) {
         const { data: communityRow } = await supabase
           .from('communities')
-          .select('membership_tier')
+          .select('name, membership_tier')
           .eq('id', cmRow.community_id)
           .maybeSingle()
         tier = (communityRow?.membership_tier as 'gold' | 'silver' | undefined) ?? undefined
+        communityName = communityRow?.name as string | undefined
       }
       const amount = tier === 'gold' ? 500000 : 250000;
 
-      console.log(`User ${inv.user_id}: tier=${tier ?? 'unknown'}, amount=${amount}`);
+      console.log(`User ${inv.user_id}: community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, amount=${amount}`);
 
       newInvoices.push({
         user_id: inv.user_id,
