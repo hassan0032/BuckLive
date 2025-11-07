@@ -69,6 +69,43 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
           ]);
 
         if (assignError) throw assignError;
+
+        // Create initial invoice for the newly created community
+        try {
+          const today = new Date();
+          const formatYMD = (d: Date) => d.toISOString().slice(0, 10);
+          const addYears = (ymd: string, years: number) => {
+            const date = new Date(ymd);
+            date.setFullYear(date.getFullYear() + years);
+            return formatYMD(date);
+          };
+
+          const issueDate = formatYMD(today);
+          const periodStart = issueDate;
+          const periodEnd = addYears(issueDate, 1);
+          const amount = communityData.membership_tier === 'gold' ? 500000 : 250000;
+
+          const { error: invoiceError } = await supabase
+            .from('invoices')
+            .insert([
+              {
+                user_id: userId ?? null,
+                community_id: communityData.id,
+                issue_date: issueDate,
+                period_start: periodStart,
+                period_end: periodEnd,
+                amount_cents: amount,
+                currency: 'USD',
+                status: 'issued',
+              },
+            ]);
+
+          if (invoiceError) {
+            console.error('Failed to create initial invoice for community:', invoiceError);
+          }
+        } catch (e) {
+          console.error('Unexpected error while creating initial invoice:', e);
+        }
       }
 
       await refetch();
