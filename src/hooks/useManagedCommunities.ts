@@ -63,6 +63,14 @@ export const useManagedCommunities = (userId?: string) => {
     }
   };
 
+  const updateCommunity = (communityId: string, updates: Partial<Community>) => {
+    setCommunities(prev =>
+      prev.map(community =>
+        community.id === communityId ? { ...community, ...updates } : community
+      )
+    );
+  };
+
   const deleteCommunity = async (communityId: string) => {
     if (!communityId) return
 
@@ -98,5 +106,6 @@ export const useManagedCommunities = (userId?: string) => {
     refetch: fetchManagedCommunities,
     deleting,
     deleteCommunity,
+    updateCommunity,
   };
 };
