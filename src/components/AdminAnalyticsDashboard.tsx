@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSystemAnalytics } from '../hooks/useSystemAnalytics';
 import { useCommunities } from '../hooks/useCommunities';
 import { BarChart3, TrendingUp, Clock, Eye, User, Building2, Users, Award } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const AdminAnalyticsDashboard: React.FC = () => {
   const [communityFilter, setCommunityFilter] = useState<string>('');
@@ -189,7 +190,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   <span className="text-sm font-semibold text-brand-primary">{index + 1}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#363f49] truncate">{content.title}</p>
+                  <Link to={`/content/${content.content_id}`}>
+                    <p className="text-sm font-medium text-[#363f49] truncate">{content.title}</p>
+                  </Link>
                   <div className="flex items-center space-x-4 mt-1">
                     <div className="flex items-center text-xs text-gray-500">
                       <Eye className="h-3 w-3 mr-1" />
@@ -353,7 +356,11 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {`${view.user_profiles?.first_name || ''} ${view.user_profiles?.last_name || ''}`.trim() || 'Anonymous User'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{view.content?.title || ''}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      <Link to={`/content/${view.content_id}`}>
+                        {view.content?.title || ''}
+                      </Link>
+                    </td>
                     {!communityFilter && (
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {community?.name || 'N/A'}
