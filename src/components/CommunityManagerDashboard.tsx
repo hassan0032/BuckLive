@@ -153,26 +153,43 @@ export const CommunityManagerDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-sm text-gray-600 mb-3">
                   Allow anonymous users to view your community's content without logging in.
                 </p>
-                <label className="flex items-center cursor-pointer">
+                <div className="flex items-center">
                   <input
+                    id="communityToggle"
                     type="checkbox"
                     checked={selectedCommunity.is_sharable || false}
                     onChange={(e) => handleToggleShareLink(e.target.checked)}
                     disabled={updatingShareLink}
                     className="sr-only"
                   />
-                  <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${(selectedCommunity.is_sharable || false) ? 'bg-brand-primary' : 'bg-gray-300'
-                    } ${updatingShareLink ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${(selectedCommunity.is_sharable || false) ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                  </div>
-                  <span className="ml-3 text-sm font-medium text-gray-700">
+
+                  {/* Make this clickable by linking to the input */}
+                  <label
+                    htmlFor="communityToggle"
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors 
+                    ${(selectedCommunity.is_sharable || false) ? 'bg-brand-primary' : 'bg-gray-300'}
+                    ${updatingShareLink ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform 
+                      ${(selectedCommunity.is_sharable || false) ? 'translate-x-6' : 'translate-x-1'}
+                      `}
+                    />
+                  </label>
+
+                  {/* Text also links to checkbox only */}
+                  <label
+                    htmlFor="communityToggle"
+                    className="ml-3 text-sm font-medium text-gray-700 cursor-pointer"
+                  >
                     {selectedCommunity.is_sharable ? 'Enabled' : 'Disabled'}
-                  </span>
-                </label>
+                  </label>
+                </div>
+
               </div>
             </div>
 
@@ -266,11 +283,10 @@ export const CommunityManagerDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('invoices')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'invoices'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'invoices'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             <span className="inline-flex items-center gap-2">Invoices</span>
           </button>
