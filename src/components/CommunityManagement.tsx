@@ -1,7 +1,7 @@
+import { Edit, Key, Loader2, Plus, Shield, Trash2, Users } from 'lucide-react';
 import React, { useState } from 'react';
-import { Plus, Edit, Users, Key, Shield, Trash } from 'lucide-react';
-import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useCommunities } from '../hooks/useCommunities';
+import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { supabase } from '../lib/supabase';
 import { Community } from '../types';
 
@@ -11,7 +11,7 @@ interface CommunityManagementProps {
 }
 
 export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId, onCommunityUpdate }) => {
-  const { communities, refetch, deleteCommunity } = useManagedCommunities(userId);
+  const { loading: communitiesLoading, communities, refetch, deleteCommunity } = useManagedCommunities(userId);
   const { generateAccessCode } = useCommunities();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
@@ -139,6 +139,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
   };
 
   const handleDelete = async (communityId: string, communityName: string) => {
+    return;
     const confirmed = window.confirm(`Are you sure you want to delete "${communityName}"?`)
     if (!confirmed) return
 
@@ -184,75 +185,82 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {communities.map((community) => (
-          <div key={community.id} className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-[#363f49] mb-1">{community.name}</h3>
-                <p className="text-sm text-gray-600 line-clamp-2">{community.description}</p>
-              </div>
-              <button
-                onClick={() => handleEdit(community)}
-                className="ml-2 p-2 text-brand-primary hover:bg-brand-beige-light rounded-lg transition-colors"
-              >
-                <Edit className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => handleDelete(community.id, community.name)}
-                className="ml-2 p-2 text-red-700 hover:bg-brand-beige-light rounded-lg transition-colors"
-              >
-                <Trash className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Members</span>
+      {communitiesLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {communities.map((community) => (
+            <div key={community.id} className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-[#363f49] mb-1">{community.name}</h3>
+                  <p className="text-sm text-gray-600 line-clamp-2">{community.description}</p>
                 </div>
-                <span className="text-sm font-semibold text-[#363f49]">{community.member_count || 0}</span>
+                <button
+                  onClick={() => handleEdit(community)}
+                  className="ml-2 p-2 text-brand-primary hover:bg-brand-beige-light rounded-lg transition-colors"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button
+                  disabled
+                  onClick={() => handleDelete(community.id, community.name)}
+                  className="ml-2 p-2 text-red-700 hover:bg-brand-beige-light rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Key className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Access Code</span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">Members</span>
+                  </div>
+                  <span className="text-sm font-semibold text-[#363f49]">{community.member_count || 0}</span>
                 </div>
-                <code className="text-sm font-mono font-semibold text-brand-primary">
-                  {community.access_code}
-                </code>
-              </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Tier</span>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Key className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">Access Code</span>
+                  </div>
+                  <code className="text-sm font-mono font-semibold text-brand-primary">
+                    {community.access_code}
+                  </code>
                 </div>
-                <span
-                  className={`text-xs font-semibold px-2 py-1 rounded ${community.membership_tier === 'gold'
+
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">Tier</span>
+                  </div>
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded ${community.membership_tier === 'gold'
                       ? 'bg-yellow-100 text-yellow-700'
                       : 'bg-gray-200 text-gray-700'
-                    }`}
-                >
-                  {community.membership_tier.toUpperCase()}
-                </span>
-              </div>
+                      }`}
+                  >
+                    {community.membership_tier.toUpperCase()}
+                  </span>
+                </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Status</span>
-                <span
-                  className={`text-xs font-semibold px-2 py-1 rounded ${community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}
-                >
-                  {community.is_active ? 'ACTIVE' : 'INACTIVE'}
-                </span>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Status</span>
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded ${community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}
+                  >
+                    {community.is_active ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {communities.length === 0 && !showCreateForm && (
         <div className="text-center py-12 bg-white rounded-lg shadow-sm">
@@ -331,9 +339,10 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
                     Membership Tier *
                   </label>
                   <select
+                    disabled={!!editingCommunity}
                     value={formData.membership_tier}
                     onChange={(e) => setFormData({ ...formData, membership_tier: e.target.value as 'silver' | 'gold' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="silver">Silver - Basic Access</option>
                     <option value="gold">Gold - Premium Access</option>

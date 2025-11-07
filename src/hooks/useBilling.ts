@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from 'react'
-import { useAuth } from './useAuth'
 import { createClient } from '@supabase/supabase-js'
+import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from './useAuth'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -17,8 +17,9 @@ function addYears(ymd: string, years: number) {
 }
 
 export function useBilling() {
-  const { user, isAdmin, isCommunityManager, loading: authLoading } = useAuth()
-  const enabled = !!user && (isAdmin || isCommunityManager)
+  const { user, isCommunityManager, loading: authLoading } = useAuth()
+  // Only enable for community managers, not admins (admins use useAdminInvoices)
+  const enabled = !!user && isCommunityManager
   const [invoices, setInvoices] = useState<any[]>([])
   const [startDate, setStartDate] = useState<string | null>(null)
   const [renewalDate, setRenewalDate] = useState<string | null>(null)
@@ -58,7 +59,7 @@ export function useBilling() {
           .select('community_id, communities:community_id(name, membership_tier)')
           .eq('user_id', user?.id)
           .maybeSingle()
-      
+
         if (cmError) {
           console.error('Error fetching community tier:', cmError)
         }
@@ -74,10 +75,10 @@ export function useBilling() {
           communityName = communityRow?.name as string | undefined
         }
         const amount = tier === 'gold' ? 500000 : 250000
-      
+
         const currentStart = today
         const currentEnd = addYears(today, 1)
-      
+
         const { data: inserted, error: insertError } = await client
           .from('invoices')
           .insert([
@@ -93,16 +94,16 @@ export function useBilling() {
             },
           ])
           .select('*, community:community_id(name, membership_tier)')
-      
+
         if (insertError) {
           console.error('Error inserting invoice:', insertError)
           setIsLoading(false)
           return
         }
-      
+
         invoicesToSet = inserted || []
       }
-      
+
 
       // Fetch community info for all invoices
       const normalizedInvoices = invoicesToSet.map((inv) => ({
