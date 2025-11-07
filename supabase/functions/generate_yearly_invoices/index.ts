@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
     // --- Step 1: Find all invoices expiring today ---
     const { data: expiringInvoices, error: fetchError } = await supabase
       .from("invoices")
-      .select("*")
+      .select("*, community:community_id(name, membership_tier)")
       .eq("period_end", todayYMD);
 
     if (fetchError) {
@@ -75,16 +75,27 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Found ${expiringInvoices.length} expiring invoices.`);
 
-    // --- Step 2: Create new invoices for the next year ---
-    const newInvoices = expiringInvoices.map((inv) => ({
-      user_id: inv.user_id,
-      issue_date: todayYMD,
-      period_start: todayYMD,
-      period_end: addYears(todayYMD, 1),
-      amount_cents: inv.amount_cents,
-      currency: inv.currency,
-      status: "issued",
-    }));
+    // --- Step 2: Create new invoices for the next year with tier-based pricing ---
+    const newInvoices: any[] = [];
+
+    for (const inv of expiringInvoices) {
+      const tier = inv.community?.membership_tier as 'gold' | 'silver' | undefined;
+      const communityName = inv.community?.name;
+      const amount = tier === 'gold' ? 500000 : 250000;
+
+      console.log(`User ${inv.user_id}: community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, amount=${amount}`);
+
+      newInvoices.push({
+        user_id: inv.user_id,
+        issue_date: todayYMD,
+        period_start: todayYMD,
+        period_end: addYears(todayYMD, 1),
+        amount_cents: amount,
+        currency: 'USD',
+        status: 'issued',
+        community_id: inv.community_id ?? null,
+      });
+    }
 
     const { error: insertError } = await supabase.from("invoices").insert(newInvoices);
 

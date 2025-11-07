@@ -181,15 +181,17 @@ export const UserProfile: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-            <Shield className="h-5 w-5 text-gray-400" />
-            <div>
-              <p className="text-sm font-medium text-gray-700">Membership Tier</p>
-              <p className={`text-sm font-medium ${getTierColor()}`}>
-                {getTierDisplay()}
-              </p>
+          {isCommunityManager && (
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <Shield className="h-5 w-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Membership Tier</p>
+                <p className={`text-sm font-medium ${getTierColor()}`}>
+                  {getTierDisplay()}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           {isIndividualMember && (
             <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
@@ -223,7 +225,7 @@ export const UserProfile: React.FC = () => {
             </div>
           )}
 
-          {!isIndividualMember && (isAdmin || isCommunityManager) && (
+          {isCommunityManager && (
             <>
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                 <Calendar className="h-5 w-5 text-gray-400" />
