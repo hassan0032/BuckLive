@@ -8,12 +8,13 @@ import { CommunityManagement } from './CommunityManagement';
 import { UserManagement } from './UserManagement';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import CommunityManagerInvoices from './CommunityManagerInvoices';
+import CommunityManagerNotifications from './CommunityManagerNotifications';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
   const { communities, loading: communitiesLoading, refetch } = useManagedCommunities(user?.id);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices' | 'notifications'>('overview');
 
   const { analytics } = useCommunityAnalytics(selectedCommunityId);
 
@@ -274,6 +275,16 @@ export const CommunityManagerDashboard: React.FC = () => {
           >
             <span className="inline-flex items-center gap-2">Invoices</span>
           </button>
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
+              activeTab === 'notifications'
+                ? 'border-brand-primary text-brand-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">Notifications</span>
+          </button>
         </nav>
       </div>
 
@@ -395,6 +406,10 @@ export const CommunityManagerDashboard: React.FC = () => {
 
       {activeTab === 'invoices' && (
         <CommunityManagerInvoices />
+      )}
+
+      {activeTab === 'notifications' && (
+        <CommunityManagerNotifications />
       )}
     </div>
   );
