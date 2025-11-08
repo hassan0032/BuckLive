@@ -443,7 +443,7 @@ export const AdminUserManagement: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name *
+                      First Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -455,7 +455,7 @@ export const AdminUserManagement: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name *
+                      Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -468,12 +468,12 @@ export const AdminUserManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email {!editingUser && <span className="text-red-500">*</span>}</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     required
                     disabled={!!editingUser}
                   />
@@ -482,7 +482,7 @@ export const AdminUserManagement: React.FC = () => {
                 {!editingUser && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password * (min. 6 characters)
+                      Password <span className="text-red-500">*</span> (min. 6 characters)
                     </label>
                     <input
                       type="password"
@@ -497,12 +497,13 @@ export const AdminUserManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Community *
+                    Community {!editingUser && <span className="text-red-500">*</span>}
                   </label>
                   <select
+                    disabled={!!editingUser}
                     value={formData.community_id}
                     onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     required
                   >
                     <option value="">Select a community</option>
@@ -516,12 +517,13 @@ export const AdminUserManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role *
+                    Role {!editingUser && <span className="text-red-500">*</span>}
                   </label>
                   <select
+                    disabled={!!editingUser}
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     required
                   >
                     <option value={ROLE.MEMBER}>Member</option>
@@ -535,23 +537,23 @@ export const AdminUserManagement: React.FC = () => {
                   )}
                 </div>
 
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="is_shared_account"
-                      checked={formData.is_shared_account}
-                      onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
-                      className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                    />
-                    <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
-                      Shared Account
-                    </label>
-                    <span className="text-xs text-gray-500">
-                      (Multiple users can use this account)
-                    </span>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_shared_account"
+                    checked={formData.is_shared_account}
+                    onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                    className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                  />
+                  <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
+                    Shared Account
+                  </label>
+                  <span className="text-xs text-gray-500">
+                    (Multiple users can use this account)
+                  </span>
+                </div>
 
-                  {/* {editingUser && formData.is_shared_account && (
+                {/* {editingUser && formData.is_shared_account && (
                   <div className="flex items-center space-x-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                     <Users className="h-4 w-4 text-purple-600" />
                     <span className="text-sm text-purple-700">

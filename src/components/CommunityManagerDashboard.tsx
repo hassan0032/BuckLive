@@ -11,7 +11,7 @@ import CommunityManagerInvoices from './CommunityManagerInvoices';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { communities, loading: communitiesLoading, refetch } = useManagedCommunities(user?.id);
+  const { communities, loading: communitiesLoading, refetch, updateCommunity } = useManagedCommunities(user?.id);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices'>('overview');
 
@@ -26,6 +26,7 @@ export const CommunityManagerDashboard: React.FC = () => {
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [updatingShareLink, setUpdatingShareLink] = useState(false);
+  const [regeneratingToken, setRegeneratingToken] = useState(false);
 
   const generateShareToken = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -42,8 +43,12 @@ export const CommunityManagerDashboard: React.FC = () => {
     setUpdatingShareLink(true);
     try {
       const updateData: any = { is_sharable: enabled };
+
+      let newToken: string | undefined = selectedCommunity?.sharable_token || undefined;
+
       if (enabled && !selectedCommunity?.sharable_token) {
-        updateData.sharable_token = generateShareToken();
+        newToken = generateShareToken();
+        updateData.sharable_token = newToken;
       }
 
       const { error } = await supabase
@@ -53,7 +58,10 @@ export const CommunityManagerDashboard: React.FC = () => {
 
       if (error) throw error;
 
-      await refetch();
+      updateCommunity(selectedCommunityId, {
+        is_sharable: enabled,
+        sharable_token: newToken,
+      });
     } catch (err) {
       console.error('Error updating share link:', err);
       alert('Failed to update share link. Please try again.');
@@ -66,20 +74,25 @@ export const CommunityManagerDashboard: React.FC = () => {
     if (!selectedCommunityId) return;
 
     setUpdatingShareLink(true);
+    setRegeneratingToken(true);
     try {
+      const newToken = generateShareToken();
       const { error } = await supabase
         .from('communities')
-        .update({ sharable_token: generateShareToken() })
+        .update({ sharable_token: newToken })
         .eq('id', selectedCommunityId);
 
       if (error) throw error;
 
-      await refetch();
+      updateCommunity(selectedCommunityId, {
+        sharable_token: newToken,
+      });
     } catch (err) {
       console.error('Error regenerating token:', err);
       alert('Failed to regenerate token. Please try again.');
     } finally {
       setUpdatingShareLink(false);
+      setRegeneratingToken(false);
     }
   };
 
@@ -153,26 +166,43 @@ export const CommunityManagerDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-sm text-gray-600 mb-3">
                   Allow anonymous users to view your community's content without logging in.
                 </p>
-                <label className="flex items-center cursor-pointer">
+                <div className="flex items-center">
                   <input
+                    id="communityToggle"
                     type="checkbox"
                     checked={selectedCommunity.is_sharable || false}
                     onChange={(e) => handleToggleShareLink(e.target.checked)}
                     disabled={updatingShareLink}
                     className="sr-only"
                   />
-                  <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${(selectedCommunity.is_sharable || false) ? 'bg-brand-primary' : 'bg-gray-300'
-                    } ${updatingShareLink ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${(selectedCommunity.is_sharable || false) ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                  </div>
-                  <span className="ml-3 text-sm font-medium text-gray-700">
+
+                  {/* Make this clickable by linking to the input */}
+                  <label
+                    htmlFor="communityToggle"
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors 
+                    ${(selectedCommunity.is_sharable || false) ? 'bg-brand-primary' : 'bg-gray-300'}
+                    ${updatingShareLink ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform 
+                      ${(selectedCommunity.is_sharable || false) ? 'translate-x-6' : 'translate-x-1'}
+                      `}
+                    />
+                  </label>
+
+                  {/* Text also links to checkbox only */}
+                  <label
+                    htmlFor="communityToggle"
+                    className="ml-3 text-sm font-medium text-gray-700 cursor-pointer"
+                  >
                     {selectedCommunity.is_sharable ? 'Enabled' : 'Disabled'}
-                  </span>
-                </label>
+                  </label>
+                </div>
+
               </div>
             </div>
 
@@ -213,7 +243,7 @@ export const CommunityManagerDashboard: React.FC = () => {
                     disabled={updatingShareLink}
                     className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${updatingShareLink ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`h-4 w-4 mr-2 ${regeneratingToken ? 'animate-spin' : ''}`} />
                     Regenerate Token
                   </button>
                   <p className="text-xs text-gray-500 mt-2">
@@ -266,11 +296,10 @@ export const CommunityManagerDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('invoices')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'invoices'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'invoices'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             <span className="inline-flex items-center gap-2">Invoices</span>
           </button>

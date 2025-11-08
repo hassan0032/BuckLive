@@ -1,6 +1,7 @@
 import React from 'react';
 import { useCommunityAnalytics } from '../hooks/useCommunityAnalytics';
 import { BarChart3, TrendingUp, Clock, Eye, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface AnalyticsDashboardProps {
   communityId: string;
@@ -84,7 +85,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ communit
                   <span className="text-sm font-semibold text-brand-primary">{index + 1}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#363f49] truncate">{content.title}</p>
+                  <Link to={`/content/${content.content_id}`}>
+                    <p className="text-sm font-medium text-[#363f49] truncate">{content.title}</p>
+                  </Link>
                   <div className="flex items-center space-x-4 mt-1">
                     <div className="flex items-center text-xs text-gray-500">
                       <Eye className="h-3 w-3 mr-1" />
@@ -164,13 +167,15 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ communit
               {analytics.recentViews.slice(0, 10).map((view) => (
                 <tr key={view.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm text-gray-900">
-                  {view.user_name} <span className='text-xs'>({view.user_email})</span>
+                    {view.user_name} <span className='text-xs'>({view.user_email})</span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {/* {analytics.topContent.find(c => c.content_id === view.content_id)?.title || (view.content_id ? `${view.content_id.slice(0, 8)}...` : 'N/A')} */}
-                    {
-                    analytics.topContent.find(c => c.content_id === view.content_id)?.title 
-                    }
+                    <Link to={`/content/${analytics.topContent.find(c => c.content_id === view.content_id)?.content_id}`}>
+                      {
+                        analytics.topContent.find(c => c.content_id === view.content_id)?.title
+                      }
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {Math.floor(view.view_duration / 60)}m {view.view_duration % 60}s
@@ -194,7 +199,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ communit
 
       <h2 className="text-2xl font-semibold text-[#363f49] mt-8">Anonymous User Analytics</h2>
       <p className="text-gray-600 mb-6">Analytics for users accessing content via public share links</p>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-2">
@@ -229,7 +234,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ communit
                 <span className="text-sm font-semibold text-brand-primary">{index + 1}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#363f49] truncate">{content.title}</p>
+                <Link to={`/content/${content.content_id}`}>
+                  <p className="text-sm font-medium text-[#363f49] truncate">
+                    {content.title}
+                  </p>
+                </Link>
                 <div className="flex items-center space-x-4 mt-1">
                   <div className="flex items-center text-xs text-gray-500">
                     <Eye className="h-3 w-3 mr-1" />
@@ -279,7 +288,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ communit
                     {view.user_name || 'Anonymous User'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {anonymousAnalytics.topContent.find(c => c.content_id === view.content_id)?.title || (view.content_id ? `${view.content_id.slice(0, 8)}...` : 'N/A')}
+                    <Link to={`/content/${anonymousAnalytics.topContent.find(c => c.content_id === view.content_id)?.content_id}`}>
+                      {anonymousAnalytics.topContent.find(c => c.content_id === view.content_id)?.title || (view.content_id ? `${view.content_id.slice(0, 8)}...` : 'N/A')}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {Math.floor((view.view_duration || 0) / 60)}m {(view.view_duration || 0) % 60}s

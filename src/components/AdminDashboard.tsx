@@ -1,4 +1,4 @@
-import { BarChart3, Edit, FileText, Image as ImageIcon, Plus, Trash2, Upload } from 'lucide-react';
+import { BarChart3, Edit, FileText, Image as ImageIcon, Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import React, { useState } from 'react';
 import { useCommunities } from '../hooks/useCommunities';
 import { useContent } from '../hooks/useContent';
@@ -19,7 +19,7 @@ interface CommunityFormData {
 
 export const AdminDashboard: React.FC = () => {
   const { content, addContent, updateContent, deleteContent } = useContent();
-  const { communities, addCommunity, updateCommunity, deleteCommunity } = useCommunities();
+  const { loading: communitiesLoading, communities, addCommunity, updateCommunity, deleteCommunity } = useCommunities();
   const [showForm, setShowForm] = useState(false);
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
@@ -105,6 +105,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteCommunity = async (id: string) => {
+    return;
     if (confirm('Are you sure you want to delete this community? This will affect all associated users.')) {
       await deleteCommunity(id);
     }
@@ -376,84 +377,91 @@ export const AdminDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Access Code
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tier
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {communities.map((community) => (
-                  <tr key={community.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-[#363f49]">{community.name}</div>
-                      <div className="text-sm text-gray-500">{community.description}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
-                        {community.access_code}
-                      </code>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.membership_tier === 'gold'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-gray-100 text-gray-700'
-                          }`}
-                      >
-                        {community.membership_tier.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.is_active
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                          }`}
-                      >
-                        {community.is_active ? 'ACTIVE' : 'INACTIVE'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(community.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => handleEditCommunity(community)}
-                        className="text-brand-primary hover:text-brand-d-blue inline-block"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCommunity(community.id)}
-                        className="text-red-600 hover:text-red-700 inline-block"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
+          {communitiesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Access Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tier
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {communities.map((community) => (
+                    <tr key={community.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-[#363f49]">{community.name}</div>
+                        <div className="text-sm text-gray-500">{community.description}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                          {community.access_code}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.membership_tier === 'gold'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-100 text-gray-700'
+                            }`}
+                        >
+                          {community.membership_tier.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.is_active
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                            }`}
+                        >
+                          {community.is_active ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {new Date(community.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium space-x-2">
+                        <button
+                          onClick={() => handleEditCommunity(community)}
+                          className="text-brand-primary hover:text-brand-d-blue inline-block"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          disabled
+                          onClick={() => handleDeleteCommunity(community.id)}
+                          className="text-red-600 hover:text-red-700 inline-block disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -539,6 +547,7 @@ export const AdminDashboard: React.FC = () => {
                     Membership Tier
                   </label>
                   <select
+                    disabled={!!editingCommunity}
                     value={communityFormData.membership_tier}
                     onChange={(e) =>
                       setCommunityFormData({
@@ -546,7 +555,7 @@ export const AdminDashboard: React.FC = () => {
                         membership_tier: e.target.value as PaymentTier,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     required
                   >
                     <option value={PAYMENT_TIER.SILVER}>{PAYMENT_TIER.SILVER.toUpperCase()}</option>
