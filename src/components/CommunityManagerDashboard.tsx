@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { BarChart3, Building2, Check, Clock, Copy, Eye, Link2, Plus, RefreshCw, TrendingUp, Users } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useCommunityAnalytics } from '../hooks/useCommunityAnalytics';
+import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { supabase } from '../lib/supabase';
-import { Users, BarChart3, TrendingUp, Clock, Eye, Building2, Plus, Link2, Copy, RefreshCw, Check } from 'lucide-react';
-import { CommunityManagement } from './CommunityManagement';
-import { UserManagement } from './UserManagement';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
+import { CommunityManagement } from './CommunityManagement';
 import CommunityManagerInvoices from './CommunityManagerInvoices';
-import CommunityManagerNotifications from './CommunityManagerNotifications';
+import { UserManagement } from './UserManagement';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
   const { communities, loading: communitiesLoading, refetch } = useManagedCommunities(user?.id);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices' | 'notifications'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices'>('overview');
 
   const { analytics } = useCommunityAnalytics(selectedCommunityId);
 
@@ -267,23 +266,12 @@ export const CommunityManagerDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('invoices')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'invoices'
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'invoices'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             <span className="inline-flex items-center gap-2">Invoices</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('notifications')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'notifications'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <span className="inline-flex items-center gap-2">Notifications</span>
           </button>
         </nav>
       </div>
@@ -408,9 +396,6 @@ export const CommunityManagerDashboard: React.FC = () => {
         <CommunityManagerInvoices />
       )}
 
-      {activeTab === 'notifications' && (
-        <CommunityManagerNotifications />
-      )}
     </div>
   );
 };
