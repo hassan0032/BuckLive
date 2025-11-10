@@ -142,3 +142,9 @@ export interface AuthState {
   user: User | null;
   loading: boolean;
 }
+
+export interface ContentStats {
+  videosWatched: number;
+  articlesRead: number;
+  pdfsDownloaded: number;
+}
