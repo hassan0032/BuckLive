@@ -1,6 +1,6 @@
 import { AlertCircle, Calendar, CreditCard, Mail, PencilIcon, Shield, User } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useContentStats } from '../hooks/useContentStats';
 import { useBilling } from '../hooks/useBilling';
 import { supabase } from '../lib/supabase';

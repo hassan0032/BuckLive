@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from './useAuth'
+import { useAuth } from '../contexts/AuthContext'
 import { useCommunities } from './useCommunities'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL

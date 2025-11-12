@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useContentTracking } from '../hooks/useContentTracking';
 import { getThumbnailUrl, getPDFUrl } from '../lib/supabase';
 import { Content } from '../types';

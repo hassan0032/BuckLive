@@ -1,10 +1,22 @@
-import { useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as AppUser, REGISTRATION_TYPE, ROLE } from '../types';
 
-export const useAuth = () => {
+interface AuthContextType {
+  user: AppUser | null;
+  loading: boolean;
+  isAdmin: boolean;
+  isCommunityManager: boolean;
+  isSharedAccount: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const currentUserIdRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -17,6 +29,15 @@ export const useAuth = () => {
         if (!mounted) return;
 
         if (session?.user) {
+          // Skip if we already have this user's data
+          if (currentUserIdRef.current === session.user.id) {
+            console.log('⏭️ Skipping fetch - user data already loaded:', session.user.id);
+            if (mounted) {
+              setLoading(false);
+            }
+            return;
+          }
+
           console.log('🔍 Fetching profile for user:', session.user.id);
           const { data: profile, error: profileError } = await supabase
             .from('user_profiles')
@@ -60,6 +81,7 @@ export const useAuth = () => {
           };
           console.log('👥 Final appUser object:', appUser);
           console.log('🔑 Final role set to:', appUser.role);
+          currentUserIdRef.current = session.user.id;
           setUser(appUser);
         } else {
           setUser(null);
@@ -78,12 +100,24 @@ export const useAuth = () => {
 
     getInitialSession();
 
-    // Listen for auth changes
+    // Listen for auth changes - only one subscription for the entire app
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         (async () => {
           try {
             if (session?.user) {
+              // Skip if we're already fetching or if user hasn't changed
+              if (isFetchingRef.current) {
+                console.log('⏭️ Already fetching profile, skipping duplicate call');
+                return;
+              }
+
+              if (currentUserIdRef.current === session.user.id) {
+                console.log('⏭️ User unchanged, skipping profile fetch:', session.user.id);
+                return;
+              }
+
+              isFetchingRef.current = true;
               console.log('🔄 Auth state changed - Fetching profile for:', session.user.id);
               const { data: profile, error: profileError } = await supabase
                 .from('user_profiles')
@@ -127,9 +161,11 @@ export const useAuth = () => {
               };
               console.log('👥 Final appUser in auth state change:', appUser);
               console.log('🔑 Final role in auth state change:', appUser.role);
+              currentUserIdRef.current = session.user.id;
               setUser(appUser);
             } else {
               if (mounted) {
+                currentUserIdRef.current = null;
                 setUser(null);
               }
             }
@@ -138,6 +174,8 @@ export const useAuth = () => {
             if (mounted) {
               setUser(null);
             }
+          } finally {
+            isFetchingRef.current = false;
           }
         })();
       }
@@ -149,11 +187,22 @@ export const useAuth = () => {
     };
   }, []);
 
-  return {
+  const value: AuthContextType = {
     user,
     loading,
     isAdmin: user?.role === 'admin',
     isCommunityManager: user?.role === 'community_manager',
     isSharedAccount: user?.is_shared_account || false,
   };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+

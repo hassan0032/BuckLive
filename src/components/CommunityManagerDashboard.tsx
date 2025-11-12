@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useCommunityAnalytics } from '../hooks/useCommunityAnalytics';
 import { supabase } from '../lib/supabase';

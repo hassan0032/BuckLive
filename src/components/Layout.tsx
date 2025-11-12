@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { signOut } from '../lib/supabase';
 import { LogOut, User, Settings, Library, Users } from 'lucide-react';
 import { Footer } from './Footer';
