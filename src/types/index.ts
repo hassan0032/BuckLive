@@ -142,3 +142,10 @@ export interface AuthState {
   user: User | null;
   loading: boolean;
 }
+
+export interface AdminNotification {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+}
