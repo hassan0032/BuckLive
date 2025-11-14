@@ -1,6 +1,6 @@
 import { ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { FC, useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useFeedback } from '../hooks/useFeedback';
 
 const ContentFeedbackForm: FC<{ contentId: string }> = ({ contentId }) => {
