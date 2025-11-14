@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Auth } from './components/Auth';
 import { CommunityManagerDashboard } from './components/CommunityManagerDashboard';
+import CommunityManagerNotifications from './components/CommunityManagerNotifications';
 import { ContentDetail } from './components/ContentDetail';
 import { ContentLibrary } from './components/ContentLibrary';
 import { Layout } from './components/Layout';
@@ -18,7 +19,7 @@ function App() {
 
   // Check if we're on the reset password page
   const isResetPasswordPage = window.location.pathname === '/reset-password' || window.location.hash.includes('type=recovery');
-  
+
   // Check if we're on a public share route
   const isPublicShareRoute = window.location.pathname.startsWith('/public/');
 
@@ -74,7 +75,7 @@ function App() {
         {/* Public share routes (no authentication required) */}
         <Route path="/public/:token" element={<PublicShareView />} />
         <Route path="/public/:token/content/:id" element={<PublicContentDetail />} />
-        
+
         {/* Authenticated routes */}
         <Route
           path="/*"
@@ -88,6 +89,12 @@ function App() {
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />
                 <Route path="/community-manager" element={isCommunityManager ? <CommunityManagerDashboard /> : <Navigate to="/library" replace />} />
+                <Route
+                  path="/notifications"
+                  element={
+                    isCommunityManager ? <CommunityManagerNotifications /> : <Navigate to="/library" replace />
+                  }
+                />
                 <Route path="*" element={<Navigate to="/library" replace />} />
               </Routes>
             </Layout>

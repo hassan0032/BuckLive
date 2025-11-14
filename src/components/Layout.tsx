@@ -1,8 +1,8 @@
+import { Bell, Library, LogOut, Settings, User, Users } from 'lucide-react';
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { signOut } from '../lib/supabase';
-import { LogOut, User, Settings, Library, Users } from 'lucide-react';
 import { Footer } from './Footer';
 
 interface LayoutProps {
@@ -27,6 +27,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
+  const isNotificationsRoute = location.pathname.startsWith('/notifications');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
       {/* Header */}
@@ -42,17 +44,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </h1>
                 )}
               </div>
-              
+
               <nav className="hidden md:flex space-x-8">
                 {navItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => navigate(item.path)}
-                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold transition-colors uppercase ${
-                      isActive(item.path)
+                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold transition-colors uppercase ${isActive(item.path)
                         ? 'text-brand-primary bg-brand-beige-light'
                         : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
-                    }`}
+                      }`}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
@@ -65,6 +66,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="text-sm text-gray-700">
                 Welcome, {user?.profile?.first_name || user?.email}
               </div>
+              {isCommunityManager && (
+                <button
+                  onClick={() => navigate('/notifications')}
+                  aria-label="Notifications"
+                  className={`relative flex items-center justify-center h-9 w-9 rounded-full border transition-colors ${isNotificationsRoute
+                      ? 'border-brand-primary text-brand-primary bg-brand-beige-light'
+                      : 'border-transparent text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
+                    }`}
+                >
+                  <Bell className="h-5 w-5" />
+                  <span className="sr-only">Notifications</span>
+                </button>
+              )}
               <button
                 onClick={handleSignOut}
                 className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors uppercase"
@@ -85,11 +99,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <button
                 key={item.id}
                 onClick={() => navigate(item.path)}
-                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors uppercase ${
-                  isActive(item.path)
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors uppercase ${isActive(item.path)
                     ? 'text-brand-primary bg-brand-beige-light'
                     : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
-                }`}
+                  }`}
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.label}</span>

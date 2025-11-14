@@ -143,6 +143,12 @@ export interface AuthState {
   loading: boolean;
 }
 
+export interface AdminNotification {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+}
 export interface ContentStats {
   videosWatched: number;
   articlesRead: number;
