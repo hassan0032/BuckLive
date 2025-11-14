@@ -1,7 +1,7 @@
 import { Bell, Library, LogOut, Settings, User, Users } from 'lucide-react';
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { signOut } from '../lib/supabase';
 import { Footer } from './Footer';
 

@@ -12,7 +12,7 @@ import { PublicContentDetail } from './components/PublicContentDetail';
 import { PublicShareView } from './components/PublicShareView';
 import { ResetPassword } from './components/ResetPassword';
 import { UserProfile } from './components/UserProfile';
-import { useAuth } from './hooks/useAuth';
+import { useAuth } from './contexts/AuthContext';
 
 function App() {
   const { user, loading, isAdmin, isCommunityManager, isSharedAccount } = useAuth();

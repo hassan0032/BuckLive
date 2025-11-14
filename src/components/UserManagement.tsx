@@ -1,6 +1,6 @@
 import { Calendar, Edit, Key, Mail, Plus, Search, Trash2, User as UserIcon, Users } from 'lucide-react';
 import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useCommunityUsers } from '../hooks/useCommunityUsers';
 import { adminResetUserPassword } from '../lib/supabase';
 

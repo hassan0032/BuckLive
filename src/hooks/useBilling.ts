@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react'
-import { useAuth } from './useAuth'
+import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
 function formatYMD(date: Date) {
@@ -50,7 +50,7 @@ export function useBilling() {
       let invoicesToSet = existingInvoices || []
 
       if (invoicesToSet.length === 0) {
-        const { data: cmRow, error: cmError } = await client
+        const { data: cmRow, error: cmError } = await supabase
           .from('community_managers')
           .select('community_id, communities:community_id(name, membership_tier)')
           .eq('user_id', user?.id)
@@ -62,7 +62,7 @@ export function useBilling() {
         let tier = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
         let communityName = cmRow?.communities?.[0]?.name as string | undefined
         if (!tier && cmRow?.community_id) {
-          const { data: communityRow } = await client
+          const { data: communityRow } = await supabase
             .from('communities')
             .select('name, membership_tier')
             .eq('id', cmRow.community_id)

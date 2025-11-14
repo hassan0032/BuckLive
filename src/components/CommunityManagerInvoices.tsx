@@ -2,7 +2,7 @@ import html2pdf from 'html2pdf.js'
 import { Calendar, Download, Loader2 } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../contexts/AuthContext'
 import { useBilling } from '../hooks/useBilling'
 import { formatInvoiceNumber, generateInvoicePdf } from '../utils/helper'
 

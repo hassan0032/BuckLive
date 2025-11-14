@@ -1,6 +1,7 @@
 import { AlertCircle, Calendar, CreditCard, Mail, PencilIcon, Shield, User } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
+import { useContentStats } from '../hooks/useContentStats';
 import { useBilling } from '../hooks/useBilling';
 import { supabase } from '../lib/supabase';
 import { User as AppUser } from '../types';
@@ -8,6 +9,8 @@ import { User as AppUser } from '../types';
 export const UserProfile: React.FC = () => {
   const { user, isAdmin, isCommunityManager } = useAuth();
   const { startDate, renewalDate } = useBilling();
+  // Call stats hook unconditionally to keep hooks order stable across renders
+  const stats = useContentStats(user?.id);
   const [localUser, setLocalUser] = useState<AppUser | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,8 +33,6 @@ export const UserProfile: React.FC = () => {
       </div>
     );
   }
-
-  if (!user) return null;
 
   const displayUser = localUser || user;
 
@@ -261,23 +262,25 @@ export const UserProfile: React.FC = () => {
           </div>
         )}
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="text-lg font-medium text-[#363f49] mb-4">Account Statistics</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <p className="text-2xl font-bold text-brand-primary">0</p>
-              <p className="text-sm text-gray-600">Videos Watched</p>
-            </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">0</p>
-              <p className="text-sm text-gray-600">Articles Read</p>
-            </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <p className="text-2xl font-bold text-purple-600">0</p>
-              <p className="text-sm text-gray-600">PDFs Downloaded</p>
+        {!(isAdmin || isCommunityManager) && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-medium text-[#363f49] mb-4">Account Statistics</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-brand-primary">{stats.videosWatched}</p>
+                <p className="text-sm text-gray-600">Videos Watched</p>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{stats.articlesRead}</p>
+                <p className="text-sm text-gray-600">Articles Read</p>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <p className="text-2xl font-bold text-purple-600">{stats.pdfsDownloaded}</p>
+                <p className="text-sm text-gray-600">PDFs Downloaded</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

@@ -1,7 +1,7 @@
 import { ArrowLeft, BookOpen, Calendar, Clock, Download, FileText, Tag, User, Video } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useContent } from '../hooks/useContent';
 import { useContentTracking } from '../hooks/useContentTracking';
 import { getPDFUrl, getThumbnailUrl } from '../lib/supabase';

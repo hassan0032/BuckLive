@@ -160,3 +160,8 @@ export interface AdminNotification {
   content: string;
   created_at: string;
 }
+export interface ContentStats {
+  videosWatched: number;
+  articlesRead: number;
+  pdfsDownloaded: number;
+}
