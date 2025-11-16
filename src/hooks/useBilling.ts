@@ -1,10 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from './useAuth'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const client = createClient(supabaseUrl, supabaseAnonKey)
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 
 function formatYMD(date: Date) {
   return date.toISOString().slice(0, 10)
@@ -39,7 +35,7 @@ export function useBilling() {
       setIsLoading(true)
       const today = formatYMD(new Date())
 
-      const { data: existingInvoices, error } = await client
+      const { data: existingInvoices, error } = await supabase
         .from('invoices')
         .select('*, community:community_id(name, membership_tier)')
         .eq('user_id', user?.id)
@@ -54,7 +50,7 @@ export function useBilling() {
       let invoicesToSet = existingInvoices || []
 
       if (invoicesToSet.length === 0) {
-        const { data: cmRow, error: cmError } = await client
+        const { data: cmRow, error: cmError } = await supabase
           .from('community_managers')
           .select('community_id, communities:community_id(name, membership_tier)')
           .eq('user_id', user?.id)
@@ -66,7 +62,7 @@ export function useBilling() {
         let tier = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
         let communityName = cmRow?.communities?.[0]?.name as string | undefined
         if (!tier && cmRow?.community_id) {
-          const { data: communityRow } = await client
+          const { data: communityRow } = await supabase
             .from('communities')
             .select('name, membership_tier')
             .eq('id', cmRow.community_id)
@@ -79,7 +75,7 @@ export function useBilling() {
         const currentStart = today
         const currentEnd = addYears(today, 1)
 
-        const { data: inserted, error: insertError } = await client
+        const { data: inserted, error: insertError } = await supabase
           .from('invoices')
           .insert([
             {
@@ -138,8 +134,7 @@ export function useBilling() {
       isLoading,
       refresh: async () => {
         if (!user) return
-        setIsLoading(true)
-        const { data, error } = await client
+        const { data, error } = await supabase
           .from('invoices')
           .select('*, community:community_id(name, membership_tier)')
           .eq('user_id', user.id)

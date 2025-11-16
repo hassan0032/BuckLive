@@ -1,6 +1,6 @@
 import { BarChart3, Building2, Check, Clock, Copy, Eye, Link2, Plus, RefreshCw, TrendingUp, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useCommunityAnalytics } from '../hooks/useCommunityAnalytics';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { supabase } from '../lib/supabase';

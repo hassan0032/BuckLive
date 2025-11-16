@@ -1,11 +1,12 @@
+import { ArrowLeft, BookOpen, Calendar, Clock, Download, FileText, Tag, User, Video } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { useContent } from '../hooks/useContent';
-import { useAuth } from '../hooks/useAuth';
 import { useContentTracking } from '../hooks/useContentTracking';
-import { getThumbnailUrl, getPDFUrl } from '../lib/supabase';
+import { getPDFUrl, getThumbnailUrl } from '../lib/supabase';
 import { Content } from '../types';
-import { ArrowLeft, Clock, Tag, User, Calendar, Video, FileText, BookOpen, Download } from 'lucide-react';
+import ContentFeedbackForm from './ContentFeedbackForm';
 
 export const ContentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -265,6 +266,9 @@ export const ContentDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Feedback Section */}
+      <ContentFeedbackForm contentId={singleContent.id} />
 
       {relatedContent.length > 0 && (
         <div className="space-y-4">

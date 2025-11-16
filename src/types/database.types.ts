@@ -378,6 +378,38 @@ export interface Database {
           created_at?: string
         }
       }
+      content_feedback: {
+        Row: {
+          id: string
+          content_id: string
+          user_id: string | null
+          name: string
+          email: string
+          comment: string | null
+          was_helpful: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          content_id: string
+          user_id?: string | null
+          name: string
+          email: string
+          comment?: string | null
+          was_helpful: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          content_id?: string
+          user_id?: string | null
+          name?: string
+          email?: string
+          comment?: string | null
+          was_helpful?: boolean
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

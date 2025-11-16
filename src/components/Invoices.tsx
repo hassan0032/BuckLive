@@ -3,7 +3,7 @@ import { Calendar, Download, Loader2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdminInvoices } from '../hooks/useAdminInvoices'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../contexts/AuthContext'
 import { formatInvoiceNumber, generateInvoicePdf } from '../utils/helper'
 
 function formatCurrency(cents: number, currency: string) {

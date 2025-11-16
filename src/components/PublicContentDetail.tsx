@@ -1,12 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { usePublicShare } from '../hooks/usePublicShare';
-import { useContentTracking } from '../hooks/useContentTracking';
-import { getThumbnailUrl, getPDFUrl } from '../lib/supabase';
-import { Content } from '../types';
-import { 
-  ArrowLeft, Clock, Tag, User, Calendar, Video, FileText, BookOpen, Download, AlertCircle 
+import {
+  AlertCircle,
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  Clock,
+  Download,
+  FileText,
+  Tag, User,
+  Video
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useContentTracking } from '../hooks/useContentTracking';
+import { usePublicShare } from '../hooks/usePublicShare';
+import { getPDFUrl, getThumbnailUrl } from '../lib/supabase';
+import { Content } from '../types';
+import ContentFeedbackForm from './ContentFeedbackForm';
 
 export const PublicContentDetail: React.FC = () => {
   const { token, id } = useParams<{ token: string; id: string }>();
@@ -24,10 +33,10 @@ export const PublicContentDetail: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-share-link`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
@@ -40,7 +49,7 @@ export const PublicContentDetail: React.FC = () => {
         }
 
         const data = await res.json();
-        
+
         if (!data.success) {
           throw new Error(data.error || 'Failed to fetch content');
         }
@@ -292,6 +301,9 @@ export const PublicContentDetail: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Feedback Section */}
+        <ContentFeedbackForm contentId={content.id} />
       </div>
     </div>
   );
