@@ -49,6 +49,11 @@ ALTER TABLE admin_notifications ENABLE ROW LEVEL SECURITY;
 -- STEP 3: Create RLS policies for admin_notifications table
 -- ============================================================================
 
+DROP POLICY IF EXISTS "Admins can read all notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Community managers can read notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Admins can create notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Admins can delete notifications" ON admin_notifications;
+
 -- Admins can read all notifications
 CREATE POLICY "Admins can read all notifications"
   ON admin_notifications FOR SELECT

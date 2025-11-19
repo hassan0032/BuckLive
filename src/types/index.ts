@@ -39,6 +39,50 @@ export const CONTENT_STATUS = {
 } as const;
 export type ContentStatus = typeof CONTENT_STATUS[keyof typeof CONTENT_STATUS];
 
+export const INVOICE_STATUS = {
+  ISSUED: 'Issued',
+  PAID: 'Paid',
+  OTHER: 'Other',
+} as const;
+export type InvoiceStatus = typeof INVOICE_STATUS[keyof typeof INVOICE_STATUS];
+
+// Helper function to parse invoice status
+export function parseInvoiceStatus(status: string): { type: InvoiceStatus; customText?: string } {
+  if (status === INVOICE_STATUS.ISSUED) {
+    return { type: INVOICE_STATUS.ISSUED };
+  }
+  if (status === INVOICE_STATUS.PAID) {
+    return { type: INVOICE_STATUS.PAID };
+  }
+  if (status.startsWith('Other:')) {
+    const customText = status.substring(6).trim(); // Remove "Other:" prefix
+    return { type: INVOICE_STATUS.OTHER, customText };
+  }
+  // Handle legacy lowercase 'issued' status
+  if (status.toLowerCase() === 'issued') {
+    return { type: INVOICE_STATUS.ISSUED };
+  }
+  // Default to Other if format is unknown
+  return { type: INVOICE_STATUS.OTHER, customText: status };
+}
+
+// Helper function to format invoice status for display
+export function formatInvoiceStatus(status: string): string {
+  const parsed = parseInvoiceStatus(status);
+  if (parsed.type === INVOICE_STATUS.OTHER && parsed.customText) {
+    return `Other: ${parsed.customText}`;
+  }
+  return parsed.type;
+}
+
+// Helper function to build status string for database
+export function buildInvoiceStatus(type: InvoiceStatus, customText?: string): string {
+  if (type === INVOICE_STATUS.OTHER && customText) {
+    return `Other: ${customText.trim()}`;
+  }
+  return type;
+}
+
 export interface User {
   id: string;
   email: string;

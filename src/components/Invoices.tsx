@@ -1,9 +1,10 @@
 import html2pdf from 'html2pdf.js'
-import { Calendar, Download, Loader2 } from 'lucide-react'
-import { useMemo } from 'react'
+import { Calendar, Check, Download, Edit2, Loader2, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAdminInvoices } from '../hooks/useAdminInvoices'
 import { useAuth } from '../contexts/AuthContext'
+import { useAdminInvoices } from '../hooks/useAdminInvoices'
+import { formatInvoiceStatus, INVOICE_STATUS, InvoiceStatus, parseInvoiceStatus } from '../types'
 import { formatInvoiceNumber, generateInvoicePdf } from '../utils/helper'
 
 function formatCurrency(cents: number, currency: string) {
@@ -13,9 +14,16 @@ function formatCurrency(cents: number, currency: string) {
 function Invoices() {
   const { user, isAdmin, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const { invoices, communities, selectedCommunityId, setSelectedCommunityId, isLoading, error } = useAdminInvoices()
+  const { invoices, communities, selectedCommunityId, setSelectedCommunityId, isLoading, error, updateInvoiceStatus } = useAdminInvoices()
 
   const canView = !!user && isAdmin
+  
+  // State for editing invoice status
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus>(INVOICE_STATUS.ISSUED)
+  const [customStatusText, setCustomStatusText] = useState<string>('')
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   const rows = useMemo(
     () =>
@@ -64,6 +72,56 @@ function Invoices() {
       .then(() => {
         document.body.removeChild(container)
       })
+  }
+
+  const handleStartEditStatus = (invoiceId: string, currentStatus: string) => {
+    const parsed = parseInvoiceStatus(currentStatus)
+    setEditingInvoiceId(invoiceId)
+    setSelectedStatus(parsed.type)
+    setCustomStatusText(parsed.customText || '')
+    setStatusError(null)
+  }
+
+  const handleCancelEditStatus = () => {
+    setEditingInvoiceId(null)
+    setSelectedStatus(INVOICE_STATUS.ISSUED)
+    setCustomStatusText('')
+    setStatusError(null)
+  }
+
+  const handleSaveStatus = async (invoiceId: string) => {
+    if (!invoiceId) return
+
+    // Validate custom text if Other is selected
+    if (selectedStatus === INVOICE_STATUS.OTHER && !customStatusText.trim()) {
+      setStatusError('Please enter a custom status')
+      return
+    }
+
+    setUpdatingStatus(invoiceId)
+    setStatusError(null)
+
+    try {
+      await updateInvoiceStatus(invoiceId, selectedStatus, customStatusText.trim() || undefined)
+      setEditingInvoiceId(null)
+      setSelectedStatus(INVOICE_STATUS.ISSUED)
+      setCustomStatusText('')
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : 'Failed to update status')
+    } finally {
+      setUpdatingStatus(null)
+    }
+  }
+
+  const getStatusBadgeColor = (status: string) => {
+    const parsed = parseInvoiceStatus(status)
+    if (parsed.type === INVOICE_STATUS.PAID) {
+      return 'bg-green-100 text-green-800'
+    }
+    if (parsed.type === INVOICE_STATUS.ISSUED) {
+      return 'bg-blue-100 text-blue-800'
+    }
+    return 'bg-gray-100 text-gray-800'
   }
 
   return (
@@ -150,7 +208,77 @@ function Invoices() {
                 </div>
 
                 <div className="text-right font-medium">{row.amountDisplay}</div>
-                <div className="text-gray-700 capitalize">{row.status}</div>
+                
+                <div>
+                  {editingInvoiceId === row.id ? (
+                    <div className="space-y-2">
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) => {
+                          setSelectedStatus(e.target.value as InvoiceStatus)
+                          if (e.target.value !== INVOICE_STATUS.OTHER) {
+                            setCustomStatusText('')
+                          }
+                        }}
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                        disabled={updatingStatus === row.id}
+                      >
+                        <option value={INVOICE_STATUS.ISSUED}>Issued</option>
+                        <option value={INVOICE_STATUS.PAID}>Paid</option>
+                        <option value={INVOICE_STATUS.OTHER}>Other</option>
+                      </select>
+                      
+                      {selectedStatus === INVOICE_STATUS.OTHER && (
+                        <input
+                          type="text"
+                          value={customStatusText}
+                          onChange={(e) => setCustomStatusText(e.target.value)}
+                          placeholder="Enter custom status"
+                          className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                          disabled={updatingStatus === row.id}
+                        />
+                      )}
+                      
+                      {statusError && editingInvoiceId === row.id && (
+                        <div className="text-xs text-red-600">{statusError}</div>
+                      )}
+                      
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => handleSaveStatus(row.id)}
+                          disabled={updatingStatus === row.id}
+                          className="inline-flex items-center justify-center gap-1 p-1 text-xs text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
+                        >
+                          {updatingStatus === row.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Check className="w-3 h-3" />
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCancelEditStatus}
+                          disabled={updatingStatus === row.id}
+                          className="inline-flex items-center justify-center gap-1 p-1 text-xs text-red-500 hover:text-red-500/80 disabled:opacity-50"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${getStatusBadgeColor(row.status)}`}>
+                        {formatInvoiceStatus(row.status)}
+                      </span>
+                      <button
+                        onClick={() => handleStartEditStatus(row.id, row.status)}
+                        className="text-xs text-brand-primary hover:text-brand-primary/80 underline"
+                        title="Edit status"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="text-right">
                   <button

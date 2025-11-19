@@ -4,7 +4,8 @@ import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useBilling } from '../hooks/useBilling'
-import { formatInvoiceNumber, generateInvoicePdf } from '../utils/helper'
+import { INVOICE_STATUS } from '../types'
+import { cn, formatInvoiceNumber, generateInvoicePdf } from '../utils/helper'
 
 function formatCurrency(cents: number, currency: string) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100)
@@ -111,7 +112,20 @@ function CommunityManagerInvoices() {
                 </div>
 
                 <div className="text-right font-medium">{row.amountDisplay}</div>
-                <div className="text-gray-700 capitalize">{row.status}</div>
+                {/* <div className="text-gray-700 capitalize">{row.status}</div> */}
+                <div className="flex items-center">
+                  <span
+                    className={cn(
+                      'inline-flex items-center px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-800 text-xs font-medium',
+                      {
+                        'bg-green-100 text-green-800': row.status === INVOICE_STATUS.PAID,
+                        'bg-blue-100 text-blue-800': row.status === INVOICE_STATUS.ISSUED,
+                      }
+                    )}
+                  >
+                    {row.status}
+                  </span>
+                </div>
 
                 <div className="text-right">
                   <button
