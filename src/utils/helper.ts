@@ -12,11 +12,9 @@ export function cn(...args: ClassValue[]) {
  * @param issueDate - The issue date (YYYY-MM-DD format) or Date object
  * @returns Formatted invoice number string (e.g., "BUCK-2025-0001")
  */
-export function formatInvoiceNumber(invoiceNo: number, issueDate: string | Date | null): string {
-  const date = issueDate ? new Date(issueDate) : new Date();
-  const year = date.getFullYear();
+export function formatInvoiceNumber(invoiceNo: number): string {
   const paddedNumber = invoiceNo.toString().padStart(4, '0');
-  return `BUCK-${year}-${paddedNumber}`;
+  return `MCCF - ${paddedNumber}`;
 }
 
 type InvoicePdfData = {
@@ -64,10 +62,14 @@ export function generateInvoicePdf({
           align-items: flex-start;
           margin-bottom: 60px;
       }
+      
+      .logo {
+          width: 200px;
+      }
 
       .brand {
           font-size: 1.1rem;
-          font-weight: 700;
+          font-weight: 600;
           color: #000;
       }
 
@@ -236,7 +238,8 @@ export function generateInvoicePdf({
   <div class="invoice-wrapper">
     <div class="header">
       <div>
-        <p class="brand">Buck LIVE</p>
+      <img src="/pdf-logo.png" alt="Logo" class="logo" />
+        <p class="brand">Buck Institute for Research on Aging</p>
         <p class="brand-address">8001 Redwood Blvd. Novato, CA 94945</p>
       </div>
       <div class="invoice-title-section">
@@ -273,7 +276,7 @@ export function generateInvoicePdf({
       </thead>
       <tbody>
         <tr>
-          <td class="community-name">${community} - ${tier} - ${periodStart} - ${periodEnd}</td>
+          <td class="community-name">${community} - ${tier} Tier - ${periodStart} - ${periodEnd}</td>
           <td>${amount}</td>
           <td>${amount}</td>
         </tr>

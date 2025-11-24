@@ -51,7 +51,7 @@ function Invoices() {
     const inv = invoices.find((i) => i.invoice_no === invoice_no)
     if (!inv) return
 
-    const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no, inv.issueDate)
+    const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no)
     const formattedAmount = formatCurrency(inv.amountCents, inv.currency)
     const { container, opt } = generateInvoicePdf({
       invoiceNo: formattedInvoiceNo,
@@ -174,7 +174,7 @@ function Invoices() {
           </div>
 
           {rows.map((row) => {
-            const formattedInvoiceNo = formatInvoiceNumber(row.invoice_no, row.issueDate)
+            const formattedInvoiceNo = formatInvoiceNumber(row.invoice_no)
             return (
               <div key={formattedInvoiceNo} className="grid grid-cols-7 gap-4 px-4 py-4 items-center border-b last:border-b-0">
                 <div className="col-span-2">
