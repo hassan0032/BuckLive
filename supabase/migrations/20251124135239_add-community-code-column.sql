@@ -1,4 +1,12 @@
--- 1. Create function that generates a unique 4-character code
+-- 0. Drop code column if it exists (safe cleanup)
+alter table communities drop column if exists code cascade;
+
+-- 1. Add code column with check constraint for 4 uppercase letters
+alter table communities
+add column code char(4)
+check (code ~ '^[A-Z]{4}$');
+
+-- 2. Create or replace function to generate a unique 4-character code
 create or replace function gen_unique_code_for_communities()
 returns trigger as $$
 declare
@@ -37,11 +45,10 @@ begin
 end;
 $$ language plpgsql;
 
--- 2. Add code column if not already added
-alter table communities
-add column if not exists code char(4);
+-- 3. Drop trigger if it already exists
+drop trigger if exists communities_code_trigger on communities;
 
--- 3. Create trigger to auto-generate unique code
+-- 4. Create trigger to auto-generate unique code before insert
 create trigger communities_code_trigger
 before insert on communities
 for each row
