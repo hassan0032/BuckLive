@@ -17,6 +17,92 @@ export function formatInvoiceNumber(invoiceNo: number): string {
   return `MCCF - ${paddedNumber}`;
 }
 
+const BASE_COMMUNITY_PRICES = {
+  silver: 2500,
+  gold: 5000,
+} as const;
+
+function getDiscountRate(newTotal: number) {
+  if (newTotal >= 20) return 0.4;
+  if (newTotal >= 10) return 0.36;
+  if (newTotal >= 6) return 0.3;
+
+  switch (newTotal) {
+    case 5:
+      return 0.2;
+    case 4:
+      return 0.15;
+    case 3:
+      return 0.1;
+    case 2:
+      return 0.05;
+    default:
+      return 0;
+  }
+}
+
+export function calculateCommunityPrice(existingCommunitiesCount: number, communityType: 'silver' | 'gold') {
+  const normalizedExisting = Math.max(0, existingCommunitiesCount || 0);
+  const newTotal = normalizedExisting + 1;
+  const basePrice = BASE_COMMUNITY_PRICES[communityType] ?? BASE_COMMUNITY_PRICES.silver;
+  const discountRate = getDiscountRate(newTotal);
+
+  return Math.round(basePrice * (1 - discountRate));
+}
+
+type PricingInput = {
+  id?: string
+  invoice_no: number
+  userId?: string | null
+  issueDate?: string | null
+  periodStart?: string | null
+  communityTier?: 'gold' | 'silver' | undefined
+  amountCents?: number
+}
+
+function getInvoiceKey(inv: PricingInput) {
+  return inv.id ?? `${inv.userId ?? 'unknown'}-${inv.invoice_no}`
+}
+
+function getInvoiceSortDate(inv: PricingInput) {
+  return inv.issueDate || inv.periodStart || ''
+}
+
+export function withDiscountedAmounts<T extends PricingInput>(invoices: T[]): Array<T & { calculatedAmountCents?: number }> {
+  const grouped = invoices.reduce<Map<string, T[]>>((acc, invoice) => {
+    const key = invoice.userId ?? 'unknown'
+    if (!acc.has(key)) {
+      acc.set(key, [])
+    }
+    acc.get(key)!.push(invoice)
+    return acc
+  }, new Map())
+
+  const calculatedMap = new Map<string, number>()
+
+  grouped.forEach((list) => {
+    const sorted = [...list].sort((a, b) => {
+      const aDate = new Date(getInvoiceSortDate(a)).getTime()
+      const bDate = new Date(getInvoiceSortDate(b)).getTime()
+      return aDate - bDate
+    })
+
+    sorted.forEach((invoice, index) => {
+      const price = calculateCommunityPrice(index, invoice.communityTier ?? 'silver')
+      calculatedMap.set(getInvoiceKey(invoice), price * 100)
+    })
+  })
+
+  return invoices.map((invoice) => {
+    const key = getInvoiceKey(invoice)
+    const cents = calculatedMap.get(key)
+    return {
+      ...invoice,
+      calculatedAmountCents: cents ?? invoice.amountCents,
+    }
+  })
+}
+
 type InvoicePdfData = {
   invoiceNo: string
   amount: string
@@ -27,6 +113,8 @@ type InvoicePdfData = {
   tier: string
   billToName: string
   billToEmail: string
+  originalAmount?: string
+  discountPercent?: number
 }
 
 export function generateInvoicePdf({
@@ -39,7 +127,41 @@ export function generateInvoicePdf({
   tier,
   billToName,
   billToEmail,
+  originalAmount,
+  discountPercent: providedDiscountPercent,
 }: InvoicePdfData) {
+  // Helpers to parse and format currency consistently
+  function parseCurrencyToCents(value?: string) {
+    if (!value) return 0
+    const cleaned = value.replace(/[^0-9.\-]/g, '')
+    if (cleaned === '') return 0
+    const num = parseFloat(cleaned)
+    if (Number.isNaN(num)) return 0
+    return Math.round(num * 100)
+  }
+
+  function formatCentsToCurrency(cents: number) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
+  }
+
+  // Determine base/original price from tier (2500 for silver, 5000 for gold)
+  const tierKey = tier === 'gold' ? 'gold' : 'silver'
+  const basePriceCents = (BASE_COMMUNITY_PRICES as any)[tierKey]
+    ? (BASE_COMMUNITY_PRICES as any)[tierKey] * 100
+    : BASE_COMMUNITY_PRICES.silver * 100
+
+  const origCentsFromArg = parseCurrencyToCents(originalAmount)
+  const origCents = origCentsFromArg > 0 ? origCentsFromArg : basePriceCents
+  const discountedCents = parseCurrencyToCents(amount)
+  const discountCents = Math.max(0, origCents - discountedCents)
+  const discountPercent = typeof providedDiscountPercent === 'number'
+    ? providedDiscountPercent
+    : origCents > 0 ? Number(((discountCents / origCents) * 100).toFixed(2)) : 0
+
+  const originalAmountDisplay = formatCentsToCurrency(origCents)
+  const discountedAmountDisplay = formatCentsToCurrency(discountedCents)
+  const discountAmountDisplay = formatCentsToCurrency(discountCents)
+
   const html = `
   <style>
       body {
@@ -208,8 +330,9 @@ export function generateInvoicePdf({
       .total-row {
           display: flex;
           justify-content: flex-end;
-          margin-bottom: 8px;
-          padding: 12px;
+          padding-left: 12px;
+          padding-right: 12px;
+          padding-bottom: 12px;
           font-size: 0.95rem;
       }
       
@@ -284,7 +407,7 @@ export function generateInvoicePdf({
           </div>
           <div class="balance-row">
             <p class="balance-label">Balance Due:</p>
-            <p class="balance-amount">${amount}</p>
+            <p class="balance-amount">${discountedAmountDisplay}</p>
           </div>
         </div>
       </div>
@@ -300,20 +423,24 @@ export function generateInvoicePdf({
         <tbody>
           <tr>
             <td class="community-name">${community} - ${tier} Tier - ${periodStart} - ${periodEnd}</td>
-            <td>${amount}</td>
-            <td>${amount}</td>
+            <td>${originalAmountDisplay}</td>
+            <td>${originalAmountDisplay}</td>
           </tr>
         </tbody>
       </table>
 
       <div class="totals-section">
         <div class="total-row">
+          <p class="total-label">Discount (${discountPercent}%):</p>
+          <p class="total-value">-${discountAmountDisplay}</p>
+        </div>
+        <div class="total-row">
           <p class="total-label">Subtotal:</p>
-          <p class="total-value">${amount}</p>
+          <p class="total-value">${discountedAmountDisplay}</p>
         </div>
         <div class="total-row final-total">
           <p class="total-label">Total:</p>
-          <p class="total-value">${amount}</p>
+          <p class="total-value">${discountedAmountDisplay}</p>
         </div>
       </div>
     </div>

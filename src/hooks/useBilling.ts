@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { calculateCommunityPrice, withDiscountedAmounts } from '../utils/helper'
 
 function formatYMD(date: Date) {
   return date.toISOString().slice(0, 10)
@@ -50,17 +51,27 @@ export function useBilling() {
       let invoicesToSet = existingInvoices || []
 
       if (invoicesToSet.length === 0) {
-        const { data: cmRow, error: cmError } = await supabase
-          .from('community_managers')
-          .select('community_id, communities:community_id(name, membership_tier)')
-          .eq('user_id', user?.id)
-          .maybeSingle()
+        const [{ count: totalCommunities, error: communityCountError }, { data: cmRow, error: cmError }] =
+          await Promise.all([
+            supabase
+              .from('community_managers')
+              .select('community_id', { count: 'exact', head: true })
+              .eq('user_id', user?.id),
+            supabase
+              .from('community_managers')
+              .select('community_id, communities:community_id(name, membership_tier)')
+              .eq('user_id', user?.id)
+              .maybeSingle(),
+          ])
+
+        if (communityCountError) {
+          console.error('Error counting communities:', communityCountError)
+        }
 
         if (cmError) {
           console.error('Error fetching community tier:', cmError)
         }
         let tier = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
-        let communityName = cmRow?.communities?.[0]?.name as string | undefined
         if (!tier && cmRow?.community_id) {
           const { data: communityRow } = await supabase
             .from('communities')
@@ -68,9 +79,10 @@ export function useBilling() {
             .eq('id', cmRow.community_id)
             .maybeSingle()
           tier = (communityRow?.membership_tier as 'gold' | 'silver' | undefined) ?? undefined
-          communityName = communityRow?.name as string | undefined
         }
-        const amount = tier === 'gold' ? 500000 : 250000
+        const existingCommunitiesCount = Math.max((totalCommunities ?? 1) - 1, 0)
+        const calculatedPrice = calculateCommunityPrice(existingCommunitiesCount, tier ?? 'silver')
+        const amount = calculatedPrice * 100
 
         const currentStart = today
         const currentEnd = addYears(today, 1)
@@ -103,6 +115,7 @@ export function useBilling() {
 
       // Fetch community info for all invoices
       const normalizedInvoices = invoicesToSet.map((inv) => ({
+        id: inv.id,
         invoice_no: Number(inv.invoice_no),
         userId: inv.user_id,
         issueDate: inv.issue_date,
@@ -116,7 +129,9 @@ export function useBilling() {
         communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
       }))
 
-      setInvoices(normalizedInvoices)
+      const invoicesWithCalculatedAmounts = withDiscountedAmounts(normalizedInvoices)
+
+      setInvoices(invoicesWithCalculatedAmounts)
       setStartDate(normalizedInvoices[normalizedInvoices.length - 1]?.periodStart || today)
       setRenewalDate(normalizedInvoices[0]?.periodEnd || addYears(today, 1))
       setIsLoading(false)
@@ -144,21 +159,21 @@ export function useBilling() {
           setIsLoading(false)
           return
         }
-        setInvoices(
-          (data || []).map((inv) => ({
-            invoice_no: Number(inv.invoice_no),
-            userId: inv.user_id,
-            issueDate: inv.issue_date,
-            periodStart: inv.period_start,
-            periodEnd: inv.period_end,
-            amountCents: Number(inv.amount_cents),
-            currency: inv.currency,
-            status: inv.status,
-            communityId: inv.community_id,
-            communityName: inv.community?.name,
-            communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
-          }))
-        )
+        const normalized = (data || []).map((inv) => ({
+          id: inv.id,
+          invoice_no: Number(inv.invoice_no),
+          userId: inv.user_id,
+          issueDate: inv.issue_date,
+          periodStart: inv.period_start,
+          periodEnd: inv.period_end,
+          amountCents: Number(inv.amount_cents),
+          currency: inv.currency,
+          status: inv.status,
+          communityId: inv.community_id,
+          communityName: inv.community?.name,
+          communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
+        }))
+        setInvoices(withDiscountedAmounts(normalized))
         setIsLoading(false)
       },
     }),

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useCommunities } from './useCommunities'
+import { withDiscountedAmounts } from '../utils/helper'
 import { InvoiceStatus, buildInvoiceStatus } from '../types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -23,6 +24,7 @@ interface InvoiceData {
   userName?: string
   userEmail?: string
   id: string // Invoice ID for updates
+  calculatedAmountCents?: number
 }
 
 export function useAdminInvoices() {
@@ -91,7 +93,7 @@ export function useAdminInvoices() {
           id: inv.id,
         }))
 
-        setInvoices(normalizedInvoices)
+        setInvoices(withDiscountedAmounts(normalizedInvoices))
       } catch (err) {
         console.error('Error loading invoices:', err)
         setError(err instanceof Error ? err.message : 'Failed to load invoices')
@@ -165,7 +167,7 @@ export function useAdminInvoices() {
         id: inv.id,
       }))
 
-      setInvoices(normalizedInvoices)
+      setInvoices(withDiscountedAmounts(normalizedInvoices))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh invoices')
     } finally {
@@ -209,26 +211,28 @@ export function useAdminInvoices() {
             return
           }
 
-          const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
-            invoice_no: Number(inv.invoice_no),
-            userId: inv.user_id,
-            issueDate: inv.issue_date,
-            periodStart: inv.period_start,
-            periodEnd: inv.period_end,
-            amountCents: Number(inv.amount_cents),
-            currency: inv.currency,
-            status: inv.status,
-            communityId: inv.community_id,
-            communityName: inv.community?.name || null,
-            communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
-            userName: inv.user_profiles
-              ? `${inv.user_profiles.first_name || ''} ${inv.user_profiles.last_name || ''}`.trim() || undefined
-              : undefined,
-            userEmail: inv.user_profiles?.email || undefined,
-            id: inv.id,
-          }))
+      const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
+        invoice_no: Number(inv.invoice_no),
+        userId: inv.user_id,
+        issueDate: inv.issue_date,
+        periodStart: inv.period_start,
+        periodEnd: inv.period_end,
+        amountCents: Number(inv.amount_cents),
+        currency: inv.currency,
+        status: inv.status,
+        communityId: inv.community_id,
+        communityName: inv.community?.name || null,
+        communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
+        userName: inv.user_profiles
+          ? `${inv.user_profiles.first_name || ''} ${inv.user_profiles.last_name || ''}`.trim() || undefined
+          : undefined,
+        userEmail: inv.user_profiles?.email || undefined,
+        id: inv.id,
+      }))
 
-          setInvoices(normalizedInvoices)
+      setInvoices(withDiscountedAmounts(normalizedInvoices))
+
+          setInvoices(withDiscountedAmounts(normalizedInvoices))
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to refresh invoices')
         } finally {

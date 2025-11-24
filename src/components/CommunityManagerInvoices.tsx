@@ -20,10 +20,14 @@ function CommunityManagerInvoices() {
 
   const rows = useMemo(
     () =>
-      invoices.map((inv) => ({
-        ...inv,
-        amountDisplay: formatCurrency(inv.amountCents, inv.currency),
-      })),
+      invoices.map((inv) => {
+        const amountCentsToDisplay = inv.calculatedAmountCents ?? inv.amountCents
+        return {
+          ...inv,
+          amountCentsToDisplay,
+          amountDisplay: formatCurrency(amountCentsToDisplay, inv.currency),
+        }
+      }),
     [invoices]
   )
 
@@ -48,7 +52,8 @@ function CommunityManagerInvoices() {
     if (!inv || !user) return
 
     const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no)
-    const formattedAmount = formatCurrency(inv.amountCents, inv.currency)
+    const amountCentsToDisplay = inv.calculatedAmountCents ?? inv.amountCents
+    const formattedAmount = formatCurrency(amountCentsToDisplay, inv.currency)
     const { container, opt } = generateInvoicePdf({
       invoiceNo: formattedInvoiceNo,
       amount: formattedAmount,
