@@ -52,8 +52,12 @@ export function generateInvoicePdf({
 
       .invoice-wrapper {
           max-width: 800px;
+          min-height: 100vh;
           margin: 0 auto;
           padding: 50px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
       }
 
       .header {
@@ -233,65 +237,101 @@ export function generateInvoicePdf({
           color: #000;
           font-size: 1.05rem;
       }
+        
+      .details {
+          font-size: 14px;
+      }
+
+      .checks {
+          margin-top: 10px;
+          margin-bottom: 10px;
+      }
+
+      .reference {
+          font-size: 14px;
+          margin-top: 10px;
+      }
+
+      .payment-details {
+          margin-top: auto;
+      }
   </style>
 
   <div class="invoice-wrapper">
-    <div class="header">
-      <div>
-      <img src="/pdf-logo.png" alt="Logo" class="logo" />
-        <p class="brand">Buck Institute for Research on Aging</p>
-        <p class="brand-address">8001 Redwood Blvd. Novato, CA 94945</p>
+    <div>
+      <div class="header">
+        <div>
+        <img src="/pdf-logo.png" alt="Logo" class="logo" />
+          <p class="brand">Buck Institute for Research on Aging</p>
+          <p class="brand-address">8001 Redwood Blvd. Novato, CA 94945</p>
+        </div>
+        <div class="invoice-title-section">
+          <p class="invoice-title">INVOICE</p>
+          <div class="invoice-number"># ${invoiceNo}</div>
+        </div>
       </div>
-      <div class="invoice-title-section">
-        <p class="invoice-title">INVOICE</p>
-        <div class="invoice-number"># ${invoiceNo}</div>
+
+      <div class="main-info">
+        <div class="bill-to">
+          <p class="bill-to-label">Bill To:</p>
+          <p class="bill-to-name">${billToName}</p>
+          <p class="bill-to-email">${billToEmail}</p>
+        </div>
+        <div class="date-balance">
+          <div class="date-row">
+            <p class="date-label">Date:</p>
+            <p class="date-value">${issueDate}</p>
+          </div>
+          <div class="balance-row">
+            <p class="balance-label">Balance Due:</p>
+            <p class="balance-amount">${amount}</p>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="community-name">${community} - ${tier} Tier - ${periodStart} - ${periodEnd}</td>
+            <td>${amount}</td>
+            <td>${amount}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="totals-section">
+        <div class="total-row">
+          <p class="total-label">Subtotal:</p>
+          <p class="total-value">${amount}</p>
+        </div>
+        <div class="total-row final-total">
+          <p class="total-label">Total:</p>
+          <p class="total-value">${amount}</p>
+        </div>
       </div>
     </div>
 
-    <div class="main-info">
-      <div class="bill-to">
-        <p class="bill-to-label">Bill To:</p>
-        <p class="bill-to-name">${billToName}</p>
-        <p class="bill-to-email">${billToEmail}</p>
-      </div>
-      <div class="date-balance">
-        <div class="date-row">
-          <p class="date-label">Date:</p>
-          <p class="date-value">${issueDate}</p>
-        </div>
-        <div class="balance-row">
-          <p class="balance-label">Balance Due:</p>
-          <p class="balance-amount">${amount}</p>
-        </div>
-      </div>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Rate</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="community-name">${community} - ${tier} Tier - ${periodStart} - ${periodEnd}</td>
-          <td>${amount}</td>
-          <td>${amount}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="totals-section">
-      <div class="total-row">
-        <p class="total-label">Subtotal:</p>
-        <p class="total-value">${amount}</p>
-      </div>
-      <div class="total-row final-total">
-        <p class="total-label">Total:</p>
-        <p class="total-value">${amount}</p>
-      </div>
+    <div class="payment-details">
+      <p class="payment-title">
+      <b>Payment Due Upon Receipt</b>
+      </p>
+      <p class="details checks"><b>Checks:</b> Payable to Buck Institute for Research on Aging, 8001 Redwood Blvd., Novato, CA 94945</p>
+      <p class="ach">
+      <b>ACH or Wire:</b>
+      </p>
+      <p class="details">Bank Name: BMO Harris Bank NA</p>
+      <p class="details">Acct Name: Buck Institute for Research on Aging</p>
+      <p class="details">Acct #: 1821008</p>
+      <p class="details">ABA: 071000288</p>
+      <p class="details">SWIFT: HATRUS44</p>
+      <p class="reference">Please reference the invoice number with all payments.</p>
     </div>
   </div>
 `
