@@ -119,6 +119,7 @@ export interface Community {
   member_count?: number;
   is_sharable?: boolean;
   sharable_token?: string | null;
+  code: string;
 }
 
 export interface CommunityManager {
