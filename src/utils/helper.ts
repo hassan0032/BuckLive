@@ -12,11 +12,96 @@ export function cn(...args: ClassValue[]) {
  * @param issueDate - The issue date (YYYY-MM-DD format) or Date object
  * @returns Formatted invoice number string (e.g., "BUCK-2025-0001")
  */
-export function formatInvoiceNumber(invoiceNo: number, issueDate: string | Date | null): string {
-  const date = issueDate ? new Date(issueDate) : new Date();
-  const year = date.getFullYear();
-  const paddedNumber = invoiceNo.toString().padStart(4, '0');
-  return `BUCK-${year}-${paddedNumber}`;
+export function formatInvoiceNumber(invoiceNo: number, communityCode?: string | null): string {
+  const paddedNumber = invoiceNo.toString().padStart(4, '0')
+  const prefix = (communityCode ?? '').trim() || 'No Cmmunity'
+  return `${prefix} - ${paddedNumber}`
+}
+
+const BASE_COMMUNITY_PRICES = {
+  silver: 2500,
+  gold: 5000,
+} as const;
+
+function getDiscountRate(newTotal: number) {
+  if (newTotal >= 20) return 0.4;
+  if (newTotal >= 10) return 0.36;
+  if (newTotal >= 6) return 0.3;
+
+  switch (newTotal) {
+    case 5:
+      return 0.2;
+    case 4:
+      return 0.15;
+    case 3:
+      return 0.1;
+    case 2:
+      return 0.05;
+    default:
+      return 0;
+  }
+}
+
+export function calculateCommunityPrice(existingCommunitiesCount: number, communityType: 'silver' | 'gold') {
+  const normalizedExisting = Math.max(0, existingCommunitiesCount || 0);
+  const newTotal = normalizedExisting + 1;
+  const basePrice = BASE_COMMUNITY_PRICES[communityType] ?? BASE_COMMUNITY_PRICES.silver;
+  const discountRate = getDiscountRate(newTotal);
+
+  return Math.round(basePrice * (1 - discountRate));
+}
+
+type PricingInput = {
+  id?: string
+  invoice_no: number
+  userId?: string | null
+  issueDate?: string | null
+  periodStart?: string | null
+  communityTier?: 'gold' | 'silver' | undefined
+  amountCents?: number
+}
+
+function getInvoiceKey(inv: PricingInput) {
+  return inv.id ?? `${inv.userId ?? 'unknown'}-${inv.invoice_no}`
+}
+
+function getInvoiceSortDate(inv: PricingInput) {
+  return inv.issueDate || inv.periodStart || ''
+}
+
+export function withDiscountedAmounts<T extends PricingInput>(invoices: T[]): Array<T & { calculatedAmountCents?: number }> {
+  const grouped = invoices.reduce<Map<string, T[]>>((acc, invoice) => {
+    const key = invoice.userId ?? 'unknown'
+    if (!acc.has(key)) {
+      acc.set(key, [])
+    }
+    acc.get(key)!.push(invoice)
+    return acc
+  }, new Map())
+
+  const calculatedMap = new Map<string, number>()
+
+  grouped.forEach((list) => {
+    const sorted = [...list].sort((a, b) => {
+      const aDate = new Date(getInvoiceSortDate(a)).getTime()
+      const bDate = new Date(getInvoiceSortDate(b)).getTime()
+      return aDate - bDate
+    })
+
+    sorted.forEach((invoice, index) => {
+      const price = calculateCommunityPrice(index, invoice.communityTier ?? 'silver')
+      calculatedMap.set(getInvoiceKey(invoice), price * 100)
+    })
+  })
+
+  return invoices.map((invoice) => {
+    const key = getInvoiceKey(invoice)
+    const cents = calculatedMap.get(key)
+    return {
+      ...invoice,
+      calculatedAmountCents: cents ?? invoice.amountCents,
+    }
+  })
 }
 
 type InvoicePdfData = {
@@ -29,6 +114,8 @@ type InvoicePdfData = {
   tier: string
   billToName: string
   billToEmail: string
+  originalAmount?: string
+  discountPercent?: number
 }
 
 export function generateInvoicePdf({
@@ -41,9 +128,47 @@ export function generateInvoicePdf({
   tier,
   billToName,
   billToEmail,
+  originalAmount,
+  discountPercent: providedDiscountPercent,
 }: InvoicePdfData) {
+  // Helpers to parse and format currency consistently
+  function parseCurrencyToCents(value?: string) {
+    if (!value) return 0
+    const cleaned = value.replace(/[^0-9.\-]/g, '')
+    if (cleaned === '') return 0
+    const num = parseFloat(cleaned)
+    if (Number.isNaN(num)) return 0
+    return Math.round(num * 100)
+  }
+
+  function formatCentsToCurrency(cents: number) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
+  }
+
+  // Determine base/original price from tier (2500 for silver, 5000 for gold)
+  const tierKey = tier === 'gold' ? 'gold' : 'silver'
+  const basePriceCents = (BASE_COMMUNITY_PRICES as any)[tierKey]
+    ? (BASE_COMMUNITY_PRICES as any)[tierKey] * 100
+    : BASE_COMMUNITY_PRICES.silver * 100
+
+  const origCentsFromArg = parseCurrencyToCents(originalAmount)
+  const origCents = origCentsFromArg > 0 ? origCentsFromArg : basePriceCents
+  const discountedCents = parseCurrencyToCents(amount)
+  const discountCents = Math.max(0, origCents - discountedCents)
+  const discountPercent = typeof providedDiscountPercent === 'number'
+    ? providedDiscountPercent
+    : origCents > 0 ? Number(((discountCents / origCents) * 100).toFixed(2)) : 0
+
+  const originalAmountDisplay = formatCentsToCurrency(origCents)
+  const discountedAmountDisplay = formatCentsToCurrency(discountedCents)
+  const discountAmountDisplay = formatCentsToCurrency(discountCents)
+
   const html = `
   <style>
+      * {
+          box-sizing: border-box;
+      }
+
       body {
           font-family: Arial, sans-serif;
           background: #fff;
@@ -53,28 +178,49 @@ export function generateInvoicePdf({
       }
 
       .invoice-wrapper {
+          width: 100%;
           max-width: 800px;
+          min-height: 1090px;
           margin: 0 auto;
-          padding: 50px;
+          padding: 40px 50px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          page-break-inside: avoid;
+          page-break-after: avoid;
+      }
+      
+      .content-top {
+          flex: 0 0 auto;
+      }
+      
+      .content-bottom {
+          margin-top: auto;
       }
 
       .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 60px;
+          margin-bottom: 50px;
+      }
+      
+      .logo {
+          width: 200px;
+          display: block;
       }
 
       .brand {
           font-size: 1.1rem;
-          font-weight: 700;
+          font-weight: 600;
           color: #000;
+          margin: 8px 0 0 0;
       }
 
       .brand-address {
           font-size: 0.85rem;
           color: #666;
-          margin-top: 4px;
+          margin: 4px 0 0 0;
       }
 
       .invoice-title-section {
@@ -92,13 +238,13 @@ export function generateInvoicePdf({
       .invoice-number {
           font-size: 0.9rem;
           color: #666;
-          margin-top: 8px;
+          margin: 8px 0 0 0;
       }
 
       .main-info {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 40px;
+          margin-bottom: 35px;
       }
 
       .bill-to {
@@ -108,17 +254,19 @@ export function generateInvoicePdf({
       .bill-to-label {
           font-size: 0.85rem;
           color: #666;
+          margin: 0 0 4px 0;
       }
 
       .bill-to-name {
           font-weight: 700;
           color: #000;
-          margin-bottom: 2px;
+          margin: 0 0 2px 0;
       }
 
       .bill-to-email {
           color: #666;
           font-size: 0.9rem;
+          margin: 0;
       }
 
       .date-balance {
@@ -128,46 +276,47 @@ export function generateInvoicePdf({
 
       .date-row {
           display: flex;
-          justify-content: end;
+          justify-content: flex-end;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
           font-size: 0.9rem;
       }
 
       .date-label {
           color: #666;
-          margin-right: 20px;
+          margin: 0 20px 0 0;
       }
 
       .date-value {
           color: #000;
+          margin: 0;
       }
 
       .balance-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding-left: 15px;
-          padding-right: 15px;
-          padding-bottom: 15px;
+          padding: 12px 15px;
           background: #f5f5f5;
       }
 
       .balance-label {
           font-weight: 700;
           color: #000;
+          margin: 0;
       }
 
       .balance-amount {
           font-weight: 700;
           font-size: 1.1rem;
           color: #000;
+          margin: 0;
       }
 
       table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 30px;
+          margin-bottom: 25px;
       }
 
       thead {
@@ -196,14 +345,13 @@ export function generateInvoicePdf({
 
       .totals-section {
           text-align: right;
-          margin-top: 30px;
+          margin-top: 20px;
       }
 
       .total-row {
           display: flex;
           justify-content: flex-end;
-          margin-bottom: 8px;
-          padding: 12px;
+          padding: 0 12px 10px 12px;
           font-size: 0.95rem;
       }
       
@@ -223,71 +371,127 @@ export function generateInvoicePdf({
 
       .final-total {
           border-top: 1px solid #ddd;
-          padding-top: 8px;
-          margin-top: 8px;
+          padding-top: 10px;
+          margin-top: 5px;
       }
 
       .final-total .total-label {
           color: #000;
           font-size: 1.05rem;
       }
+        
+      .details {
+          font-size: 14px;
+          margin: 0 0 4px 0;
+      }
+
+      .checks {
+          margin: 8px 0;
+      }
+
+      .reference {
+          font-size: 14px;
+          margin: 8px 0 0 0;
+      }
+
+      .payment-details {
+          page-break-inside: avoid;
+      }
+
+      .payment-title {
+          margin: 0 0 8px 0;
+      }
+
+      .ach {
+          margin: 0 0 4px 0;
+          font-weight: bold;
+      }
+
+      /* Safari-specific fixes */
+      @media print {
+          .invoice-wrapper {
+              height: auto;
+              min-height: 0;
+          }
+      }
   </style>
 
   <div class="invoice-wrapper">
-    <div class="header">
-      <div>
-        <p class="brand">Buck LIVE</p>
-        <p class="brand-address">8001 Redwood Blvd. Novato, CA 94945</p>
+    <div class="content-top">
+      <div class="header">
+        <div>
+          <img src="/pdf-logo.png" alt="Logo" class="logo" />
+          <p class="brand">Buck Institute for Research on Aging</p>
+          <p class="brand-address">8001 Redwood Blvd. Novato, CA 94945</p>
+        </div>
+        <div class="invoice-title-section">
+          <p class="invoice-title">INVOICE</p>
+          <div class="invoice-number"># ${invoiceNo}</div>
+        </div>
       </div>
-      <div class="invoice-title-section">
-        <p class="invoice-title">INVOICE</p>
-        <div class="invoice-number"># ${invoiceNo}</div>
+
+      <div class="main-info">
+        <div class="bill-to">
+          <p class="bill-to-label">Bill To:</p>
+          <p class="bill-to-name">${billToName}</p>
+          <p class="bill-to-email">${billToEmail}</p>
+        </div>
+        <div class="date-balance">
+          <div class="date-row">
+            <p class="date-label">Date:</p>
+            <p class="date-value">${issueDate}</p>
+          </div>
+          <div class="balance-row">
+            <p class="balance-label">Balance Due:</p>
+            <p class="balance-amount">${discountedAmountDisplay}</p>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="community-name">${community} - ${tier} Tier - ${periodStart} - ${periodEnd}</td>
+            <td>${originalAmountDisplay}</td>
+            <td>${originalAmountDisplay}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="totals-section">
+        <div class="total-row">
+          <p class="total-label">Discount (${discountPercent}%):</p>
+          <p class="total-value">-${discountAmountDisplay}</p>
+        </div>
+        <div class="total-row">
+          <p class="total-label">Subtotal:</p>
+          <p class="total-value">${discountedAmountDisplay}</p>
+        </div>
+        <div class="total-row final-total">
+          <p class="total-label">Total:</p>
+          <p class="total-value">${discountedAmountDisplay}</p>
+        </div>
       </div>
     </div>
 
-    <div class="main-info">
-      <div class="bill-to">
-        <p class="bill-to-label">Bill To:</p>
-        <p class="bill-to-name">${billToName}</p>
-        <p class="bill-to-email">${billToEmail}</p>
-      </div>
-      <div class="date-balance">
-        <div class="date-row">
-          <p class="date-label">Date:</p>
-          <p class="date-value">${issueDate}</p>
-        </div>
-        <div class="balance-row">
-          <p class="balance-label">Balance Due:</p>
-          <p class="balance-amount">${amount}</p>
-        </div>
-      </div>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Rate</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="community-name">${community} - ${tier} - ${periodStart} - ${periodEnd}</td>
-          <td>${amount}</td>
-          <td>${amount}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="totals-section">
-      <div class="total-row">
-        <p class="total-label">Subtotal:</p>
-        <p class="total-value">${amount}</p>
-      </div>
-      <div class="total-row final-total">
-        <p class="total-label">Total:</p>
-        <p class="total-value">${amount}</p>
+    <div class="content-bottom">
+      <div class="payment-details">
+        <p class="payment-title"><b>Payment Due Upon Receipt</b></p>
+        <p class="details checks"><b>Checks:</b> Payable to Buck Institute for Research on Aging, 8001 Redwood Blvd., Novato, CA 94945</p>
+        <p class="ach"><b>ACH or Wire:</b></p>
+        <p class="details">Bank Name: BMO Harris Bank NA</p>
+        <p class="details">Acct Name: Buck Institute for Research on Aging</p>
+        <p class="details">Acct #: 1821008</p>
+        <p class="details">ABA: 071000288</p>
+        <p class="details">SWIFT: HATRUS44</p>
+        <p class="reference">Please reference the invoice number with all payments.</p>
       </div>
     </div>
   </div>
@@ -298,11 +502,22 @@ export function generateInvoicePdf({
   document.body.appendChild(container)
 
   const opt = {
-    margin: 0,
+    margin: [10, 10, 10, 10] as [number, number, number, number], // Reduced margins for Safari
     filename: `invoice-${invoiceNo}.pdf`,
     image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: "pt", format: "a4", orientation: "portrait" as const },
+    html2canvas: { 
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowHeight: 1123, // A4 height in pixels at 96 DPI
+    },
+    jsPDF: { 
+      unit: "pt", 
+      format: "a4", 
+      orientation: "portrait" as const,
+      compress: true
+    },
+    pagebreak: { mode: 'avoid-all' }
   }
 
   return { container, opt }

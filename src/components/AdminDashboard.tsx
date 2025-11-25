@@ -15,6 +15,7 @@ interface CommunityFormData {
   description: string;
   access_code: string;
   is_active: boolean;
+  code: string,
   membership_tier: 'silver' | 'gold';
 }
 
@@ -32,6 +33,7 @@ export const AdminDashboard: React.FC = () => {
     description: '',
     access_code: '',
     is_active: true,
+    code: "",
     membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
   });
 
@@ -78,6 +80,7 @@ export const AdminDashboard: React.FC = () => {
       description: '',
       access_code: '',
       is_active: true,
+      code: "",
       membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
     });
   };
@@ -94,6 +97,7 @@ export const AdminDashboard: React.FC = () => {
       description: community.description,
       access_code: community.access_code,
       is_active: community.is_active,
+      code: community.code,
       membership_tier: community.membership_tier,
     });
     setShowCommunityForm(true);
@@ -409,6 +413,9 @@ export const AdminDashboard: React.FC = () => {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -449,6 +456,8 @@ export const AdminDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
+                        {community.code}
+                      </td>                      <td className="px-6 py-4 text-sm text-gray-500">
                         {new Date(community.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium space-x-2">
@@ -547,6 +556,24 @@ export const AdminDashboard: React.FC = () => {
                       setCommunityFormData({
                         ...communityFormData,
                         access_code: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Code
+                  </label>
+                  <input
+                    type="text"
+                    value={communityFormData.code}
+                    onChange={(e) =>
+                      setCommunityFormData({
+                        ...communityFormData,
+                        code: e.target.value,
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"

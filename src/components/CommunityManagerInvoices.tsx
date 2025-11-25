@@ -20,10 +20,14 @@ function CommunityManagerInvoices() {
 
   const rows = useMemo(
     () =>
-      invoices.map((inv) => ({
-        ...inv,
-        amountDisplay: formatCurrency(inv.amountCents, inv.currency),
-      })),
+      invoices.map((inv) => {
+        const amountCentsToDisplay = inv.calculatedAmountCents ?? inv.amountCents
+        return {
+          ...inv,
+          amountCentsToDisplay,
+          amountDisplay: formatCurrency(amountCentsToDisplay, inv.currency),
+        }
+      }),
     [invoices]
   )
 
@@ -47,8 +51,9 @@ function CommunityManagerInvoices() {
     const inv = invoices.find((i) => i.invoice_no === invoice_no)
     if (!inv || !user) return
 
-    const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no, inv.issueDate)
-    const formattedAmount = formatCurrency(inv.amountCents, inv.currency)
+    const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no, inv.communityCode)
+    const amountCentsToDisplay = inv.calculatedAmountCents ?? inv.amountCents
+    const formattedAmount = formatCurrency(amountCentsToDisplay, inv.currency)
     const { container, opt } = generateInvoicePdf({
       invoiceNo: formattedInvoiceNo,
       amount: formattedAmount,
@@ -87,7 +92,7 @@ function CommunityManagerInvoices() {
           </div>
 
           {rows.map((row) => {
-            const formattedInvoiceNo = formatInvoiceNumber(row.invoice_no, row.issueDate)
+            const formattedInvoiceNo = formatInvoiceNumber(row.invoice_no, row.communityCode)
             return (
               <div key={formattedInvoiceNo} className="grid grid-cols-6 gap-4 px-4 py-4 items-center border-b last:border-b-0">
                 <div className="col-span-2">
