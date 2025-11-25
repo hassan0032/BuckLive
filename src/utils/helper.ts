@@ -165,6 +165,10 @@ export function generateInvoicePdf({
 
   const html = `
   <style>
+      * {
+          box-sizing: border-box;
+      }
+
       body {
           font-family: Arial, sans-serif;
           background: #fff;
@@ -174,36 +178,49 @@ export function generateInvoicePdf({
       }
 
       .invoice-wrapper {
+          width: 100%;
           max-width: 800px;
-          min-height: 100vh;
+          min-height: 1090px;
           margin: 0 auto;
-          padding: 50px;
+          padding: 40px 50px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          page-break-inside: avoid;
+          page-break-after: avoid;
+      }
+      
+      .content-top {
+          flex: 0 0 auto;
+      }
+      
+      .content-bottom {
+          margin-top: auto;
       }
 
       .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 60px;
+          margin-bottom: 50px;
       }
       
       .logo {
           width: 200px;
+          display: block;
       }
 
       .brand {
           font-size: 1.1rem;
           font-weight: 600;
           color: #000;
+          margin: 8px 0 0 0;
       }
 
       .brand-address {
           font-size: 0.85rem;
           color: #666;
-          margin-top: 4px;
+          margin: 4px 0 0 0;
       }
 
       .invoice-title-section {
@@ -221,13 +238,13 @@ export function generateInvoicePdf({
       .invoice-number {
           font-size: 0.9rem;
           color: #666;
-          margin-top: 8px;
+          margin: 8px 0 0 0;
       }
 
       .main-info {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 40px;
+          margin-bottom: 35px;
       }
 
       .bill-to {
@@ -237,17 +254,19 @@ export function generateInvoicePdf({
       .bill-to-label {
           font-size: 0.85rem;
           color: #666;
+          margin: 0 0 4px 0;
       }
 
       .bill-to-name {
           font-weight: 700;
           color: #000;
-          margin-bottom: 2px;
+          margin: 0 0 2px 0;
       }
 
       .bill-to-email {
           color: #666;
           font-size: 0.9rem;
+          margin: 0;
       }
 
       .date-balance {
@@ -257,46 +276,47 @@ export function generateInvoicePdf({
 
       .date-row {
           display: flex;
-          justify-content: end;
+          justify-content: flex-end;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
           font-size: 0.9rem;
       }
 
       .date-label {
           color: #666;
-          margin-right: 20px;
+          margin: 0 20px 0 0;
       }
 
       .date-value {
           color: #000;
+          margin: 0;
       }
 
       .balance-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding-left: 15px;
-          padding-right: 15px;
-          padding-bottom: 15px;
+          padding: 12px 15px;
           background: #f5f5f5;
       }
 
       .balance-label {
           font-weight: 700;
           color: #000;
+          margin: 0;
       }
 
       .balance-amount {
           font-weight: 700;
           font-size: 1.1rem;
           color: #000;
+          margin: 0;
       }
 
       table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 30px;
+          margin-bottom: 25px;
       }
 
       thead {
@@ -325,15 +345,13 @@ export function generateInvoicePdf({
 
       .totals-section {
           text-align: right;
-          margin-top: 30px;
+          margin-top: 20px;
       }
 
       .total-row {
           display: flex;
           justify-content: flex-end;
-          padding-left: 12px;
-          padding-right: 12px;
-          padding-bottom: 12px;
+          padding: 0 12px 10px 12px;
           font-size: 0.95rem;
       }
       
@@ -353,8 +371,8 @@ export function generateInvoicePdf({
 
       .final-total {
           border-top: 1px solid #ddd;
-          padding-top: 8px;
-          margin-top: 8px;
+          padding-top: 10px;
+          margin-top: 5px;
       }
 
       .final-total .total-label {
@@ -364,28 +382,45 @@ export function generateInvoicePdf({
         
       .details {
           font-size: 14px;
+          margin: 0 0 4px 0;
       }
 
       .checks {
-          margin-top: 10px;
-          margin-bottom: 10px;
+          margin: 8px 0;
       }
 
       .reference {
           font-size: 14px;
-          margin-top: 10px;
+          margin: 8px 0 0 0;
       }
 
       .payment-details {
-          margin-top: auto;
+          page-break-inside: avoid;
+      }
+
+      .payment-title {
+          margin: 0 0 8px 0;
+      }
+
+      .ach {
+          margin: 0 0 4px 0;
+          font-weight: bold;
+      }
+
+      /* Safari-specific fixes */
+      @media print {
+          .invoice-wrapper {
+              height: auto;
+              min-height: 0;
+          }
       }
   </style>
 
   <div class="invoice-wrapper">
-    <div>
+    <div class="content-top">
       <div class="header">
         <div>
-        <img src="/pdf-logo.png" alt="Logo" class="logo" />
+          <img src="/pdf-logo.png" alt="Logo" class="logo" />
           <p class="brand">Buck Institute for Research on Aging</p>
           <p class="brand-address">8001 Redwood Blvd. Novato, CA 94945</p>
         </div>
@@ -446,20 +481,18 @@ export function generateInvoicePdf({
       </div>
     </div>
 
-    <div class="payment-details">
-      <p class="payment-title">
-      <b>Payment Due Upon Receipt</b>
-      </p>
-      <p class="details checks"><b>Checks:</b> Payable to Buck Institute for Research on Aging, 8001 Redwood Blvd., Novato, CA 94945</p>
-      <p class="ach">
-      <b>ACH or Wire:</b>
-      </p>
-      <p class="details">Bank Name: BMO Harris Bank NA</p>
-      <p class="details">Acct Name: Buck Institute for Research on Aging</p>
-      <p class="details">Acct #: 1821008</p>
-      <p class="details">ABA: 071000288</p>
-      <p class="details">SWIFT: HATRUS44</p>
-      <p class="reference">Please reference the invoice number with all payments.</p>
+    <div class="content-bottom">
+      <div class="payment-details">
+        <p class="payment-title"><b>Payment Due Upon Receipt</b></p>
+        <p class="details checks"><b>Checks:</b> Payable to Buck Institute for Research on Aging, 8001 Redwood Blvd., Novato, CA 94945</p>
+        <p class="ach"><b>ACH or Wire:</b></p>
+        <p class="details">Bank Name: BMO Harris Bank NA</p>
+        <p class="details">Acct Name: Buck Institute for Research on Aging</p>
+        <p class="details">Acct #: 1821008</p>
+        <p class="details">ABA: 071000288</p>
+        <p class="details">SWIFT: HATRUS44</p>
+        <p class="reference">Please reference the invoice number with all payments.</p>
+      </div>
     </div>
   </div>
 `
@@ -469,11 +502,22 @@ export function generateInvoicePdf({
   document.body.appendChild(container)
 
   const opt = {
-    margin: 0,
+    margin: [10, 10, 10, 10] as [number, number, number, number], // Reduced margins for Safari
     filename: `invoice-${invoiceNo}.pdf`,
     image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: "pt", format: "a4", orientation: "portrait" as const },
+    html2canvas: { 
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowHeight: 1123, // A4 height in pixels at 96 DPI
+    },
+    jsPDF: { 
+      unit: "pt", 
+      format: "a4", 
+      orientation: "portrait" as const,
+      compress: true
+    },
+    pagebreak: { mode: 'avoid-all' }
   }
 
   return { container, opt }
