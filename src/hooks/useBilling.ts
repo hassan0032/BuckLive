@@ -38,7 +38,7 @@ export function useBilling() {
 
       const { data: existingInvoices, error } = await supabase
         .from('invoices')
-        .select('*, community:community_id(name, membership_tier)')
+        .select('*, community:community_id(name, membership_tier, code)')
         .eq('user_id', user?.id)
         .order('period_start', { ascending: false })
 
@@ -59,7 +59,7 @@ export function useBilling() {
               .eq('user_id', user?.id),
             supabase
               .from('community_managers')
-              .select('community_id, communities:community_id(name, membership_tier)')
+              .select('community_id, communities:community_id(name, membership_tier, code)')
               .eq('user_id', user?.id)
               .maybeSingle(),
           ])
@@ -75,7 +75,7 @@ export function useBilling() {
         if (!tier && cmRow?.community_id) {
           const { data: communityRow } = await supabase
             .from('communities')
-            .select('name, membership_tier')
+            .select('name, membership_tier, code')
             .eq('id', cmRow.community_id)
             .maybeSingle()
           tier = (communityRow?.membership_tier as 'gold' | 'silver' | undefined) ?? undefined
@@ -101,7 +101,7 @@ export function useBilling() {
               community_id: cmRow?.community_id ?? null,
             },
           ])
-          .select('*, community:community_id(name, membership_tier)')
+          .select('*, community:community_id(name, membership_tier, code)')
 
         if (insertError) {
           console.error('Error inserting invoice:', insertError)
@@ -126,6 +126,7 @@ export function useBilling() {
         status: inv.status,
         communityId: inv.community_id,
         communityName: inv.community?.name,
+        communityCode: inv.community?.code,
         communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
       }))
 
@@ -151,7 +152,7 @@ export function useBilling() {
         if (!user) return
         const { data, error } = await supabase
           .from('invoices')
-          .select('*, community:community_id(name, membership_tier)')
+          .select('*, community:community_id(name, membership_tier, code)')
           .eq('user_id', user.id)
           .order('period_start', { ascending: false })
         if (error) {
@@ -171,6 +172,7 @@ export function useBilling() {
           status: inv.status,
           communityId: inv.community_id,
           communityName: inv.community?.name,
+          communityCode: inv.community?.code,
           communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
         }))
         setInvoices(withDiscountedAmounts(normalized))

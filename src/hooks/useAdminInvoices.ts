@@ -20,6 +20,7 @@ interface InvoiceData {
   status: string
   communityId: string | null
   communityName: string | null
+  communityCode: string | null
   communityTier: 'gold' | 'silver' | undefined
   userName?: string
   userEmail?: string
@@ -55,7 +56,7 @@ export function useAdminInvoices() {
           .from('invoices')
           .select(`
             *,
-            community:community_id(name, membership_tier),
+            community:community_id(name, membership_tier, code),
             user_profiles:user_id(id, email, first_name, last_name)
           `)
           .order('period_start', { ascending: false })
@@ -85,6 +86,7 @@ export function useAdminInvoices() {
           status: inv.status,
           communityId: inv.community_id,
           communityName: inv.community?.name || null,
+          communityCode: inv.community?.code || null,
           communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
           userName: inv.user_profiles
             ? `${inv.user_profiles.first_name || ''} ${inv.user_profiles.last_name || ''}`.trim() || undefined
@@ -129,9 +131,9 @@ export function useAdminInvoices() {
     try {
       let query = client
         .from('invoices')
-        .select(`
+          .select(`
           *,
-          community:community_id(name, membership_tier),
+          community:community_id(name, membership_tier, code),
           user_profiles:user_id(id, email, first_name, last_name)
         `)
         .order('period_start', { ascending: false })
@@ -159,6 +161,7 @@ export function useAdminInvoices() {
         status: inv.status,
         communityId: inv.community_id,
         communityName: inv.community?.name || null,
+        communityCode: inv.community?.code || null,
         communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
         userName: inv.user_profiles
           ? `${inv.user_profiles.first_name || ''} ${inv.user_profiles.last_name || ''}`.trim() || undefined
@@ -194,7 +197,7 @@ export function useAdminInvoices() {
             .from('invoices')
             .select(`
               *,
-              community:community_id(name, membership_tier),
+              community:community_id(name, membership_tier, code),
               user_profiles:user_id(id, email, first_name, last_name)
             `)
             .order('period_start', { ascending: false })
@@ -222,6 +225,7 @@ export function useAdminInvoices() {
         status: inv.status,
         communityId: inv.community_id,
         communityName: inv.community?.name || null,
+        communityCode: inv.community?.code || null,
         communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
         userName: inv.user_profiles
           ? `${inv.user_profiles.first_name || ''} ${inv.user_profiles.last_name || ''}`.trim() || undefined
