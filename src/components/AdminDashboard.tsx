@@ -37,7 +37,7 @@ export const AdminDashboard: React.FC = () => {
     membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
   });
 
-  const handleContentSubmit = async (contentData: Content, isDraft: boolean) => {
+  const handleContentSubmit = async (contentData: Omit<Content, 'id' | 'created_at' | 'updated_at'>, isDraft: boolean) => {
     try {
       let result;
       if (editingContent) {

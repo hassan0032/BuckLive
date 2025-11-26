@@ -10,7 +10,7 @@ import { useContent } from '../hooks/useContent';
 interface EnhancedContentFormProps {
   editingContent?: Content | null;
   onClose: () => void;
-  onSubmit: (data: Content, isDraft: boolean) => Promise<void>;
+  onSubmit: (data: Omit<Content, 'id' | 'created_at' | 'updated_at'>, isDraft: boolean) => Promise<void>;
 }
 
 export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
@@ -160,8 +160,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         }
       }
 
-      const contentData: Content = {
-        id: editingContent?.id || '',
+      const contentData: Omit<Content, 'id' | 'created_at' | 'updated_at'> = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         type: formData.type,
@@ -175,8 +174,6 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         required_tier: formData.required_tier,
         status: isDraft ? 'draft' : 'published',
         vimeo_video_id: formData.vimeo_video_id || '',
-        created_at: editingContent?.created_at || new Date().toISOString(),
-        updated_at: editingContent?.updated_at || new Date().toISOString(),
       };
 
       if (formData.type === 'video' && formData.duration) {
