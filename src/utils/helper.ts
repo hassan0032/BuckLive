@@ -466,10 +466,12 @@ export function generateInvoicePdf({
       </table>
 
       <div class="totals-section">
-        <div class="total-row">
-          <p class="total-label">Discount (${discountPercent}%):</p>
-          <p class="total-value">-${discountAmountDisplay}</p>
-        </div>
+          ${discountPercent > 0 ? `
+            <div class="total-row">
+              <p class="total-label">Discount (${discountPercent}%):</p>
+              <p class="total-value">-${discountAmountDisplay}</p>
+            </div>
+          ` : ''}
         <div class="total-row">
           <p class="total-label">Subtotal:</p>
           <p class="total-value">${discountedAmountDisplay}</p>
