@@ -32,14 +32,24 @@ const createSupabaseClient = () => {
 
 export const supabase = createSupabaseClient();
 
-interface ValidateAccessCodeResponse {
-  communityId: string;
-  is_admin: boolean;
+export interface ValidateAccessCodeResponse {
+  communityId: string | null;
+  isAdmin: boolean;
 }
 
 export const validateAccessCode = async (accessCode: string) => {
-  const { data, error }: { data: ValidateAccessCodeResponse | null; error: PostgrestError | null } = await supabase.rpc('validate_access_code', { code: accessCode });
-  return { data, error };
+  const { data, error } = await supabase.rpc('validate_access_code', { p_code: accessCode });
+  if (!data) {
+    return { data: null as ValidateAccessCodeResponse | null, error };
+  }
+
+  return {
+    data: {
+      communityId: data.community_id ?? null,
+      isAdmin: Boolean(data.is_admin),
+    },
+    error,
+  };
 };
 
 export const signUp = async (email: string, password: string, firstName: string, lastName: string, communityId: string | null, is_admin?: boolean) => {
@@ -238,4 +248,99 @@ export const getPDFUrl = (content: { url?: string; storage_pdf_path?: string }):
   }
 
   return '';
+};
+
+// AUTO-GENERATE INVOICE FOR COMMUNITY MANAGER AFTER LOGIN
+export const ensureCommunityManagerInvoices = async (userId: string) => {
+  try {
+    console.log("🔍 Checking if invoices need to be generated for user:", userId);
+
+    // 1. Get communities managed by this user
+    const { data: managerCommunities, error: cmError } = await supabase
+      .from('community_managers')
+      .select('community_id, communities:community_id(name, membership_tier)')
+      .eq('user_id', userId);
+
+    if (cmError) {
+      console.error("❌ Error loading community managers:", cmError);
+      return;
+    }
+
+    if (!managerCommunities || managerCommunities.length === 0) {
+      console.log("ℹ No managed communities found. Skipping invoice generation.");
+      return;
+    }
+
+    const communityMeta = managerCommunities.map(row => {
+      const community = Array.isArray(row.communities)
+        ? row.communities[0]
+        : row.communities;
+
+      return {
+        communityId: row.community_id,
+        communityTier: community?.membership_tier ?? "silver",
+      };
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    // 2. Fetch existing invoices for this period
+    const { data: existingInvoices, error: invoicesError } = await supabase
+      .from('invoices')
+      .select('community_id, period_start')
+      .in('community_id', communityMeta.map(c => c.communityId))
+      .eq('period_start', today); // check only invoices for this period
+
+    if (invoicesError) {
+      console.error("❌ Error fetching existing invoices:", invoicesError);
+      return;
+    }
+
+    const communitiesWithoutInvoice = communityMeta.filter(
+      meta => !existingInvoices?.some(
+        inv => inv.community_id === meta.communityId && inv.period_start === today
+      )
+    );
+
+    if (communitiesWithoutInvoice.length === 0) {
+      console.log("✔ All communities already have invoices for today. No new invoice needed.");
+      return;
+    }
+
+    console.log("🆕 Communities missing invoices for this period:", communitiesWithoutInvoice);
+
+    // 3. Create invoice for communities missing one
+    for (const meta of communitiesWithoutInvoice) {
+      const amount = meta.communityTier.toLowerCase() === "gold" ? 500000 : 250000;
+      const nextYear = new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+        .toISOString()
+        .slice(0, 10);
+
+      const { data: inserted, error: insertError } = await supabase
+        .from('invoices')
+        .upsert([
+          {
+            community_id: meta.communityId,
+            issue_date: today,
+            period_start: today,
+            period_end: nextYear,
+            amount_cents: amount,
+            currency: 'USD',
+            status: 'issued',
+          },
+        ], { onConflict: ['community_id', 'period_start'], ignoreDuplicates: true })
+        .select();
+
+      if (insertError) {
+        console.error(`❌ Failed to create invoice for community ${meta.communityId}:`, insertError);
+      } else if (inserted && inserted.length > 0) {
+        console.log(`✅ Invoice created for community ${meta.communityId} (id: ${inserted[0].id})`);
+      } else {
+        console.log(`ℹ Invoice already exists for community ${meta.communityId} today, skipping.`);
+      }
+    }
+
+  } catch (err) {
+    console.error("❌ Unexpected error generating invoice:", err);
+  }
 };

@@ -89,7 +89,6 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
             .from('invoices')
             .insert([
               {
-                user_id: userId ?? null,
                 community_id: communityData.id,
                 issue_date: issueDate,
                 period_start: periodStart,
