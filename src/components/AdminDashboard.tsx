@@ -2,13 +2,15 @@ import { BarChart3, Edit, FileText, Image as ImageIcon, Loader2, Plus, Trash2, U
 import React, { useState } from 'react';
 import { useCommunities } from '../hooks/useCommunities';
 import { useContent } from '../hooks/useContent';
-import { Community, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier } from '../types';
+import { useDocuments } from '../hooks/useDocuments';
+import { Community, CommunityDocument, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier } from '../types';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import { AdminUserManagement } from './AdminUserManagement';
 import { EnhancedContentForm } from './EnhancedContentForm';
 import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
 import AdminNotifications from './AdminNotifications';
+import { PDFUploader } from './PDFUploader';
 
 interface CommunityFormData {
   name: string;
@@ -19,6 +21,24 @@ interface CommunityFormData {
   membership_tier: 'silver' | 'gold';
 }
 
+const createEmptyCommunityForm = (): CommunityFormData => ({
+  name: '',
+  description: '',
+  access_code: '',
+  is_active: true,
+  code: '',
+  membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
+});
+
+const generateAccessCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
 export const AdminDashboard: React.FC = () => {
   const { content, addContent, updateContent, deleteContent } = useContent();
   const { loading: communitiesLoading, communities, addCommunity, updateCommunity, deleteCommunity } = useCommunities();
@@ -26,16 +46,34 @@ export const AdminDashboard: React.FC = () => {
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
+  const {
+    documents: storedPdfs,
+    loading: pdfsLoading,
+    uploading: pdfUploading,
+    uploadDocument: uploadCommunityPdf,
+    deleteDocument: deleteStoredPdf,
+    refetch: refetchStoredPdfs,
+  } = useDocuments(editingCommunity);
   const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback'>('content');
+  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents'>('details');
+  const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
+  const [deletingPdfId, setDeletingPdfId] = useState<string | null>(null);
 
-  const [communityFormData, setCommunityFormData] = useState<CommunityFormData>({
-    name: '',
-    description: '',
-    access_code: '',
-    is_active: true,
-    code: "",
-    membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
-  });
+  const resetCommunityForm = () => setCommunityFormData(createEmptyCommunityForm());
+
+  const openCreateCommunityModal = () => {
+    resetCommunityForm();
+    setEditingCommunity(null);
+    setCommunityModalTab('details');
+    setShowCommunityForm(true);
+  };
+
+  const closeCommunityModal = () => {
+    setShowCommunityForm(false);
+    setEditingCommunity(null);
+    setCommunityModalTab('details');
+    resetCommunityForm();
+  };
 
   const handleContentSubmit = async (contentData: Omit<Content, 'id' | 'created_at' | 'updated_at'>, isDraft: boolean) => {
     try {
@@ -67,22 +105,25 @@ export const AdminDashboard: React.FC = () => {
   const handleCommunitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check for duplicate code when editing
+    if (editingCommunity && communityFormData.code) {
+      const duplicateCode = communities.find(
+        (c) => c.code === communityFormData.code && c.id !== editingCommunity
+      );
+      
+      if (duplicateCode) {
+        alert(`Error: Code "${communityFormData.code}" is already in use by "${duplicateCode.name}". Please use a unique code.`);
+        return;
+      }
+    }
+
     if (editingCommunity) {
       await updateCommunity(editingCommunity, communityFormData);
     } else {
       await addCommunity(communityFormData);
     }
 
-    setShowCommunityForm(false);
-    setEditingCommunity(null);
-    setCommunityFormData({
-      name: '',
-      description: '',
-      access_code: '',
-      is_active: true,
-      code: "",
-      membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
-    });
+    closeCommunityModal();
   };
 
   const handleEdit = (item: Content) => {
@@ -100,6 +141,7 @@ export const AdminDashboard: React.FC = () => {
       code: community.code,
       membership_tier: community.membership_tier,
     });
+    setCommunityModalTab('details');
     setShowCommunityForm(true);
   };
 
@@ -113,6 +155,38 @@ export const AdminDashboard: React.FC = () => {
     return;
     if (confirm('Are you sure you want to delete this community? This will affect all associated users.')) {
       await deleteCommunity(id);
+    }
+  };
+
+    const handleGenerateAccessCode = () => {
+    setCommunityFormData({
+      ...communityFormData,
+      access_code: generateAccessCode()
+    });
+  };
+
+  const handleCommunityPdfUploadComplete = async () => {
+    await refetchStoredPdfs();
+  };
+
+  const handleDeletePdf = async (doc: CommunityDocument) => {
+    if (deletingPdfId === doc.id) return;
+    const confirmDelete = confirm('Delete this PDF from storage?');
+    if (!confirmDelete) return;
+
+    try {
+      setDeletingPdfId(doc.id);
+      const { error } = await deleteStoredPdf(doc);
+      if (error) {
+        alert(error);
+        return;
+      }
+      await refetchStoredPdfs();
+    } catch (error) {
+      console.error('Failed to delete PDF:', error);
+      alert('Failed to delete PDF. Please try again.');
+    } finally {
+      setDeletingPdfId(null);
     }
   };
 
@@ -146,7 +220,7 @@ export const AdminDashboard: React.FC = () => {
                 setEditingContent(null);
                 setShowForm(true);
               } else {
-                setShowCommunityForm(true);
+                openCreateCommunityModal();
               }
             }}
             className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
@@ -383,7 +457,7 @@ export const AdminDashboard: React.FC = () => {
               Communities & Access Codes
             </h2>
             <button
-              onClick={() => setShowCommunityForm(true)}
+              onClick={openCreateCommunityModal}
               className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
             >
               <Plus className="h-4 w-4" />
@@ -413,7 +487,7 @@ export const AdminDashboard: React.FC = () => {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Code
+                      Billing Code
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
@@ -508,134 +582,265 @@ export const AdminDashboard: React.FC = () => {
       {showCommunityForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">
-                {editingCommunity ? 'Edit Community' : 'Add New Community'}
-              </h2>
-
-              <form onSubmit={handleCommunitySubmit} className="space-y-4">
+            <div className="p-6 space-y-6">
+              <div className="flex items-start justify-between">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={communityFormData.name}
-                    onChange={(e) =>
-                      setCommunityFormData({ ...communityFormData, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                    required
-                  />
+                  <h2 className="text-xl font-semibold">
+                    {editingCommunity ? 'Edit Community' : 'Add New Community'}
+                  </h2>
+                  {!editingCommunity && (
+                    <p className="text-sm text-gray-500">
+                      Configure access and details for the new community.
+                    </p>
+                  )}
                 </div>
+                <button
+                  type="button"
+                  onClick={closeCommunityModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors text-sm font-semibold uppercase"
+                >
+                  Close
+                </button>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={communityFormData.description}
-                    onChange={(e) =>
-                      setCommunityFormData({
-                        ...communityFormData,
-                        description: e.target.value,
-                      })
-                    }
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                    required
-                  />
+              {editingCommunity && (
+                <div className="border-b border-gray-200">
+                  <nav className="flex">
+                    <button
+                      type="button"
+                      onClick={() => setCommunityModalTab('details')}
+                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${
+                        communityModalTab === 'details'
+                          ? 'border-brand-primary text-brand-primary'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Community Details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommunityModalTab('documents')}
+                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${
+                        communityModalTab === 'documents'
+                          ? 'border-brand-primary text-brand-primary'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      PDF Library
+                    </button>
+                  </nav>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Access Code
-                  </label>
-                  <input
-                    type="text"
-                    value={communityFormData.access_code}
-                    onChange={(e) =>
-                      setCommunityFormData({
-                        ...communityFormData,
-                        access_code: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                    required
-                  />
-                </div>
+              {(!editingCommunity || communityModalTab === 'details') && (
+                <form onSubmit={handleCommunitySubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={communityFormData.name}
+                      onChange={(e) =>
+                        setCommunityFormData({ ...communityFormData, name: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Code
-                  </label>
-                  <input
-                    type="text"
-                    value={communityFormData.code}
-                    onChange={(e) =>
-                      setCommunityFormData({
-                        ...communityFormData,
-                        code: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                    required
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={communityFormData.description}
+                      onChange={(e) =>
+                        setCommunityFormData({
+                          ...communityFormData,
+                          description: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Membership Tier
-                  </label>
-                  <select
-                    disabled={!!editingCommunity}
-                    value={communityFormData.membership_tier}
-                    onChange={(e) =>
-                      setCommunityFormData({
-                        ...communityFormData,
-                        membership_tier: e.target.value as PaymentTier,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    required
-                  >
-                    <option value={PAYMENT_TIER.SILVER}>{PAYMENT_TIER.SILVER.toUpperCase()}</option>
-                    <option value={PAYMENT_TIER.GOLD}>{PAYMENT_TIER.GOLD.toUpperCase()}</option>
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Access Code *
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={communityFormData.access_code}
+                        onChange={(e) =>
+                          setCommunityFormData({
+                            ...communityFormData,
+                            access_code: e.target.value.toUpperCase(),
+                          })
+                        }
+                        maxLength={6}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono uppercase"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGenerateAccessCode}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold text-sm"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      6-character alphanumeric code for community access
+                    </p>
+                  </div>
 
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={communityFormData.is_active}
-                    onChange={(e) =>
-                      setCommunityFormData({
-                        ...communityFormData,
-                        is_active: e.target.checked,
-                      })
-                    }
-                    className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Active</label>
-                </div>
+                  {editingCommunity && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                      <input
+                        type="text"
+                        value={communityFormData.code}
+                        onChange={(e) =>
+                          setCommunityFormData({
+                            ...communityFormData,
+                            code: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                        required
+                      />
+                    </div>
+                  )}
 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCommunityForm(false);
-                      setEditingCommunity(null);
-                    }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
-                  >
-                    {editingCommunity ? 'Update' : 'Add'} Community
-                  </button>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Membership Tier
+                    </label>
+                    <select
+                      disabled={!!editingCommunity}
+                      value={communityFormData.membership_tier}
+                      onChange={(e) =>
+                        setCommunityFormData({
+                          ...communityFormData,
+                          membership_tier: e.target.value as PaymentTier,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                      required
+                    >
+                      <option value={PAYMENT_TIER.SILVER}>{PAYMENT_TIER.SILVER.toUpperCase()}</option>
+                      <option value={PAYMENT_TIER.GOLD}>{PAYMENT_TIER.GOLD.toUpperCase()}</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={communityFormData.is_active}
+                      onChange={(e) =>
+                        setCommunityFormData({
+                          ...communityFormData,
+                          is_active: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                    />
+                    <label className="ml-2 text-sm text-gray-700">Active</label>
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={closeCommunityModal}
+                      className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
+                    >
+                      {editingCommunity ? 'Update' : 'Add'} Community
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {editingCommunity && communityModalTab === 'documents' && (
+                <div className="space-y-6">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Upload PDFs to the shared bucket so they can be surfaced to community members.
+                    </p>
+                    <PDFUploader
+                      uploadFunction={uploadCommunityPdf}
+                      onUploadComplete={handleCommunityPdfUploadComplete}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                        Recently Uploaded PDFs
+                      </h3>
+                    </div>
+
+                    {pdfsLoading && !storedPdfs.length ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-6 w-6 animate-spin text-brand-primary" />
+                      </div>
+                    ) : storedPdfs.length === 0 ? (
+                      <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-4">
+                        No PDFs uploaded yet.
+                      </p>
+                    ) : (
+                      <ul className="space-y-3">
+                        {storedPdfs.slice(0, 5).map((doc) => (
+                          <li
+                            key={doc.id}
+                            className="flex items-center justify-between bg-white border border-gray-100 rounded-lg px-4 py-3 shadow-sm"
+                          >
+                            <div>
+                              <p className="text-sm font-semibold text-[#363f49] break-all">
+                                {doc.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {doc.createdAt
+                                  ? new Date(doc.createdAt).toLocaleString()
+                                  : 'Upload in progress'}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <a
+                                href={doc.publicUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-semibold text-brand-primary hover:text-brand-d-blue uppercase"
+                              >
+                                View
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePdf(doc)}
+                                disabled={deletingPdfId === doc.id}
+                                className="text-xs font-semibold text-red-600 hover:text-red-700 uppercase disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                <span>{deletingPdfId === doc.id ? 'Deleting...' : 'Delete'}</span>
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {pdfUploading && (
+                      <p className="text-xs text-gray-500 mt-2">Uploading...</p>
+                    )}
+                  </div>
                 </div>
-              </form>
+              )}
             </div>
           </div>
         </div>

@@ -210,3 +210,14 @@ export interface ContentStats {
   articlesRead: number;
   pdfsDownloaded: number;
 }
+
+export interface CommunityDocument {
+  id: string;
+  communityId: string;
+  name: string;
+  storagePath: string;
+  publicUrl: string;
+  size: number;
+  createdAt?: string;
+  createdBy?: string | null;
+}

@@ -8,12 +8,13 @@ import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { CommunityManagement } from './CommunityManagement';
 import CommunityManagerInvoices from './CommunityManagerInvoices';
 import { UserManagement } from './UserManagement';
+import Documents from './Documents';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
   const { communities, loading: communitiesLoading, refetch, updateCommunity } = useManagedCommunities(user?.id);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices' | 'documents'>('overview');
 
   const { analytics } = useCommunityAnalytics(selectedCommunityId);
 
@@ -134,7 +135,7 @@ export const CommunityManagerDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 min-h-screen">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-5 lg:flex-row lg:justify-between items-start">
         <div>
           <h1 className="text-3xl font-semibold text-[#363f49]">Community Manager Dashboard</h1>
           <p className="text-gray-600">Manage your communities, users, and track engagement</p>
@@ -297,11 +298,20 @@ export const CommunityManagerDashboard: React.FC = () => {
           <button
             onClick={() => setActiveTab('invoices')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'invoices'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
           >
             <span className="inline-flex items-center gap-2">Invoices</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('documents')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'documents'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            <span className="inline-flex items-center gap-2">Documents</span>
           </button>
         </nav>
       </div>
@@ -424,6 +434,10 @@ export const CommunityManagerDashboard: React.FC = () => {
 
       {activeTab === 'invoices' && (
         <CommunityManagerInvoices />
+      )}
+
+      {activeTab === 'documents' && (
+        <Documents communityId={selectedCommunityId} />
       )}
 
     </div>
