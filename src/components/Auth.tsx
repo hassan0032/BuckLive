@@ -31,9 +31,9 @@ export const Auth: React.FC = () => {
             throw new Error('Invalid access code. Please check and try again.');
           }
 
-          const { communityId, is_admin } = data;
+          const { communityId, isAdmin } = data;
 
-          const { error } = await signUp(email, password, firstName, lastName, communityId, is_admin);
+          const { error } = await signUp(email, password, firstName, lastName, communityId, isAdmin);
           if (error) throw error;
         } else if (registrationType === REGISTRATION_TYPE.SELF_REGISTERED) {
           const { error } = await signUp(email, password, firstName, lastName, null);

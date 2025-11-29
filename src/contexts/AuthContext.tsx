@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as AppUser, REGISTRATION_TYPE, ROLE } from '../types';
+import { ensureCommunityManagerInvoices } from '../lib/supabase';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -17,6 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const currentUserIdRef = useRef<string | null>(null);
   const isFetchingRef = useRef(false);
+  const invoiceGeneratedRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -83,6 +85,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('🔑 Final role set to:', appUser.role);
           currentUserIdRef.current = session.user.id;
           setUser(appUser);
+          if (appUser.role === "community_manager" && !invoiceGeneratedRef.current) {
+            invoiceGeneratedRef.current = true;
+            console.log("⚡ Generating invoices on initial session load...");
+            await ensureCommunityManagerInvoices(appUser.id);
+          }
         } else {
           setUser(null);
         }
@@ -163,6 +170,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log('🔑 Final role in auth state change:', appUser.role);
               currentUserIdRef.current = session.user.id;
               setUser(appUser);
+              if (appUser.role === "community_manager" && !invoiceGeneratedRef.current) {
+                invoiceGeneratedRef.current = true;
+                console.log("⚡ Generating invoices on auth state change...");
+                await ensureCommunityManagerInvoices(appUser.id);
+              }
+
             } else {
               if (mounted) {
                 currentUserIdRef.current = null;
@@ -205,4 +218,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

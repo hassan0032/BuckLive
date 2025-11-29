@@ -83,10 +83,9 @@ Deno.serve(async (req: Request) => {
       const communityName = inv.community?.name;
       const amount = tier === 'gold' ? 500000 : 250000;
 
-      console.log(`User ${inv.user_id}: community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, amount=${amount}`);
+      console.log(`ommunity=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, amount=${amount}`);
 
       newInvoices.push({
-        user_id: inv.user_id,
         issue_date: todayYMD,
         period_start: todayYMD,
         period_end: addYears(todayYMD, 1),

@@ -1,145 +1,123 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
-import { calculateCommunityPrice, withDiscountedAmounts } from '../utils/helper'
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase, ensureCommunityManagerInvoices } from '../lib/supabase';
 
 function formatYMD(date: Date) {
-  return date.toISOString().slice(0, 10)
-}
-
-function addYears(ymd: string, years: number) {
-  const date = new Date(ymd)
-  date.setFullYear(date.getFullYear() + years)
-  return formatYMD(date)
+  return date.toISOString().slice(0, 10);
 }
 
 export function useBilling() {
-  const { user, isCommunityManager, loading: authLoading } = useAuth()
-  // Only enable for community managers, not admins (admins use useAdminInvoices)
-  const enabled = !!user && isCommunityManager
-  const [invoices, setInvoices] = useState<any[]>([])
-  const [startDate, setStartDate] = useState<string | null>(null)
-  const [renewalDate, setRenewalDate] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { user, isCommunityManager, loading: authLoading } = useAuth();
+  const enabled = !!user && isCommunityManager;
+
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [renewalDate, setRenewalDate] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadInvoices = useCallback(async () => {
+    if (!enabled || !user?.id) {
+      setInvoices([]);
+      setStartDate(null);
+      setRenewalDate(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Ensure invoices exist for this community manager (idempotent)
+    try {
+      await ensureCommunityManagerInvoices(user.id);
+    } catch (err) {
+      console.error('Error ensuring manager invoices:', err);
+      // Continue loading even if generation fails so the UI still works
+    }
+
+    // Fetch communities managed by the user
+    const { data: managerCommunities, error: cmError } = await supabase
+      .from('community_managers')
+      .select('community_id, communities:community_id(name, membership_tier)')
+      .eq('user_id', user.id);
+
+    if (cmError || !managerCommunities) {
+      console.error('Error fetching communities for manager:', cmError);
+      setInvoices([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const communityMeta = managerCommunities
+      .map((row) => {
+        const community = Array.isArray(row.communities)
+          ? row.communities[0]
+          : row.communities;
+
+        return {
+          communityId: row.community_id,
+          communityName: community?.name ?? 'Community',
+          communityTier: community?.membership_tier ?? null,
+        };
+      })
+      .filter((c) => !!c.communityId);
+
+    if (communityMeta.length === 0) {
+      setInvoices([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const communityIds = communityMeta.map((c) => c.communityId);
+
+    // Fetch existing invoices including community info
+    const { data: existingInvoices, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('*, communities(name, membership_tier)')
+      .in('community_id', communityIds);
+
+    if (invoiceError) {
+      console.error('Error fetching invoices:', invoiceError);
+      setInvoices([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const normalized = (existingInvoices || []).map((inv) => ({
+      id: inv.id,
+      invoice_no: inv.invoice_no,
+      issueDate: inv.issue_date,
+      periodStart: inv.period_start,
+      periodEnd: inv.period_end,
+
+      amountCents: inv.amount_cents,
+      currency: inv.currency,
+      status: inv.status,
+
+      communityId: inv.community_id,
+      communityName: inv.communities?.name ?? null,
+      communityTier: inv.communities?.membership_tier ?? null,
+
+      createdAt: inv.created_at,
+    }));
+
+    // Sort descending by issue date
+    normalized.sort(
+      (a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()
+    );
+
+    setInvoices(normalized);
+    setStartDate(normalized[normalized.length - 1]?.periodStart ?? null);
+    setRenewalDate(normalized[0]?.periodEnd ?? null);
+    setIsLoading(false);
+  }, [enabled, user?.id]);
 
   useEffect(() => {
     if (authLoading) {
-      setIsLoading(true)
-      return
+      setIsLoading(true);
+      return;
     }
-    if (!enabled || !user) {
-      setIsLoading(false)
-      return
-    }
-
-    async function loadInvoices() {
-      setIsLoading(true)
-      const today = formatYMD(new Date())
-
-      const { data: existingInvoices, error } = await supabase
-        .from('invoices')
-        .select('*, community:community_id(name, membership_tier, code)')
-        .eq('user_id', user?.id)
-        .order('period_start', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching invoices:', error)
-        setIsLoading(false)
-        return
-      }
-
-      let invoicesToSet = existingInvoices || []
-
-      if (invoicesToSet.length === 0) {
-        const [{ count: totalCommunities, error: communityCountError }, { data: cmRow, error: cmError }] =
-          await Promise.all([
-            supabase
-              .from('community_managers')
-              .select('community_id', { count: 'exact', head: true })
-              .eq('user_id', user?.id),
-            supabase
-              .from('community_managers')
-              .select('community_id, communities:community_id(name, membership_tier, code)')
-              .eq('user_id', user?.id)
-              .maybeSingle(),
-          ])
-
-        if (communityCountError) {
-          console.error('Error counting communities:', communityCountError)
-        }
-
-        if (cmError) {
-          console.error('Error fetching community tier:', cmError)
-        }
-        let tier = cmRow?.communities?.[0]?.membership_tier as 'gold' | 'silver' | undefined
-        if (!tier && cmRow?.community_id) {
-          const { data: communityRow } = await supabase
-            .from('communities')
-            .select('name, membership_tier, code')
-            .eq('id', cmRow.community_id)
-            .maybeSingle()
-          tier = (communityRow?.membership_tier as 'gold' | 'silver' | undefined) ?? undefined
-        }
-        const existingCommunitiesCount = Math.max((totalCommunities ?? 1) - 1, 0)
-        const calculatedPrice = calculateCommunityPrice(existingCommunitiesCount, tier ?? 'silver')
-        const amount = calculatedPrice * 100
-
-        const currentStart = today
-        const currentEnd = addYears(today, 1)
-
-        const { data: inserted, error: insertError } = await supabase
-          .from('invoices')
-          .insert([
-            {
-              user_id: user?.id,
-              issue_date: today,
-              period_start: currentStart,
-              period_end: currentEnd,
-              amount_cents: amount,
-              currency: 'USD',
-              status: 'issued',
-              community_id: cmRow?.community_id ?? null,
-            },
-          ])
-          .select('*, community:community_id(name, membership_tier, code)')
-
-        if (insertError) {
-          console.error('Error inserting invoice:', insertError)
-          setIsLoading(false)
-          return
-        }
-
-        invoicesToSet = inserted || []
-      }
-
-
-      // Fetch community info for all invoices
-      const normalizedInvoices = invoicesToSet.map((inv) => ({
-        id: inv.id,
-        invoice_no: Number(inv.invoice_no),
-        userId: inv.user_id,
-        issueDate: inv.issue_date,
-        periodStart: inv.period_start,
-        periodEnd: inv.period_end,
-        amountCents: Number(inv.amount_cents),
-        currency: inv.currency,
-        status: inv.status,
-        communityId: inv.community_id,
-        communityName: inv.community?.name,
-        communityCode: inv.community?.code,
-        communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
-      }))
-
-      const invoicesWithCalculatedAmounts = withDiscountedAmounts(normalizedInvoices)
-
-      setInvoices(invoicesWithCalculatedAmounts)
-      setStartDate(normalizedInvoices[normalizedInvoices.length - 1]?.periodStart || today)
-      setRenewalDate(normalizedInvoices[0]?.periodEnd || addYears(today, 1))
-      setIsLoading(false)
-    }
-
-    loadInvoices()
-  }, [authLoading, enabled, user?.id])
+    loadInvoices();
+  }, [authLoading, loadInvoices]);
 
   return useMemo(
     () => ({
@@ -149,36 +127,9 @@ export function useBilling() {
       invoices,
       isLoading,
       refresh: async () => {
-        if (!user) return
-        const { data, error } = await supabase
-          .from('invoices')
-          .select('*, community:community_id(name, membership_tier, code)')
-          .eq('user_id', user.id)
-          .order('period_start', { ascending: false })
-        if (error) {
-          console.error('Error refreshing invoices:', error)
-          setIsLoading(false)
-          return
-        }
-        const normalized = (data || []).map((inv) => ({
-          id: inv.id,
-          invoice_no: Number(inv.invoice_no),
-          userId: inv.user_id,
-          issueDate: inv.issue_date,
-          periodStart: inv.period_start,
-          periodEnd: inv.period_end,
-          amountCents: Number(inv.amount_cents),
-          currency: inv.currency,
-          status: inv.status,
-          communityId: inv.community_id,
-          communityName: inv.community?.name,
-          communityCode: inv.community?.code,
-          communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
-        }))
-        setInvoices(withDiscountedAmounts(normalized))
-        setIsLoading(false)
+        if (!authLoading) await loadInvoices();
       },
     }),
-    [enabled, startDate, renewalDate, invoices, isLoading, user?.id]
-  )
+    [enabled, startDate, renewalDate, invoices, isLoading, authLoading, loadInvoices]
+  );
 }

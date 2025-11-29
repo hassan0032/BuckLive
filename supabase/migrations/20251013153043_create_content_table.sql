@@ -120,6 +120,7 @@ CREATE POLICY "Admins can delete content"
     )
   );
 
+DROP TRIGGER IF EXISTS update_content_updated_at ON content;
 -- Create trigger for updated_at
 CREATE TRIGGER update_content_updated_at
   BEFORE UPDATE ON content

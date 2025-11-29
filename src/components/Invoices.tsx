@@ -66,8 +66,8 @@ function Invoices() {
       periodEnd: new Date(inv.periodEnd).toLocaleDateString(),
       community: inv.communityName || 'Community',
       tier: inv.communityTier ? inv.communityTier.charAt(0).toUpperCase() + inv.communityTier.slice(1) : 'Tier',
-      billToName: inv.userName || 'Account Holder',
-      billToEmail: inv.userEmail || 'billing@bucklive.com',
+      billToName: inv.communityName ? `${inv.communityName} Management` : 'Community Manager',
+      billToEmail: 'billing@bucklive.com',
     })
 
     html2pdf()
@@ -188,11 +188,6 @@ function Invoices() {
                     {new Date(row.periodEnd).toLocaleDateString()}
                   </div>
                   <div className="text-xs text-gray-500">ID: {formattedInvoiceNo}</div>
-                  {row.userName && (
-                    <div className="text-xs text-gray-600 mt-1">
-                      {row.userName} {row.userEmail && `(${row.userEmail})`}
-                    </div>
-                  )}
                 </div>
 
                 <div>

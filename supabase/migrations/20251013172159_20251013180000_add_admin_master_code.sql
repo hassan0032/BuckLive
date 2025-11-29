@@ -86,6 +86,7 @@ CREATE TRIGGER update_settings_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP FUNCTION IF EXISTS validate_access_code;
 -- Update validate_access_code function to handle both community and admin codes
 CREATE OR REPLACE FUNCTION validate_access_code(code text)
 RETURNS jsonb

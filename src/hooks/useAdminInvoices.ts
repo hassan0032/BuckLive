@@ -11,7 +11,6 @@ const client = createClient(supabaseUrl, supabaseAnonKey)
 
 interface InvoiceData {
   invoice_no: number
-  userId: string
   issueDate: string
   periodStart: string
   periodEnd: string
@@ -22,8 +21,6 @@ interface InvoiceData {
   communityName: string | null
   communityCode: string | null
   communityTier: 'gold' | 'silver' | undefined
-  userName?: string
-  userEmail?: string
   id: string // Invoice ID for updates
   calculatedAmountCents?: number
 }
@@ -54,11 +51,7 @@ export function useAdminInvoices() {
       try {
         let query = client
           .from('invoices')
-          .select(`
-            *,
-            community:community_id(name, membership_tier, code),
-            user_profiles:user_id(id, email, first_name, last_name)
-          `)
+          .select(`*, community:community_id(name, membership_tier)`)
           .order('period_start', { ascending: false })
 
         // Filter by community if selected
@@ -77,7 +70,6 @@ export function useAdminInvoices() {
 
         const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
           invoice_no: Number(inv.invoice_no),
-          userId: inv.user_id,
           issueDate: inv.issue_date,
           periodStart: inv.period_start,
           periodEnd: inv.period_end,
@@ -88,10 +80,6 @@ export function useAdminInvoices() {
           communityName: inv.community?.name || null,
           communityCode: inv.community?.code || null,
           communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
-          userName: inv.user_profiles
-            ? `${inv.user_profiles.first_name || ''} ${inv.user_profiles.last_name || ''}`.trim() || undefined
-            : undefined,
-          userEmail: inv.user_profiles?.email || undefined,
           id: inv.id,
         }))
 
@@ -131,11 +119,7 @@ export function useAdminInvoices() {
     try {
       let query = client
         .from('invoices')
-          .select(`
-          *,
-          community:community_id(name, membership_tier, code),
-          user_profiles:user_id(id, email, first_name, last_name)
-        `)
+        .select(`*, community:community_id(name, membership_tier)`)
         .order('period_start', { ascending: false })
 
       if (selectedCommunityId) {
@@ -152,7 +136,6 @@ export function useAdminInvoices() {
 
       const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
         invoice_no: Number(inv.invoice_no),
-        userId: inv.user_id,
         issueDate: inv.issue_date,
         periodStart: inv.period_start,
         periodEnd: inv.period_end,
@@ -163,10 +146,6 @@ export function useAdminInvoices() {
         communityName: inv.community?.name || null,
         communityCode: inv.community?.code || null,
         communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
-        userName: inv.user_profiles
-          ? `${inv.user_profiles.first_name || ''} ${inv.user_profiles.last_name || ''}`.trim() || undefined
-          : undefined,
-        userEmail: inv.user_profiles?.email || undefined,
         id: inv.id,
       }))
 
@@ -195,11 +174,7 @@ export function useAdminInvoices() {
         try {
           let query = client
             .from('invoices')
-            .select(`
-              *,
-              community:community_id(name, membership_tier, code),
-              user_profiles:user_id(id, email, first_name, last_name)
-            `)
+            .select(`*, community:community_id(name, membership_tier)`)
             .order('period_start', { ascending: false })
 
           if (selectedCommunityId) {
@@ -214,25 +189,19 @@ export function useAdminInvoices() {
             return
           }
 
-      const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
-        invoice_no: Number(inv.invoice_no),
-        userId: inv.user_id,
-        issueDate: inv.issue_date,
-        periodStart: inv.period_start,
-        periodEnd: inv.period_end,
-        amountCents: Number(inv.amount_cents),
-        currency: inv.currency,
-        status: inv.status,
-        communityId: inv.community_id,
-        communityName: inv.community?.name || null,
-        communityCode: inv.community?.code || null,
-        communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
-        userName: inv.user_profiles
-          ? `${inv.user_profiles.first_name || ''} ${inv.user_profiles.last_name || ''}`.trim() || undefined
-          : undefined,
-        userEmail: inv.user_profiles?.email || undefined,
-        id: inv.id,
-      }))
+          const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
+            invoice_no: Number(inv.invoice_no),
+            issueDate: inv.issue_date,
+            periodStart: inv.period_start,
+            periodEnd: inv.period_end,
+            amountCents: Number(inv.amount_cents),
+            currency: inv.currency,
+            status: inv.status,
+            communityId: inv.community_id,
+            communityName: inv.community?.name || null,
+            communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
+            id: inv.id,
+          }))
 
       setInvoices(withDiscountedAmounts(normalizedInvoices))
 

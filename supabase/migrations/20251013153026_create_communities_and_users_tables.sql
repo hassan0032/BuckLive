@@ -191,6 +191,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop triggers if they exist
+DROP TRIGGER IF EXISTS update_communities_updated_at ON communities;
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
+
 -- Create triggers for updated_at
 CREATE TRIGGER update_communities_updated_at
   BEFORE UPDATE ON communities
