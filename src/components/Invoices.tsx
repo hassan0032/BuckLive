@@ -14,10 +14,10 @@ function formatCurrency(cents: number, currency: string) {
 function Invoices() {
   const { user, isAdmin, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const { invoices, communities, selectedCommunityId, setSelectedCommunityId, isLoading, error, updateInvoiceStatus } = useAdminInvoices()
+  const { invoices, selectedCommunityId, isLoading, error, updateInvoiceStatus } = useAdminInvoices()
 
   const canView = !!user && isAdmin
-  
+
   // State for editing invoice status
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus>(INVOICE_STATUS.ISSUED)
@@ -25,17 +25,31 @@ function Invoices() {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
 
+  // State for filtering by status
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('')
+
   const rows = useMemo(
-    () =>
-      invoices.map((inv) => {
+    () => {
+      let filteredInvoices = invoices
+
+      // Filter by status if selected
+      if (selectedStatusFilter) {
+        filteredInvoices = filteredInvoices.filter((inv) => {
+          const parsed = parseInvoiceStatus(inv.status)
+          return parsed.type === selectedStatusFilter
+        })
+      }
+
+      return filteredInvoices.map((inv) => {
         const amountCentsToDisplay = inv.calculatedAmountCents ?? inv.amountCents
         return {
           ...inv,
           amountCentsToDisplay,
           amountDisplay: formatCurrency(amountCentsToDisplay, inv.currency),
         }
-      }),
-    [invoices]
+      })
+    },
+    [invoices, selectedStatusFilter]
   )
 
   if (authLoading) {
@@ -131,26 +145,26 @@ function Invoices() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-[#363f49]">Community Invoices</h1>
-        <p className="text-gray-600 mt-1">View and manage invoices for all communities.</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-[#363f49]">Community Invoices</h1>
+          <p className="text-gray-600 mt-1">View and manage invoices for all communities.</p>
+        </div>
 
-        <div className="mt-4">
-          <label htmlFor="community-filter" className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by Community
+        <div>
+          <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-2">
+            Filter by Status
           </label>
           <select
-            id="community-filter"
-            value={selectedCommunityId || ''}
-            onChange={(e) => setSelectedCommunityId(e.target.value || null)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
+            id="status-filter"
+            value={selectedStatusFilter}
+            onChange={(e) => setSelectedStatusFilter(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
           >
-            <option value="">All Communities</option>
-            {communities.map((community) => (
-              <option key={community.id} value={community.id}>
-                {community.name}
-              </option>
-            ))}
+            <option value="">All Statuses</option>
+            <option value={INVOICE_STATUS.ISSUED}>Issued</option>
+            <option value={INVOICE_STATUS.PAID}>Paid</option>
+            <option value={INVOICE_STATUS.OTHER}>Other</option>
           </select>
         </div>
       </div>
@@ -165,7 +179,7 @@ function Invoices() {
         </div>
       ) : rows.length === 0 ? (
         <div className="p-6 bg-white rounded-lg shadow-sm text-gray-600">
-          {selectedCommunityId ? 'No invoices found for the selected community.' : 'No invoices found.'}
+          {selectedCommunityId || selectedStatusFilter ? 'No invoices found matching the selected filters.' : 'No invoices found.'}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -208,7 +222,7 @@ function Invoices() {
                 </div>
 
                 <div className="text-right font-medium">{row.amountDisplay}</div>
-                
+
                 <div>
                   {editingInvoiceId === row.id ? (
                     <div className="space-y-2">
@@ -227,7 +241,7 @@ function Invoices() {
                         <option value={INVOICE_STATUS.PAID}>Paid</option>
                         <option value={INVOICE_STATUS.OTHER}>Other</option>
                       </select>
-                      
+
                       {selectedStatus === INVOICE_STATUS.OTHER && (
                         <input
                           type="text"
@@ -238,11 +252,11 @@ function Invoices() {
                           disabled={updatingStatus === row.id}
                         />
                       )}
-                      
+
                       {statusError && editingInvoiceId === row.id && (
                         <div className="text-xs text-red-600">{statusError}</div>
                       )}
-                      
+
                       <div className="flex justify-end gap-1">
                         <button
                           onClick={() => handleSaveStatus(row.id)}

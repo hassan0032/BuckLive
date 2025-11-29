@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { signOut } from '../lib/supabase';
 import { Footer } from './Footer';
+import { useAdminNotifications } from '../hooks/useAdminNotifications';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, isAdmin, isCommunityManager, isSharedAccount } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Fetch unread count for managers
+  const { unreadCount } = useAdminNotifications({ includeReadStatus: isCommunityManager });
 
   const handleSignOut = async () => {
     await signOut();
@@ -36,23 +40,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <div className="flex items-center space-x-2">
-                <img src="/live-logo-solo.png" alt="Logo" className="h-8 w-auto" />
+              <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-2">
+                <img src="/live-logo-solo.png" alt="Logo" className="w-[70px]" />
                 {user?.profile?.community?.name && (
-                  <h1 className="text-xl font-bold text-[#363f49]">
+                  <h1 className="text-lg lg:text-xl font-bold text-[#363f49] py-2 lg:py-0">
                     {user.profile.community.name}
                   </h1>
                 )}
               </div>
 
-              <nav className="hidden md:flex space-x-8">
+              <nav className="hidden lg:flex space-x-8">
                 {navItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => navigate(item.path)}
                     className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold transition-colors uppercase ${isActive(item.path)
-                        ? 'text-brand-primary bg-brand-beige-light'
-                        : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
+                      ? 'text-brand-primary bg-brand-beige-light'
+                      : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
                       }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -71,20 +75,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   onClick={() => navigate('/notifications')}
                   aria-label="Notifications"
                   className={`relative flex items-center justify-center h-9 w-9 rounded-full border transition-colors ${isNotificationsRoute
-                      ? 'border-brand-primary text-brand-primary bg-brand-beige-light'
-                      : 'border-transparent text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
+                    ? 'border-brand-primary text-brand-primary bg-brand-beige-light'
+                    : 'border-transparent text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
                     }`}
                 >
                   <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                  )}
                   <span className="sr-only">Notifications</span>
                 </button>
               )}
               <button
                 onClick={handleSignOut}
-                className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors uppercase"
+                className="flex items-center space-x-1 lg:px-3 py-2 rounded-md text-sm font-semibold text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors uppercase"
               >
                 <LogOut className="h-4 w-4" />
-                <span>Sign Out</span>
+                <span className="hidden lg:block">Sign Out</span>
               </button>
             </div>
           </div>
@@ -92,16 +99,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Mobile Navigation */}
-      <div className="md:hidden bg-white border-b border-gray-200 sticky top-16 z-40">
+      <div className="lg:hidden bg-white border-b border-gray-200 sticky top-16 z-40">
         <div className="px-4 py-2">
-          <div className="flex space-x-4 overflow-x-auto">
+          <div className="flex space-x-4 justify-center overflow-x-auto">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => navigate(item.path)}
                 className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors uppercase ${isActive(item.path)
-                    ? 'text-brand-primary bg-brand-beige-light'
-                    : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
+                  ? 'text-brand-primary bg-brand-beige-light'
+                  : 'text-gray-700 hover:text-brand-primary hover:bg-brand-beige-light'
                   }`}
               >
                 <item.icon className="h-4 w-4" />
