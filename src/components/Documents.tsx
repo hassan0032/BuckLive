@@ -3,6 +3,7 @@ import { FileText, Loader2, ExternalLink, Download } from 'lucide-react';
 import { useDocuments } from '../hooks/useDocuments';
 import { useAuth } from '../contexts/AuthContext';
 import { CommunityDocument } from '../types';
+import { supabase } from '../lib/supabase';
 
 const formatDate = (value?: string) => {
   if (!value) return 'Unknown date';
@@ -23,17 +24,21 @@ function Documents({ communityId: propCommunityId }: DocumentsProps = {}) {
   const communityId = propCommunityId !== undefined ? propCommunityId : fallbackCommunityId;
   const { documents, loading, error } = useDocuments(communityId);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   const handleDownload = async (doc: CommunityDocument) => {
     if (downloadingId) return;
     try {
       setDownloadingId(doc.id);
-      const response = await fetch(doc.publicUrl);
-      if (!response.ok) {
-        throw new Error('Unable to download file');
-      }
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(doc.storagePath);
+
+      if (error) throw error;
+      if (!data) throw new Error('No data received');
+
+      const blobUrl = window.URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = doc.name;
@@ -43,9 +48,29 @@ function Documents({ communityId: propCommunityId }: DocumentsProps = {}) {
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error('Download failed:', err);
-      alert('Failed to download PDF. Please try again.');
+      alert(`Failed to download PDF: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleView = async (doc: CommunityDocument) => {
+    if (viewingId) return;
+    try {
+      setViewingId(doc.id);
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.storagePath, 3600); // 1 hour expiry
+
+      if (error) throw error;
+      if (!data?.signedUrl) throw new Error('Failed to generate signed URL');
+
+      window.open(data.signedUrl, '_blank');
+    } catch (err) {
+      console.error('View failed:', err);
+      alert(`Failed to open PDF: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setViewingId(null);
     }
   };
 
@@ -99,15 +124,19 @@ function Documents({ communityId: propCommunityId }: DocumentsProps = {}) {
                 </span>
               </div>
               <div className="flex items-center justify-end space-x-2">
-                <a
-                  href={doc.publicUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-3 py-2 text-sm font-semibold text-brand-primary bg-brand-primary/10 rounded-lg hover:bg-brand-primary/20 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleView(doc)}
+                  disabled={viewingId === doc.id}
+                  className="inline-flex items-center px-3 py-2 text-sm font-semibold text-brand-primary bg-brand-primary/10 rounded-lg hover:bg-brand-primary/20 transition-colors disabled:opacity-50"
                 >
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {viewingId === doc.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                  )}
                   View
-                </a>
+                </button>
                 <button
                   type="button"
                   onClick={() => handleDownload(doc)}
