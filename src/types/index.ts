@@ -199,6 +199,31 @@ export interface AuthState {
   loading: boolean;
 }
 
+// Unified notification type
+export type NotificationType = 'admin' | 'community_manager';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  user_id: string;
+  // Content fields (flexible based on type)
+  title: string | null;
+  content: string | null;
+  name: string | null; // Legacy field for simple user notifications
+  // Read tracking
+  is_read: boolean;
+  read_at: string | null;
+  // Timestamps
+  created_at: string;
+  updated_at: string | null;
+  // Optional user profile join (for admin view)
+  user_profiles?: {
+    first_name: string;
+    last_name: string;
+  };
+}
+
+// Legacy type for backward compatibility with existing code
 export interface AdminNotification {
   id: string;
   title: string;
