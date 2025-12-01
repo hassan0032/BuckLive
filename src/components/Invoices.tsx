@@ -81,7 +81,7 @@ function Invoices() {
       community: inv.communityName || 'Community',
       tier: inv.communityTier ? inv.communityTier.charAt(0).toUpperCase() + inv.communityTier.slice(1) : 'Tier',
       billToName: inv.communityName ? `${inv.communityName} Management` : 'Community Manager',
-      billToEmail: 'billing@bucklive.com',
+      billToEmail: '',
     })
 
     html2pdf()
