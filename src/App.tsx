@@ -13,6 +13,7 @@ import { PublicShareView } from './components/PublicShareView';
 import { ResetPassword } from './components/ResetPassword';
 import { UserProfile } from './components/UserProfile';
 import { useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 function App() {
   const { user, loading, isAdmin, isCommunityManager, isSharedAccount } = useAuth();
@@ -80,24 +81,26 @@ function App() {
         <Route
           path="/*"
           element={
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Navigate to="/library" replace />} />
-                <Route path="/library" element={<ContentLibrary />} />
-                <Route path="/content/:id" element={<ContentDetail />} />
-                <Route path="/profile" element={isSharedAccount ? <Navigate to="/library" replace /> : <UserProfile />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />
-                <Route path="/community-manager" element={isCommunityManager ? <CommunityManagerDashboard /> : <Navigate to="/library" replace />} />
-                <Route
-                  path="/notifications"
-                  element={
-                    isCommunityManager ? <CommunityManagerNotifications /> : <Navigate to="/library" replace />
-                  }
-                />
-                <Route path="*" element={<Navigate to="/library" replace />} />
-              </Routes>
-            </Layout>
+            <NotificationProvider>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/library" replace />} />
+                  <Route path="/library" element={<ContentLibrary />} />
+                  <Route path="/content/:id" element={<ContentDetail />} />
+                  <Route path="/profile" element={isSharedAccount ? <Navigate to="/library" replace /> : <UserProfile />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />
+                  <Route path="/community-manager" element={isCommunityManager ? <CommunityManagerDashboard /> : <Navigate to="/library" replace />} />
+                  <Route
+                    path="/notifications"
+                    element={
+                      isCommunityManager ? <CommunityManagerNotifications /> : <Navigate to="/library" replace />
+                    }
+                  />
+                  <Route path="*" element={<Navigate to="/library" replace />} />
+                </Routes>
+              </Layout>
+            </NotificationProvider>
           }
         />
       </Routes>

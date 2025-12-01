@@ -1,9 +1,9 @@
-import { Bell, Check, Circle } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 import React from 'react';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 
 const CommunityManagerNotifications: React.FC = () => {
-    const { notifications, loading, error, markAsRead, markingAsReadId } = useAdminNotifications({
+    const { notifications, loading, error, markAsRead, markAllAsRead, markingAsReadId } = useAdminNotifications({
         includeReadStatus: true
     });
 
@@ -14,6 +14,10 @@ const CommunityManagerNotifications: React.FC = () => {
         }
     };
 
+    const handleMarkAllAsRead = async () => {
+        await markAllAsRead();
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -22,9 +26,7 @@ const CommunityManagerNotifications: React.FC = () => {
         );
     }
 
-    // Separate unread and read notifications
-    const unreadNotifications = notifications.filter(n => !n.is_read);
-    const readNotifications = notifications.filter(n => n.is_read);
+
 
     return (
         <div className="space-y-6 min-h-screen">
@@ -35,12 +37,20 @@ const CommunityManagerNotifications: React.FC = () => {
                     <p className="text-gray-600 mt-1">
                         Stay up to date with announcements from the admin team.
                     </p>
-                    {unreadNotifications.length > 0 && (
+                    {notifications.filter(n => !n.is_read).length > 0 && (
                         <p className="text-sm text-brand-primary font-medium mt-2">
-                            {unreadNotifications.length} unread notification{unreadNotifications.length !== 1 ? 's' : ''}
+                            {notifications.filter(n => !n.is_read).length} unread notification{notifications.filter(n => !n.is_read).length !== 1 ? 's' : ''}
                         </p>
                     )}
                 </div>
+                <button
+                    className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 transition-colors font-medium text-sm disabled:opacity-50"
+                    disabled={!notifications.some(n => !n.is_read)}
+                    onClick={handleMarkAllAsRead}
+                >
+                    <Check className="h-4 w-4" />
+                    Mark All as Read
+                </button>
             </div>
 
             {/* Error Message */}
@@ -65,102 +75,61 @@ const CommunityManagerNotifications: React.FC = () => {
                     </div>
                 </div>
             ) : (
-                <div className="space-y-6">
-                    {/* Unread Notifications */}
-                    {unreadNotifications.length > 0 && (
-                        <div>
-                            <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">
-                                Unread
-                            </h2>
-                            <div className="space-y-3">
-                                {unreadNotifications.map((notification) => (
-                                    <div
-                                        key={notification.id}
-                                        onClick={() => handleMarkAsRead(notification.id, notification.is_read)}
-                                        className="bg-white rounded-lg shadow-sm p-6 border-2 border-brand-primary/30 hover:shadow-md transition-all cursor-pointer bg-brand-primary/5"
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <div className="flex-shrink-0 mt-1">
-                                                <div className="h-10 w-10 rounded-full bg-brand-beige-light flex items-center justify-center">
-                                                    <Bell className="h-5 w-5 text-brand-primary" />
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-4 mb-2">
-                                                    <h3 className="text-lg font-semibold text-[#363f49]">
-                                                        {notification.title}
-                                                    </h3>
-                                                    {notification.created_at && (
-                                                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                                                            {new Date(notification.created_at).toLocaleDateString('en-US', {
-                                                                year: 'numeric',
-                                                                month: 'short',
-                                                                day: 'numeric'
-                                                            })}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-gray-700 whitespace-pre-line leading-relaxed">
-                                                    {notification.content}
-                                                </p>
-                                                {markingAsReadId === notification.id ? (
-                                                    <p className="text-xs text-brand-primary mt-2">Marking as read...</p>
-                                                ) : (
-                                                    <p className="text-xs text-brand-primary mt-2 font-medium">
-                                                        Click to mark as read
-                                                    </p>
-                                                )}
-                                            </div>
+                <div className="space-y-3">
+                    {notifications.map((notification) => {
+                        const isUnread = !notification.is_read;
+                        return (
+                            <div
+                                key={notification.id}
+                                onClick={() => isUnread && handleMarkAsRead(notification.id)}
+                                className={`rounded-lg shadow-sm p-6 transition-all ${isUnread
+                                    ? 'bg-white border-2 border-brand-primary/30 hover:shadow-md cursor-pointer bg-brand-primary/5'
+                                    : 'bg-white border border-gray-200 opacity-75'
+                                    }`}
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="flex-shrink-0 mt-1">
+                                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isUnread ? 'bg-brand-beige-light' : 'bg-gray-100'
+                                            }`}>
+                                            {isUnread ? (
+                                                <Bell className="h-5 w-5 text-brand-primary" />
+                                            ) : (
+                                                <Check className="h-5 w-5 text-gray-400" />
+                                            )}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Read Notifications */}
-                    {readNotifications.length > 0 && (
-                        <div>
-                            <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">
-                                Read
-                            </h2>
-                            <div className="space-y-3">
-                                {readNotifications.map((notification) => (
-                                    <div
-                                        key={notification.id}
-                                        className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow opacity-75"
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <div className="flex-shrink-0 mt-1">
-                                                <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                                                    <Check className="h-5 w-5 text-gray-400" />
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-4 mb-2">
-                                                    <h3 className="text-lg font-semibold text-gray-600">
-                                                        {notification.title}
-                                                    </h3>
-                                                    {notification.created_at && (
-                                                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                                                            {new Date(notification.created_at).toLocaleDateString('en-US', {
-                                                                year: 'numeric',
-                                                                month: 'short',
-                                                                day: 'numeric'
-                                                            })}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-gray-600 whitespace-pre-line leading-relaxed">
-                                                    {notification.content}
-                                                </p>
-                                            </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <h3 className={`text-lg font-semibold ${isUnread ? 'text-[#363f49]' : 'text-gray-600'}`}>
+                                                {notification.title}
+                                            </h3>
+                                            {notification.created_at && (
+                                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                                    {new Date(notification.created_at).toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })}
+                                                </span>
+                                            )}
                                         </div>
+                                        <p className={`${isUnread ? 'text-gray-700' : 'text-gray-600'} whitespace-pre-line leading-relaxed`}>
+                                            {notification.content}
+                                        </p>
+                                        {isUnread && (
+                                            markingAsReadId === notification.id ? (
+                                                <p className="text-xs text-brand-primary mt-2">Marking as read...</p>
+                                            ) : (
+                                                <p className="text-xs text-brand-primary mt-2 font-medium">
+                                                    Click to mark as read
+                                                </p>
+                                            )
+                                        )}
                                     </div>
-                                ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })}
                 </div>
             )}
         </div>
