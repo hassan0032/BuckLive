@@ -51,7 +51,7 @@ export function useAdminInvoices() {
       try {
         let query = client
           .from('invoices')
-          .select(`*, community:community_id(name, membership_tier)`)
+          .select(`*, community:community_id(name, membership_tier, code)`)
           .order('period_start', { ascending: false })
 
         // Filter by community if selected
@@ -119,7 +119,7 @@ export function useAdminInvoices() {
     try {
       let query = client
         .from('invoices')
-        .select(`*, community:community_id(name, membership_tier)`)
+        .select(`*, community:community_id(name, membership_tier, code)`)
         .order('period_start', { ascending: false })
 
       if (selectedCommunityId) {
@@ -172,9 +172,9 @@ export function useAdminInvoices() {
         setError(null)
 
         try {
-          let query = client
-            .from('invoices')
-            .select(`*, community:community_id(name, membership_tier)`)
+      let query = client
+        .from('invoices')
+        .select(`*, community:community_id(name, membership_tier, code)`)
             .order('period_start', { ascending: false })
 
           if (selectedCommunityId) {
@@ -199,6 +199,7 @@ export function useAdminInvoices() {
             status: inv.status,
             communityId: inv.community_id,
             communityName: inv.community?.name || null,
+            communityCode: inv.community?.code || null,
             communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
             id: inv.id,
           }))
