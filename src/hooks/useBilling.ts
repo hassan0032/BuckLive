@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, ensureCommunityManagerInvoices } from '../lib/supabase';
+import { withDiscountedAmounts } from '../utils/helper';
 
 function formatYMD(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -100,16 +101,21 @@ export function useBilling() {
       communityCode: inv.communities?.code ?? null,
 
       createdAt: inv.created_at,
+      // Used by withDiscountedAmounts to group per manager
+      userId: user.id,
     }));
 
-    // Sort descending by issue date
+    // Sort descending by issue date for display
     normalized.sort(
       (a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()
     );
 
-    setInvoices(normalized);
-    setStartDate(normalized[normalized.length - 1]?.periodStart ?? null);
-    setRenewalDate(normalized[0]?.periodEnd ?? null);
+    // Apply discount logic based on number of communities for this manager
+    const discounted = withDiscountedAmounts(normalized);
+
+    setInvoices(discounted);
+    setStartDate(discounted[discounted.length - 1]?.periodStart ?? null);
+    setRenewalDate(discounted[0]?.periodEnd ?? null);
     setIsLoading(false);
   }, [enabled, user?.id]);
 
