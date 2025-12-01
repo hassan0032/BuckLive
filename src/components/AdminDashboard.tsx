@@ -713,7 +713,7 @@ export const AdminDashboard: React.FC = () => {
 
                   {editingCommunity && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Billing Code</label>
                       <input
                         type="text"
                         value={communityFormData.code}
