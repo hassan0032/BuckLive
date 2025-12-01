@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { signOut } from '../lib/supabase';
 import { Footer } from './Footer';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
+import { useNotifications } from '../hooks/useNotifications';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,8 +16,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Fetch unread count for managers
-  const { unreadCount } = useAdminNotifications({ includeReadStatus: isCommunityManager });
+  // Fetch unread count for managers (admin notifications)
+  const { unreadCount: managerUnreadCount } = useAdminNotifications({ 
+    includeReadStatus: isCommunityManager && !isAdmin 
+  });
+  
+  // Fetch unread count for admins (community notifications)
+  const { unreadCount: adminUnreadCount } = useNotifications();
+  
+  // Use the appropriate unread count based on user role
+  const unreadCount = isAdmin ? adminUnreadCount : managerUnreadCount;
 
   const handleSignOut = async () => {
     await signOut();
@@ -70,9 +79,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="text-sm text-gray-700">
                 Welcome, {user?.profile?.first_name || user?.email}
               </div>
-              {isCommunityManager && (
+              {(isCommunityManager || isAdmin) && (
                 <button
-                  onClick={() => navigate('/notifications')}
+                  onClick={() => {
+                    if (isAdmin) {
+                      try {
+                        localStorage.setItem('adminActiveTab', 'notifications');
+                      } catch {
+                        // Ignore localStorage errors (e.g., in private mode)
+                      }
+                      navigate('/admin');
+                    } else {
+                      navigate('/notifications');
+                    }
+                  }}
                   aria-label="Notifications"
                   className={`relative flex items-center justify-center h-9 w-9 rounded-full border transition-colors ${isNotificationsRoute
                     ? 'border-brand-primary text-brand-primary bg-brand-beige-light'

@@ -55,10 +55,29 @@ export const AdminDashboard: React.FC = () => {
     deleteDocument: deleteStoredPdf,
     refetch: refetchStoredPdfs,
   } = useDocuments(editingCommunity);
-  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback'>(() => {
+    if (typeof window === 'undefined') return 'content';
+    const stored = window.localStorage.getItem('adminActiveTab');
+    const allowedTabs = ['content', 'communities', 'users', 'analytics', 'invoices', 'notifications', 'feedback'] as const;
+    if (stored && (allowedTabs as readonly string[]).includes(stored)) {
+      return stored as (typeof allowedTabs)[number];
+    }
+    return 'content';
+  });
   const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents'>('details');
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
   const [deletingPdfId, setDeletingPdfId] = useState<string | null>(null);
+
+  const handleSetActiveTab = (tab: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback') => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('adminActiveTab', tab);
+      } catch {
+        // Ignore localStorage write errors
+      }
+    }
+  };
 
   const resetCommunityForm = () => setCommunityFormData(createEmptyCommunityForm());
 
@@ -251,7 +270,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('content')}
+            onClick={() => handleSetActiveTab('content')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'content'
               ? 'border-brand-primary text-brand-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -260,7 +279,7 @@ export const AdminDashboard: React.FC = () => {
             Content Management
           </button>
           <button
-            onClick={() => setActiveTab('communities')}
+            onClick={() => handleSetActiveTab('communities')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'communities'
               ? 'border-brand-primary text-brand-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -269,7 +288,7 @@ export const AdminDashboard: React.FC = () => {
             Communities
           </button>
           <button
-            onClick={() => setActiveTab('users')}
+            onClick={() => handleSetActiveTab('users')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'users'
               ? 'border-brand-primary text-brand-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -278,7 +297,7 @@ export const AdminDashboard: React.FC = () => {
             User Management
           </button>
           <button
-            onClick={() => setActiveTab('analytics')}
+            onClick={() => handleSetActiveTab('analytics')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'analytics'
               ? 'border-brand-primary text-brand-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -287,7 +306,7 @@ export const AdminDashboard: React.FC = () => {
             Analytics
           </button>
           <button
-            onClick={() => setActiveTab('invoices')}
+            onClick={() => handleSetActiveTab('invoices')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'invoices'
               ? 'border-brand-primary text-brand-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -296,7 +315,7 @@ export const AdminDashboard: React.FC = () => {
             Invoices
           </button>
           <button
-            onClick={() => setActiveTab('notifications')}
+            onClick={() => handleSetActiveTab('notifications')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'notifications'
               ? 'border-brand-primary text-brand-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -305,7 +324,7 @@ export const AdminDashboard: React.FC = () => {
             Notifications
           </button>
           <button
-            onClick={() => setActiveTab('feedback')}
+            onClick={() => handleSetActiveTab('feedback')}
             className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'feedback'
               ? 'border-brand-primary text-brand-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
