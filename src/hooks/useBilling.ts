@@ -37,7 +37,7 @@ export function useBilling() {
     // Fetch communities managed by the user
     const { data: managerCommunities, error: cmError } = await supabase
       .from('community_managers')
-      .select('community_id, communities:community_id(name, membership_tier)')
+      .select('community_id, communities:community_id(name, membership_tier, code)')
       .eq('user_id', user.id);
 
     if (cmError || !managerCommunities) {
@@ -57,6 +57,7 @@ export function useBilling() {
           communityId: row.community_id,
           communityName: community?.name ?? 'Community',
           communityTier: community?.membership_tier ?? null,
+          communityCode: community?.code ?? null,
         };
       })
       .filter((c) => !!c.communityId);
@@ -72,7 +73,7 @@ export function useBilling() {
     // Fetch existing invoices including community info
     const { data: existingInvoices, error: invoiceError } = await supabase
       .from('invoices')
-      .select('*, communities(name, membership_tier)')
+      .select('*, communities(name, membership_tier, code)')
       .in('community_id', communityIds);
 
     if (invoiceError) {
@@ -96,6 +97,7 @@ export function useBilling() {
       communityId: inv.community_id,
       communityName: inv.communities?.name ?? null,
       communityTier: inv.communities?.membership_tier ?? null,
+      communityCode: inv.communities?.code ?? null,
 
       createdAt: inv.created_at,
     }));

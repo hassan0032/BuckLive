@@ -36,12 +36,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 py-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-2">
-                <img src="/live-logo-solo.png" alt="Logo" className="w-[70px]" />
+              <div className="flex flex-col gap-2">
+                <img src="/live-logo-solo.png" alt="Logo" className="w-[50px]" />
                 {user?.profile?.community?.name && (
                   <h1 className="text-lg lg:text-xl font-bold text-[#363f49] py-2 lg:py-0">
                     {user.profile.community.name}
