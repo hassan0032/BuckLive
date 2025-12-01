@@ -79,7 +79,12 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const resetCommunityForm = () => setCommunityFormData(createEmptyCommunityForm());
+  const resetCommunityForm = () => {
+    const emptyForm = createEmptyCommunityForm();
+    // Generate access code by default
+    emptyForm.access_code = generateAccessCode();
+    setCommunityFormData(emptyForm);
+  };
 
   const openCreateCommunityModal = () => {
     resetCommunityForm();
@@ -567,7 +572,8 @@ export const AdminDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {community.code}
-                      </td>                      <td className="px-6 py-4 text-sm text-gray-500">
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
                         {new Date(community.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium space-x-2">
