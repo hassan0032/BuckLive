@@ -17,14 +17,14 @@
 -- ============================================================================
 
 -- Drop the old constraint
-ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 -- Delete any existing notifications that don't match the new allowed types
 -- This ensures the new constraint can be applied successfully
 DELETE FROM notifications 
-WHERE type NOT IN ('admin', 'community_manager')
+WHERE type NOT IN ('admin', 'community_manager');
 -- Add new constraint with only 'admin' and 'community_manager' types
 ALTER TABLE notifications ADD CONSTRAINT notifications_type_check 
-  CHECK (type IN ('admin', 'community_manager'))
+  CHECK (type IN ('admin', 'community_manager'));
 -- ============================================================================
 -- Update community creation notification trigger
 -- ============================================================================
@@ -44,7 +44,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$
+$$;
 -- ============================================================================
 -- Update admin notification broadcast trigger
 -- ============================================================================
@@ -74,4 +74,4 @@ BEGIN
   -- For other notifications, allow normal insert
   RETURN NEW;
 END;
-$$
+$$;
