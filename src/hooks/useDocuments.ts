@@ -24,7 +24,7 @@ export const useDocuments = (communityId?: string | null) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const bucket = useMemo(() => 'pdfs', []);
+  const bucket = useMemo(() => 'documents', []);
   const resolvedCommunityId = communityId ?? null;
 
   const fetchDocuments = useCallback(async () => {

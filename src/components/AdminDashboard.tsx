@@ -11,6 +11,7 @@ import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
 import AdminNotifications from './AdminNotifications';
 import { PDFUploader } from './PDFUploader';
+import { supabase } from '../lib/supabase';
 
 interface CommunityFormData {
   name: string;
@@ -110,7 +111,7 @@ export const AdminDashboard: React.FC = () => {
       const duplicateCode = communities.find(
         (c) => c.code === communityFormData.code && c.id !== editingCommunity
       );
-      
+
       if (duplicateCode) {
         alert(`Error: Code "${communityFormData.code}" is already in use by "${duplicateCode.name}". Please use a unique code.`);
         return;
@@ -158,7 +159,7 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-    const handleGenerateAccessCode = () => {
+  const handleGenerateAccessCode = () => {
     setCommunityFormData({
       ...communityFormData,
       access_code: generateAccessCode()
@@ -167,6 +168,22 @@ export const AdminDashboard: React.FC = () => {
 
   const handleCommunityPdfUploadComplete = async () => {
     await refetchStoredPdfs();
+  };
+
+  const handleViewPdf = async (doc: CommunityDocument) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.storagePath, 3600);
+
+      if (error) throw error;
+      if (!data?.signedUrl) throw new Error('Failed to generate signed URL');
+
+      window.open(data.signedUrl, '_blank');
+    } catch (err) {
+      console.error('View failed:', err);
+      alert(`Failed to open PDF: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   const handleDeletePdf = async (doc: CommunityDocument) => {
@@ -609,22 +626,20 @@ export const AdminDashboard: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setCommunityModalTab('details')}
-                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${
-                        communityModalTab === 'details'
+                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${communityModalTab === 'details'
                           ? 'border-brand-primary text-brand-primary'
                           : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }`}
+                        }`}
                     >
                       Community Details
                     </button>
                     <button
                       type="button"
                       onClick={() => setCommunityModalTab('documents')}
-                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${
-                        communityModalTab === 'documents'
+                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${communityModalTab === 'documents'
                           ? 'border-brand-primary text-brand-primary'
                           : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }`}
+                        }`}
                     >
                       PDF Library
                     </button>
@@ -813,14 +828,13 @@ export const AdminDashboard: React.FC = () => {
                               </p>
                             </div>
                             <div className="flex items-center space-x-3">
-                              <a
-                                href={doc.publicUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
+                                onClick={() => handleViewPdf(doc)}
                                 className="text-xs font-semibold text-brand-primary hover:text-brand-d-blue uppercase"
                               >
                                 View
-                              </a>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeletePdf(doc)}

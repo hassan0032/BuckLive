@@ -3,6 +3,8 @@ import { Loader2, PlusCircle, Trash2, X, Bell, CheckCircle, Circle } from 'lucid
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import { useNotifications } from '../hooks/useNotifications';
 
+import { Notification } from '../types';
+
 type TabType = 'create' | 'view';
 
 const AdminNotifications: React.FC = () => {
@@ -29,7 +31,7 @@ const AdminNotifications: React.FC = () => {
         unreadCount,
         markAsRead,
         deleteNotification: deleteUserNotification,
-    } = useNotifications({ viewAllAsAdmin: true });
+    } = useNotifications();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [title, setTitle] = useState('');
@@ -101,7 +103,15 @@ const AdminNotifications: React.FC = () => {
         }
     };
 
-    const formatUserName = (notification: typeof userNotifications[number]) => {
+    // Filter for community notifications only
+    const communityNotifications = (userNotifications || []).filter(n => n.type === 'community_manager');
+
+    const formatUserName = (notification: Notification) => {
+        // For community notifications, the manager's name is stored in the content field
+        if (notification.type === 'community_manager' && notification.content) {
+            return notification.content;
+        }
+
         const firstName = notification.user_profiles?.first_name || '';
         const lastName = notification.user_profiles?.last_name || '';
         return `${firstName} ${lastName}`.trim() || 'Unknown User';
@@ -185,7 +195,7 @@ const AdminNotifications: React.FC = () => {
                         <div className="flex items-center justify-center py-12">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
                         </div>
-                    ) : userNotifications.length === 0 ? (
+                    ) : communityNotifications.length === 0 ? (
                         <div className="text-center py-16 text-gray-500">
                             <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                             <p className="font-medium">No community notifications yet.</p>
@@ -195,7 +205,7 @@ const AdminNotifications: React.FC = () => {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {userNotifications.map(notification => (
+                            {communityNotifications.map(notification => (
                                 <div
                                     key={notification.id}
                                     className={`border rounded-lg p-4 transition-all ${notification.is_read

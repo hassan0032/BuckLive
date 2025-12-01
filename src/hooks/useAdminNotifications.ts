@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AdminNotification } from '../types';
+import { Notification } from '../types';
 
 interface CreateNotificationInput {
   title: string;
@@ -8,7 +8,7 @@ interface CreateNotificationInput {
 }
 
 interface CreateNotificationResult {
-  data: AdminNotification | null;
+  data: Notification | null;
   error: string | null;
 }
 
@@ -24,15 +24,10 @@ interface UseAdminNotificationsOptions {
   includeReadStatus?: boolean;
 }
 
-export interface AdminNotificationWithReadStatus extends AdminNotification {
-  is_read?: boolean;
-  read_entry_id?: string;
-}
-
 export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}) => {
   const { includeReadStatus = false } = options;
 
-  const [notifications, setNotifications] = useState<AdminNotificationWithReadStatus[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -44,44 +39,44 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
       setLoading(true);
 
       if (includeReadStatus) {
-        // For managers: fetch notifications with read status from junction table
+        // For community managers: fetch admin-type notifications for current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           throw new Error('User not authenticated');
         }
 
         const { data, error: fetchError } = await supabase
-          .from('admin_notifications')
-          .select(`
-            *,
-            admin_notification_reads!inner (
-              id,
-              is_read
-            )
-          `)
-          .eq('admin_notification_reads.user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (fetchError) throw fetchError;
-
-        // Transform the data to flatten the read status
-        const transformedData = (data || []).map((notification: any) => ({
-          ...notification,
-          is_read: notification.admin_notification_reads?.[0]?.is_read || false,
-          read_entry_id: notification.admin_notification_reads?.[0]?.id,
-          admin_notification_reads: undefined, // Remove the nested object
-        }));
-
-        setNotifications(transformedData);
-      } else {
-        // For admins: fetch all notifications without read status
-        const { data, error: fetchError } = await supabase
-          .from('admin_notifications')
+          .from('notifications')
           .select('*')
+          .eq('type', 'admin')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (fetchError) throw fetchError;
         setNotifications(data || []);
+      } else {
+        // For admins: fetch all admin-type notifications
+        // Note: This gets all copies, so you may want to group by created_at/title/content
+        // or use a different query approach
+        const { data, error: fetchError } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('type', 'admin')
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+
+        // Group by title/content/created_at to show unique notifications
+        // (since each admin notification creates multiple copies for managers)
+        const uniqueNotifications = new Map<string, Notification>();
+        (data || []).forEach(notification => {
+          const key = `${notification.title}-${notification.content}-${notification.created_at}`;
+          if (!uniqueNotifications.has(key)) {
+            uniqueNotifications.set(key, notification);
+          }
+        });
+
+        setNotifications(Array.from(uniqueNotifications.values()));
       }
 
       setError(null);
@@ -101,25 +96,28 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
         const trimmedTitle = title.trim();
         const trimmedContent = content.trim();
 
-        const { data, error: insertError } = await supabase
-          .from('admin_notifications')
+        // Insert with type='admin' and user_id=null to trigger broadcast
+        // Note: The BEFORE INSERT trigger will return NULL, preventing the template
+        // row from being stored. Instead, it creates copies for all community managers.
+        // So we don't use .select().single() here as it would fail with 0 rows.
+        const { error: insertError } = await supabase
+          .from('notifications')
           .insert([
             {
+              type: 'admin',
+              user_id: null, // NULL triggers the broadcast to all community managers
               title: trimmedTitle,
               content: trimmedContent,
             },
-          ])
-          .select()
-          .single();
+          ]);
 
         if (insertError) throw insertError;
 
-        if (data) {
-          setNotifications(prev => [data, ...prev]);
-        }
+        // Refetch to get the actual notifications created by the trigger
+        await fetchNotifications();
 
         setError(null);
-        return { data: data ?? null, error: null };
+        return { data: null, error: null }; // No single notification to return (broadcast creates multiple)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create notification';
         setError(message);
@@ -128,7 +126,7 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
         setCreating(false);
       }
     },
-    []
+    [fetchNotifications]
   );
 
   const deleteNotification = useCallback(
@@ -136,14 +134,33 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
       try {
         setDeletingId(id);
 
-        const { error: deleteError } = await supabase
-          .from('admin_notifications')
-          .delete()
-          .eq('id', id);
+        // Find the notification to get its details
+        const notification = notifications.find(n => n.id === id);
 
-        if (deleteError) throw deleteError;
+        if (includeReadStatus) {
+          // For managers: delete only their copy
+          const { error: deleteError } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', id);
 
-        setNotifications(prev => prev.filter(notification => notification.id !== id));
+          if (deleteError) throw deleteError;
+        } else {
+          // For admins: delete all copies with same title/content/created_at
+          if (notification) {
+            const { error: deleteError } = await supabase
+              .from('notifications')
+              .delete()
+              .eq('type', 'admin')
+              .eq('title', notification.title)
+              .eq('content', notification.content)
+              .eq('created_at', notification.created_at);
+
+            if (deleteError) throw deleteError;
+          }
+        }
+
+        setNotifications(prev => prev.filter(n => n.id !== id));
         setError(null);
         return { error: null };
       } catch (err) {
@@ -154,7 +171,7 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
         setDeletingId(current => (current === id ? null : current));
       }
     },
-    []
+    [notifications, includeReadStatus]
   );
 
   const markAsRead = useCallback(
@@ -162,19 +179,13 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
       try {
         setMarkingAsReadId(notificationId);
 
-        // Find the read entry ID for this notification
-        const notification = notifications.find(n => n.id === notificationId);
-        if (!notification?.read_entry_id) {
-          throw new Error('Read entry not found');
-        }
-
         const { error: updateError } = await supabase
-          .from('admin_notification_reads')
+          .from('notifications')
           .update({
             is_read: true,
             read_at: new Date().toISOString()
           })
-          .eq('id', notification.read_entry_id);
+          .eq('id', notificationId);
 
         if (updateError) throw updateError;
 
@@ -182,7 +193,7 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
         setNotifications(prev =>
           prev.map(n =>
             n.id === notificationId
-              ? { ...n, is_read: true }
+              ? { ...n, is_read: true, read_at: new Date().toISOString() }
               : n
           )
         );
@@ -197,14 +208,15 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
         setMarkingAsReadId(null);
       }
     },
-    [notifications]
+    []
   );
 
   useEffect(() => {
     fetchNotifications();
 
-    // Subscribe to real-time updates for admin_notifications
-    const channelName = includeReadStatus ? 'manager_admin_notifications' : 'admin_admin_notifications';
+    // Subscribe to real-time updates for notifications table
+    const channelName = includeReadStatus ? 'manager_notifications' : 'admin_notifications';
+
     const subscription = supabase
       .channel(channelName)
       .on(
@@ -212,39 +224,18 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
         {
           event: '*',
           schema: 'public',
-          table: 'admin_notifications',
+          table: 'notifications',
+          filter: includeReadStatus ? undefined : 'type=eq.admin',
         },
         () => {
-          // Refetch to get updated data with read status
+          // Refetch to get updated data
           fetchNotifications();
         }
       )
       .subscribe();
 
-    // Also subscribe to read status changes if includeReadStatus is true
-    let readSubscription: any = null;
-    if (includeReadStatus) {
-      readSubscription = supabase
-        .channel('admin_notification_reads_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'admin_notification_reads',
-          },
-          () => {
-            fetchNotifications();
-          }
-        )
-        .subscribe();
-    }
-
     return () => {
       subscription.unsubscribe();
-      if (readSubscription) {
-        readSubscription.unsubscribe();
-      }
     };
   }, [fetchNotifications, includeReadStatus]);
 

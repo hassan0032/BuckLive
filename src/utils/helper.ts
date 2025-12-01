@@ -13,9 +13,9 @@ export function cn(...args: ClassValue[]) {
  * @returns Formatted invoice number string (e.g., "BUCK-2025-0001")
  */
 export function formatInvoiceNumber(invoiceNo: number, communityCode?: string | null): string {
-  const paddedNumber = invoiceNo.toString().padStart(4, '0')
-  const prefix = (communityCode ?? '').trim() || 'No Cmmunity'
-  return `${prefix} - ${paddedNumber}`
+  const paddedNumber = invoiceNo.toString().padStart(4, '0');
+  const prefix = (communityCode ?? '').trim() || 'NO-COMMUNITY';
+  return `${prefix} - ${paddedNumber}`;
 }
 
 const BASE_COMMUNITY_PRICES = {

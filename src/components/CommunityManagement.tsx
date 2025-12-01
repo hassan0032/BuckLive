@@ -2,6 +2,7 @@ import { Edit, Key, Loader2, Plus, Shield, Trash2, Users } from 'lucide-react';
 import React, { useState } from 'react';
 import { useCommunities } from '../hooks/useCommunities';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
+import { useAdminEmailNotification } from '../hooks/useAdminEmailNotification';
 import { supabase } from '../lib/supabase';
 import { Community } from '../types';
 
@@ -13,6 +14,7 @@ interface CommunityManagementProps {
 export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId, onCommunityUpdate }) => {
   const { loading: communitiesLoading, communities, refetch, deleteCommunity } = useManagedCommunities(userId);
   const { generateAccessCode } = useCommunities();
+  const { sendAdminCommunityEmail } = useAdminEmailNotification();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
   const [formData, setFormData] = useState({
@@ -105,6 +107,9 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
         } catch (e) {
           console.error('Unexpected error while creating initial invoice:', e);
         }
+
+        // Notify admin via email that a new community has been created
+        await sendAdminCommunityEmail(communityData.id, communityData.name, userId);
       }
 
       await refetch();

@@ -1,55 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { Notification } from '../types';
 
-export interface Notification {
-    id: string;
-    user_id: string;
-    name: string;
-    is_read: boolean;
-    created_at: string;
-    user_profiles?: {
-        first_name: string;
-        last_name: string;
-    };
-}
-
-interface MarkAsReadResult {
-    error: string | null;
-}
-
-interface DeleteNotificationResult {
-    error: string | null;
-}
-
-interface UseNotificationsOptions {
-    viewAllAsAdmin?: boolean;
-}
-
-export const useNotifications = (options: UseNotificationsOptions = {}) => {
-    const { viewAllAsAdmin = false } = options;
-
+export const useNotifications = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
-    // Fetch notifications (all for admin, or user-specific)
+    // Fetch notifications for current user
     const fetchNotifications = useCallback(async () => {
         try {
             setLoading(true);
 
-            // If not viewing all as admin, get the current user
-            let userId: string | null = null;
-            if (!viewAllAsAdmin) {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) {
-                    throw new Error('User not authenticated');
-                }
-                userId = user.id;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                throw new Error('User not authenticated');
             }
 
-            let query = supabase
+            const { data, error: fetchError } = await supabase
                 .from('notifications')
                 .select(`
                     *,
@@ -57,14 +27,9 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
                         first_name,
                         last_name
                     )
-                `);
-
-            // Filter by user_id if not viewing all as admin
-            if (!viewAllAsAdmin && userId) {
-                query = query.eq('user_id', userId);
-            }
-
-            const { data, error: fetchError } = await query.order('created_at', { ascending: false });
+                `)
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
 
             if (fetchError) throw fetchError;
 
@@ -76,17 +41,20 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
         } finally {
             setLoading(false);
         }
-    }, [viewAllAsAdmin]);
+    }, []);
 
     // Mark notification as read
     const markAsRead = useCallback(
-        async (id: string): Promise<MarkAsReadResult> => {
+        async (id: string): Promise<{ error: string | null }> => {
             try {
                 setUpdatingId(id);
 
                 const { error: updateError } = await supabase
                     .from('notifications')
-                    .update({ is_read: true })
+                    .update({
+                        is_read: true,
+                        read_at: new Date().toISOString()
+                    })
                     .eq('id', id);
 
                 if (updateError) throw updateError;
@@ -95,7 +63,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
                 setNotifications(prev =>
                     prev.map(notification =>
                         notification.id === id
-                            ? { ...notification, is_read: true }
+                            ? { ...notification, is_read: true, read_at: new Date().toISOString() }
                             : notification
                     )
                 );
@@ -114,16 +82,20 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
     );
 
     // Mark all notifications as read
-    const markAllAsRead = useCallback(async (): Promise<MarkAsReadResult> => {
+    const markAllAsRead = useCallback(async (): Promise<{ error: string | null }> => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
                 throw new Error('User not authenticated');
             }
 
+            const now = new Date().toISOString();
             const { error: updateError } = await supabase
                 .from('notifications')
-                .update({ is_read: true })
+                .update({
+                    is_read: true,
+                    read_at: now
+                })
                 .eq('user_id', user.id)
                 .eq('is_read', false);
 
@@ -131,7 +103,11 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
 
             // Update local state
             setNotifications(prev =>
-                prev.map(notification => ({ ...notification, is_read: true }))
+                prev.map(notification => ({
+                    ...notification,
+                    is_read: true,
+                    read_at: notification.read_at || now
+                }))
             );
 
             setError(null);
@@ -145,7 +121,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
 
     // Delete notification
     const deleteNotification = useCallback(
-        async (id: string): Promise<DeleteNotificationResult> => {
+        async (id: string): Promise<{ error: string | null }> => {
             try {
                 setDeletingId(id);
 
@@ -174,9 +150,8 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
     useEffect(() => {
         fetchNotifications();
 
-        const channelName = viewAllAsAdmin ? 'admin_notifications_changes' : 'notifications_changes';
         const subscription = supabase
-            .channel(channelName)
+            .channel('notifications_changes')
             .on(
                 'postgres_changes',
                 {
@@ -185,27 +160,9 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
                     table: 'notifications',
                 },
                 (payload) => {
-                    if (viewAllAsAdmin) {
-                        // For admin view, refetch to get user profile data
-                        fetchNotifications();
-                    } else {
-                        // For user view, update state directly
-                        if (payload.eventType === 'INSERT') {
-                            setNotifications(prev => [payload.new as Notification, ...prev]);
-                        } else if (payload.eventType === 'UPDATE') {
-                            setNotifications(prev =>
-                                prev.map(notification =>
-                                    notification.id === payload.new.id
-                                        ? (payload.new as Notification)
-                                        : notification
-                                )
-                            );
-                        } else if (payload.eventType === 'DELETE') {
-                            setNotifications(prev =>
-                                prev.filter(notification => notification.id !== payload.old.id)
-                            );
-                        }
-                    }
+                    // Simple refetch strategy to ensure data consistency
+                    // We can optimize this later if needed
+                    fetchNotifications();
                 }
             )
             .subscribe();
@@ -213,7 +170,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
         return () => {
             subscription.unsubscribe();
         };
-    }, [fetchNotifications, viewAllAsAdmin]);
+    }, [fetchNotifications]);
 
     // Calculate unread count
     const unreadCount = notifications.filter(n => !n.is_read).length;
