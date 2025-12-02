@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, ensureCommunityManagerInvoices } from '../lib/supabase';
+import { supabase, ensureCommunityManagerInvoices, createInvoicesWithNumbers } from '../lib/supabase';
 import { withDiscountedAmounts } from '../utils/helper';
 
 function formatYMD(date: Date) {
@@ -127,6 +127,44 @@ export function useBilling() {
     loadInvoices();
   }, [authLoading, loadInvoices]);
 
+  const createInvoice = async (invoiceData: {
+    community_id: string;
+    issue_date: string;
+    period_start: string;
+    period_end: string;
+    amount_cents: number;
+    currency: string;
+    status: string;
+  }) => {
+    setIsLoading(true);
+    try {
+      // Use shared helper to create invoice with auto-generated number
+      const { data: invoices, error } = await createInvoicesWithNumbers([invoiceData]);
+
+      if (error) {
+        console.error('Failed to create invoice:', error);
+        throw error;
+      }
+
+      if (!invoices || invoices.length === 0) {
+        throw new Error('Failed to create invoice');
+      }
+
+      const invoice = invoices[0];
+      console.log(`✅ Created invoice #${invoice.invoice_no} for community ${invoiceData.community_id}`);
+
+      // Refresh invoices list
+      await loadInvoices();
+
+      return invoice;
+    } catch (err) {
+      console.error('Unexpected error creating invoice:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return useMemo(
     () => ({
       enabled,
@@ -137,7 +175,9 @@ export function useBilling() {
       refresh: async () => {
         if (!authLoading) await loadInvoices();
       },
+      createInvoice,
     }),
     [enabled, startDate, renewalDate, invoices, isLoading, authLoading, loadInvoices]
   );
 }
+

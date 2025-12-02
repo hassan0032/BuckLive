@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useCommunities } from '../hooks/useCommunities';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useAdminEmailNotification } from '../hooks/useAdminEmailNotification';
+import { useBilling } from '../hooks/useBilling';
 import { supabase } from '../lib/supabase';
 import { Community } from '../types';
 
@@ -15,6 +16,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
   const { loading: communitiesLoading, communities, refetch, deleteCommunity } = useManagedCommunities(userId);
   const { generateAccessCode } = useCommunities();
   const { sendAdminCommunityEmail } = useAdminEmailNotification();
+  const { createInvoice } = useBilling();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
   const [formData, setFormData] = useState({
@@ -73,40 +75,26 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
         if (assignError) throw assignError;
 
         // Create initial invoice for the newly created community
-        try {
-          const today = new Date();
-          const formatYMD = (d: Date) => d.toISOString().slice(0, 10);
-          const addYears = (ymd: string, years: number) => {
-            const date = new Date(ymd);
-            date.setFullYear(date.getFullYear() + years);
-            return formatYMD(date);
-          };
+        const today = new Date();
+        const formatYMD = (d: Date) => d.toISOString().slice(0, 10);
+        const addYears = (ymd: string, years: number) => {
+          const date = new Date(ymd);
+          date.setFullYear(date.getFullYear() + years);
+          return formatYMD(date);
+        };
 
-          const issueDate = formatYMD(today);
-          const periodStart = issueDate;
-          const periodEnd = addYears(issueDate, 1);
-          const amount = communityData.membership_tier === 'gold' ? 500000 : 250000;
+        const issueDate = formatYMD(today);
+        const amount = communityData.membership_tier === 'gold' ? 500000 : 250000;
 
-          const { error: invoiceError } = await supabase
-            .from('invoices')
-            .insert([
-              {
-                community_id: communityData.id,
-                issue_date: issueDate,
-                period_start: periodStart,
-                period_end: periodEnd,
-                amount_cents: amount,
-                currency: 'USD',
-                status: 'issued',
-              },
-            ]);
-
-          if (invoiceError) {
-            console.error('Failed to create initial invoice for community:', invoiceError);
-          }
-        } catch (e) {
-          console.error('Unexpected error while creating initial invoice:', e);
-        }
+        await createInvoice({
+          community_id: communityData.id,
+          issue_date: issueDate,
+          period_start: issueDate,
+          period_end: addYears(issueDate, 1),
+          amount_cents: amount,
+          currency: 'USD',
+          status: 'issued',
+        });
 
         // Notify admin via email that a new community has been created
         await sendAdminCommunityEmail(communityData.id, communityData.name, userId);
