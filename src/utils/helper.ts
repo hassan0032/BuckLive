@@ -458,7 +458,7 @@ export function generateInvoicePdf({
         </thead>
         <tbody>
           <tr>
-            <td class="community-name">${community} - ${tier} Tier - ${periodStart} - ${periodEnd}</td>
+            <td class="community-name">${community} - ${tier.charAt(0).toUpperCase() + tier.slice(1)} Tier - ${periodStart} - ${periodEnd}</td>
             <td>${originalAmountDisplay}</td>
             <td>${originalAmountDisplay}</td>
           </tr>
@@ -507,15 +507,15 @@ export function generateInvoicePdf({
     margin: [10, 10, 10, 10] as [number, number, number, number], // Reduced margins for Safari
     filename: `invoice-${invoiceNo}.pdf`,
     image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { 
+    html2canvas: {
       scale: 2,
       useCORS: true,
       logging: false,
       windowHeight: 1123, // A4 height in pixels at 96 DPI
     },
-    jsPDF: { 
-      unit: "pt", 
-      format: "a4", 
+    jsPDF: {
+      unit: "pt",
+      format: "a4",
       orientation: "portrait" as const,
       compress: true
     },
