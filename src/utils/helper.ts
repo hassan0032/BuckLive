@@ -55,10 +55,12 @@ type PricingInput = {
   id?: string
   invoice_no: number
   userId?: string | null
+  communityId?: string | null
   issueDate?: string | null
   periodStart?: string | null
   communityTier?: 'gold' | 'silver' | undefined
   amountCents?: number
+  createdAt?: string | null
 }
 
 function getInvoiceKey(inv: PricingInput) {
@@ -70,7 +72,8 @@ function getInvoiceSortDate(inv: PricingInput) {
 }
 
 export function withDiscountedAmounts<T extends PricingInput>(invoices: T[]): Array<T & { calculatedAmountCents?: number }> {
-  const grouped = invoices.reduce<Map<string, T[]>>((acc, invoice) => {
+  // 1. Group by User
+  const invoicesByUser = invoices.reduce<Map<string, T[]>>((acc, invoice) => {
     const key = invoice.userId ?? 'unknown'
     if (!acc.has(key)) {
       acc.set(key, [])
@@ -81,16 +84,62 @@ export function withDiscountedAmounts<T extends PricingInput>(invoices: T[]): Ar
 
   const calculatedMap = new Map<string, number>()
 
-  grouped.forEach((list) => {
-    const sorted = [...list].sort((a, b) => {
-      const aDate = new Date(getInvoiceSortDate(a)).getTime()
-      const bDate = new Date(getInvoiceSortDate(b)).getTime()
+  invoicesByUser.forEach((userInvoices) => {
+    // 2. Group by Community within User
+    const invoicesByCommunity = userInvoices.reduce<Map<string, T[]>>((acc, invoice) => {
+      const communityKey = invoice.communityId ?? 'unknown'
+      if (!acc.has(communityKey)) {
+        acc.set(communityKey, [])
+      }
+      acc.get(communityKey)!.push(invoice)
+      return acc
+    }, new Map())
+
+    // 3. Determine Community Rank based on earliest invoice/start date
+    const communityMeta = Array.from(invoicesByCommunity.entries()).map(([communityId, communityInvoices]) => {
+      // Find the earliest date associated with this community
+      const earliestInvoice = communityInvoices.reduce((earliest, current) => {
+        const earliestDate = new Date(getInvoiceSortDate(earliest)).getTime()
+        const currentDate = new Date(getInvoiceSortDate(current)).getTime()
+
+        if (earliestDate === currentDate) {
+          // Tie-breaker: createdAt
+          const earliestCreated = new Date(earliest.createdAt || '').getTime()
+          const currentCreated = new Date(current.createdAt || '').getTime()
+          return currentCreated < earliestCreated ? current : earliest
+        }
+
+        return currentDate < earliestDate ? current : earliest
+      })
+
+      return {
+        communityId,
+        startDate: getInvoiceSortDate(earliestInvoice),
+        createdAt: earliestInvoice.createdAt,
+        invoices: communityInvoices
+      }
+    })
+
+    // Sort communities to determine rank
+    communityMeta.sort((a, b) => {
+      const aDate = new Date(a.startDate).getTime()
+      const bDate = new Date(b.startDate).getTime()
+
+      if (aDate === bDate) {
+        const aCreated = new Date(a.createdAt || '').getTime()
+        const bCreated = new Date(b.createdAt || '').getTime()
+        return aCreated - bCreated
+      }
+
       return aDate - bDate
     })
 
-    sorted.forEach((invoice, index) => {
-      const price = calculateCommunityPrice(index, invoice.communityTier ?? 'silver')
-      calculatedMap.set(getInvoiceKey(invoice), price * 100)
+    // 4. Calculate price for each invoice based on its community's rank
+    communityMeta.forEach((meta, rank) => {
+      meta.invoices.forEach(invoice => {
+        const price = calculateCommunityPrice(rank, invoice.communityTier ?? 'silver')
+        calculatedMap.set(getInvoiceKey(invoice), price * 100)
+      })
     })
   })
 
@@ -507,15 +556,15 @@ export function generateInvoicePdf({
     margin: [10, 10, 10, 10] as [number, number, number, number], // Reduced margins for Safari
     filename: `invoice-${invoiceNo}.pdf`,
     image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { 
+    html2canvas: {
       scale: 2,
       useCORS: true,
       logging: false,
       windowHeight: 1123, // A4 height in pixels at 96 DPI
     },
-    jsPDF: { 
-      unit: "pt", 
-      format: "a4", 
+    jsPDF: {
+      unit: "pt",
+      format: "a4",
       orientation: "portrait" as const,
       compress: true
     },

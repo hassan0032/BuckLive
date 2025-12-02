@@ -107,7 +107,7 @@ export function useBilling() {
 
     // Sort descending by issue date for display
     normalized.sort(
-      (a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     // Apply discount logic based on number of communities for this manager

@@ -81,6 +81,7 @@ export function useAdminInvoices() {
           communityCode: inv.community?.code || null,
           communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
           id: inv.id,
+          createdAt: inv.created_at,
         }))
 
         setInvoices(withDiscountedAmounts(normalizedInvoices))
@@ -172,9 +173,9 @@ export function useAdminInvoices() {
         setError(null)
 
         try {
-      let query = client
-        .from('invoices')
-        .select(`*, community:community_id(name, membership_tier, code)`)
+          let query = client
+            .from('invoices')
+            .select(`*, community:community_id(name, membership_tier, code)`)
             .order('period_start', { ascending: false })
 
           if (selectedCommunityId) {
@@ -202,9 +203,17 @@ export function useAdminInvoices() {
             communityCode: inv.community?.code || null,
             communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
             id: inv.id,
-          }))
-
-      setInvoices(withDiscountedAmounts(normalizedInvoices))
+            createdAt: inv.created_at,
+          })).sort(
+            (a, b) => {
+              const aDate = new Date(a.createdAt).getTime()
+              const bDate = new Date(b.createdAt).getTime()
+              if (aDate === bDate) {
+                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              }
+              return bDate - aDate
+            }
+          )
 
           setInvoices(withDiscountedAmounts(normalizedInvoices))
         } catch (err) {
