@@ -72,18 +72,7 @@ Deno.serve(async (req: Request) => {
         console.log(`Skipping invoice without community_id`);
         continue;
       }
-      // Generate next invoice number for this community
-      const { data: invoiceNo, error: rpcError } = await supabase
-        .rpc('generate_next_invoice_no', { p_community_id: communityId });
-      if (rpcError) {
-        console.error(`Error generating invoice number for ${communityName}:`, rpcError);
-        continue;
-      }
-      if (!invoiceNo && invoiceNo !== 0) {
-        console.error(`Null invoice number returned for ${communityName}`);
-        continue;
-      }
-      console.log(`Community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, amount=${amount}, invoice_no=${invoiceNo}`);
+      console.log(`Community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, amount=${amount}`);
       newInvoices.push({
         issue_date: todayYMD,
         period_start: todayYMD,
@@ -92,7 +81,6 @@ Deno.serve(async (req: Request) => {
         currency: 'USD',
         status: 'issued',
         community_id: communityId,
-        invoice_no: invoiceNo,
       });
     }
     if (newInvoices.length === 0) {
