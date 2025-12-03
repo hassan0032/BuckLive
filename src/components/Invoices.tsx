@@ -65,8 +65,8 @@ function Invoices() {
     return null
   }
 
-  const handleDownload = (invoice_no: number) => {
-    const inv = invoices.find((i) => i.invoice_no === invoice_no)
+  const handleDownload = (invoiceId: string) => {
+    const inv = invoices.find((i) => i.id === invoiceId)
     if (!inv) return
 
     const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no, inv.communityCode)
@@ -296,7 +296,7 @@ function Invoices() {
 
                 <div className="text-right">
                   <button
-                    onClick={() => handleDownload(row.invoice_no)}
+                    onClick={() => handleDownload(row.id)}
                     className="inline-flex items-center gap-2 text-white bg-brand-primary hover:bg-brand-primary/90 px-3 py-2 rounded-md text-sm"
                   >
                     <Download className="w-4 h-4" /> Download PDF
