@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, ensureCommunityManagerInvoices } from '../lib/supabase';
-import { withDiscountedAmounts } from '../utils/helper';
+import { applyDiscountFromDatabase } from '../utils/helper';
 
 function formatYMD(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -27,13 +27,12 @@ export function useBilling() {
 
     setIsLoading(true);
 
-    // Ensure invoices exist for this community manager (idempotent)
-    try {
-      await ensureCommunityManagerInvoices(user.id);
-    } catch (err) {
-      console.error('Error ensuring manager invoices:', err);
-      // Continue loading even if generation fails so the UI still works
-    }
+    // Note: Invoices are already generated on login via AuthContext
+    // This is just a fallback in case they weren't generated
+    // We don't await it to avoid blocking the UI
+    ensureCommunityManagerInvoices(user.id).catch(err => {
+      console.error('Error ensuring manager invoices (non-blocking):', err);
+    });
 
     // Fetch communities managed by the user
     const { data: managerCommunities, error: cmError } = await supabase
@@ -94,6 +93,7 @@ export function useBilling() {
       amountCents: inv.amount_cents,
       currency: inv.currency,
       status: inv.status,
+      discountPercentage: inv.discount_percentage ?? 0,
 
       communityId: inv.community_id,
       communityName: inv.community?.name ?? null,
@@ -101,7 +101,6 @@ export function useBilling() {
       communityCode: inv.community?.code ?? null,
 
       createdAt: inv.created_at,
-      // Used by withDiscountedAmounts to group per manager
       userId: user.id,
     }));
 
@@ -110,8 +109,8 @@ export function useBilling() {
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    // Apply discount logic based on number of communities for this manager
-    const discounted = withDiscountedAmounts(normalized);
+    // Apply discount logic using stored discount_percentage from database
+    const discounted = applyDiscountFromDatabase(normalized);
 
     setInvoices(discounted);
     setStartDate(discounted[discounted.length - 1]?.periodStart ?? null);

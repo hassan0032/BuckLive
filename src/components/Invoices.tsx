@@ -72,6 +72,8 @@ function Invoices() {
     const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no, inv.communityCode)
     const amountCentsToDisplay = inv.calculatedAmountCents ?? inv.amountCents
     const formattedAmount = formatCurrency(amountCentsToDisplay, inv.currency)
+    const originalAmount = formatCurrency(inv.amountCents, inv.currency)
+    const discountPercent = inv.discountPercentage ?? 0
     const { container, opt } = generateInvoicePdf({
       invoiceNo: formattedInvoiceNo,
       amount: formattedAmount,
@@ -82,6 +84,8 @@ function Invoices() {
       tier: inv.communityTier ?? 'silver',
       billToName: inv.communityName ? `${inv.communityName} Management` : 'Community Manager',
       billToEmail: '',
+      originalAmount: originalAmount,
+      discountPercent: discountPercent,
     })
 
     html2pdf()

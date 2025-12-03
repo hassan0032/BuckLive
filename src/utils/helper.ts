@@ -23,34 +23,6 @@ const BASE_COMMUNITY_PRICES = {
   gold: 5000,
 } as const;
 
-function getDiscountRate(newTotal: number) {
-  if (newTotal >= 20) return 0.4;
-  if (newTotal >= 10) return 0.36;
-  if (newTotal >= 6) return 0.3;
-
-  switch (newTotal) {
-    case 5:
-      return 0.2;
-    case 4:
-      return 0.15;
-    case 3:
-      return 0.1;
-    case 2:
-      return 0.05;
-    default:
-      return 0;
-  }
-}
-
-export function calculateCommunityPrice(existingCommunitiesCount: number, communityType: 'silver' | 'gold') {
-  const normalizedExisting = Math.max(0, existingCommunitiesCount || 0);
-  const newTotal = normalizedExisting + 1;
-  const basePrice = BASE_COMMUNITY_PRICES[communityType] ?? BASE_COMMUNITY_PRICES.silver;
-  const discountRate = getDiscountRate(newTotal);
-
-  return Math.round(basePrice * (1 - discountRate));
-}
-
 type PricingInput = {
   id?: string
   invoice_no: number
@@ -63,94 +35,27 @@ type PricingInput = {
   createdAt?: string | null
 }
 
-function getInvoiceKey(inv: PricingInput) {
-  return inv.id ?? `${inv.userId ?? 'unknown'}-${inv.invoice_no}`
-}
-
-function getInvoiceSortDate(inv: PricingInput) {
-  return inv.issueDate || inv.periodStart || ''
-}
-
-export function withDiscountedAmounts<T extends PricingInput>(invoices: T[]): Array<T & { calculatedAmountCents?: number }> {
-  // 1. Group by User
-  const invoicesByUser = invoices.reduce<Map<string, T[]>>((acc, invoice) => {
-    const key = invoice.userId ?? 'unknown'
-    if (!acc.has(key)) {
-      acc.set(key, [])
-    }
-    acc.get(key)!.push(invoice)
-    return acc
-  }, new Map())
-
-  const calculatedMap = new Map<string, number>()
-
-  invoicesByUser.forEach((userInvoices) => {
-    // 2. Group by Community within User
-    const invoicesByCommunity = userInvoices.reduce<Map<string, T[]>>((acc, invoice) => {
-      const communityKey = invoice.communityId ?? 'unknown'
-      if (!acc.has(communityKey)) {
-        acc.set(communityKey, [])
-      }
-      acc.get(communityKey)!.push(invoice)
-      return acc
-    }, new Map())
-
-    // 3. Determine Community Rank based on earliest invoice/start date
-    const communityMeta = Array.from(invoicesByCommunity.entries()).map(([communityId, communityInvoices]) => {
-      // Find the earliest date associated with this community
-      const earliestInvoice = communityInvoices.reduce((earliest, current) => {
-        const earliestDate = new Date(getInvoiceSortDate(earliest)).getTime()
-        const currentDate = new Date(getInvoiceSortDate(current)).getTime()
-
-        if (earliestDate === currentDate) {
-          // Tie-breaker: createdAt
-          const earliestCreated = new Date(earliest.createdAt || '').getTime()
-          const currentCreated = new Date(current.createdAt || '').getTime()
-          return currentCreated < earliestCreated ? current : earliest
-        }
-
-        return currentDate < earliestDate ? current : earliest
-      })
-
-      return {
-        communityId,
-        startDate: getInvoiceSortDate(earliestInvoice),
-        createdAt: earliestInvoice.createdAt,
-        invoices: communityInvoices
-      }
-    })
-
-    // Sort communities to determine rank
-    communityMeta.sort((a, b) => {
-      const aDate = new Date(a.startDate).getTime()
-      const bDate = new Date(b.startDate).getTime()
-
-      if (aDate === bDate) {
-        const aCreated = new Date(a.createdAt || '').getTime()
-        const bCreated = new Date(b.createdAt || '').getTime()
-        return aCreated - bCreated
-      }
-
-      return aDate - bDate
-    })
-
-    // 4. Calculate price for each invoice based on its community's rank
-    communityMeta.forEach((meta, rank) => {
-      meta.invoices.forEach(invoice => {
-        const price = calculateCommunityPrice(rank, invoice.communityTier ?? 'silver')
-        calculatedMap.set(getInvoiceKey(invoice), price * 100)
-      })
-    })
-  })
-
+/**
+ * Apply discount using stored discount_percentage from database
+ * This replaces the old calculation logic and uses the value stored when invoice was created
+ */
+export function applyDiscountFromDatabase<T extends PricingInput & { discountPercentage?: number }>(
+  invoices: T[]
+): Array<T & { calculatedAmountCents?: number }> {
   return invoices.map((invoice) => {
-    const key = getInvoiceKey(invoice)
-    const cents = calculatedMap.get(key)
+    const discountPercentage = invoice.discountPercentage ?? 0;
+    const originalAmountCents = invoice.amountCents ?? 0;
+    
+    // Calculate discounted amount: original * (1 - discountPercentage / 100)
+    const discountedAmountCents = Math.round(
+      originalAmountCents * (1 - discountPercentage / 100)
+    );
+    
     return {
       ...invoice,
-      calculatedAmountCents: cents ?? invoice.amountCents,
-    }
-  })
+      calculatedAmountCents: discountedAmountCents,
+    };
+  });
 }
 
 type InvoicePdfData = {

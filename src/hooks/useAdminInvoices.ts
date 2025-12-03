@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useCommunities } from './useCommunities'
-import { withDiscountedAmounts } from '../utils/helper'
+import { applyDiscountFromDatabase } from '../utils/helper'
 import { InvoiceStatus, buildInvoiceStatus } from '../types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -17,6 +17,7 @@ interface InvoiceData {
   amountCents: number
   currency: string
   status: string
+  discountPercentage?: number
   communityId: string | null
   communityName: string | null
   communityCode: string | null
@@ -76,6 +77,7 @@ export function useAdminInvoices() {
           amountCents: Number(inv.amount_cents),
           currency: inv.currency,
           status: inv.status,
+          discountPercentage: inv.discount_percentage ?? 0,
           communityId: inv.community_id,
           communityName: inv.community?.name || null,
           communityCode: inv.community?.code || null,
@@ -84,7 +86,7 @@ export function useAdminInvoices() {
           createdAt: inv.created_at,
         }))
 
-        setInvoices(withDiscountedAmounts(normalizedInvoices))
+        setInvoices(applyDiscountFromDatabase(normalizedInvoices))
       } catch (err) {
         console.error('Error loading invoices:', err)
         setError(err instanceof Error ? err.message : 'Failed to load invoices')
@@ -143,6 +145,7 @@ export function useAdminInvoices() {
         amountCents: Number(inv.amount_cents),
         currency: inv.currency,
         status: inv.status,
+        discountPercentage: inv.discount_percentage ?? 0,
         communityId: inv.community_id,
         communityName: inv.community?.name || null,
         communityCode: inv.community?.code || null,
@@ -150,7 +153,7 @@ export function useAdminInvoices() {
         id: inv.id,
       }))
 
-      setInvoices(withDiscountedAmounts(normalizedInvoices))
+      setInvoices(applyDiscountFromDatabase(normalizedInvoices))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh invoices')
     } finally {
@@ -198,6 +201,7 @@ export function useAdminInvoices() {
             amountCents: Number(inv.amount_cents),
             currency: inv.currency,
             status: inv.status,
+            discountPercentage: inv.discount_percentage ?? 0,
             communityId: inv.community_id,
             communityName: inv.community?.name || null,
             communityCode: inv.community?.code || null,
@@ -215,7 +219,7 @@ export function useAdminInvoices() {
             }
           )
 
-          setInvoices(withDiscountedAmounts(normalizedInvoices))
+          setInvoices(applyDiscountFromDatabase(normalizedInvoices))
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to refresh invoices')
         } finally {

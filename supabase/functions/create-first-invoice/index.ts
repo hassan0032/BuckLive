@@ -157,6 +157,51 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Calculate discount percentage for manual invoice creation
+      // Get all communities managed by this user to determine rank
+      const { data: allManagerCommunities, error: allCmError } = await supabaseClient
+        .from("community_managers")
+        .select("community_id, communities:community_id(created_at)")
+        .eq("user_id", userId);
+
+      let discountPercentage = 0;
+      if (!allCmError && allManagerCommunities?.length) {
+        const allCommunityMeta = allManagerCommunities.map((row: any) => {
+          const community = Array.isArray(row.communities)
+            ? row.communities[0]
+            : row.communities;
+          return {
+            communityId: row.community_id,
+            createdAt: community?.created_at || new Date().toISOString(),
+          };
+        });
+
+        // Sort by created_at
+        allCommunityMeta.sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+
+        // Find rank of the community for this invoice
+        const rank = allCommunityMeta.findIndex(c => c.communityId === requestBody.community_id);
+        
+        // Helper function to calculate discount percentage based on rank
+        const getDiscountPercentage = (rank: number): number => {
+          const newTotal = rank + 1;
+          if (newTotal >= 20) return 40;
+          if (newTotal >= 10) return 36;
+          if (newTotal >= 6) return 30;
+          switch (newTotal) {
+            case 5: return 20;
+            case 4: return 15;
+            case 3: return 10;
+            case 2: return 5;
+            default: return 0;
+          }
+        };
+        
+        discountPercentage = rank >= 0 ? getDiscountPercentage(rank) : 0;
+      }
+
       // Create invoice
       const { data: inserted, error: insertError } = await supabaseClient
         .from("invoices")
@@ -169,6 +214,7 @@ Deno.serve(async (req: Request) => {
             amount_cents: requestBody.amount_cents,
             currency: requestBody.currency,
             status: requestBody.status,
+            discount_percentage: discountPercentage,
           },
         ])
         .select()
@@ -279,16 +325,45 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Helper function to calculate discount percentage based on rank
+    const getDiscountPercentage = (rank: number): number => {
+      const newTotal = rank + 1; // rank 0 = 1st community, rank 1 = 2nd community, etc.
+      
+      if (newTotal >= 20) return 40;
+      if (newTotal >= 10) return 36;
+      if (newTotal >= 6) return 30;
+      
+      switch (newTotal) {
+        case 5: return 20;
+        case 4: return 15;
+        case 3: return 10;
+        case 2: return 5;
+        default: return 0;
+      }
+    };
+
     // Create invoices in order (communities already sorted by created_at)
-    const invoicesToInsert = communitiesNeedingInvoices.map((meta) => ({
-      community_id: meta.communityId,
-      issue_date: today,
-      period_start: today,
-      period_end: endDateISO,
-      amount_cents: meta.communityTier.toLowerCase() === "gold" ? 500000 : 250000,
-      currency: "USD",
-      status: "issued",
-    }));
+    // Calculate discount percentage based on rank (order of creation)
+    // Rank is based on position in the FULL sorted list (all communities, not just those needing invoices)
+    const invoicesToInsert = communitiesNeedingInvoices.map((meta) => {
+      // Find the rank of this community among ALL communities (including those with existing invoices)
+      // Rank is based on position in the sorted communityMeta list
+      const rank = communityMeta.findIndex(c => c.communityId === meta.communityId);
+      const discountPercentage = getDiscountPercentage(rank);
+      
+      const baseAmountCents = meta.communityTier.toLowerCase() === "gold" ? 500000 : 250000;
+      
+      return {
+        community_id: meta.communityId,
+        issue_date: today,
+        period_start: today,
+        period_end: endDateISO,
+        amount_cents: baseAmountCents,
+        currency: "USD",
+        status: "issued",
+        discount_percentage: discountPercentage,
+      };
+    });
 
     const { data: inserted, error: insertError } = await supabaseClient
       .from("invoices")
