@@ -83,7 +83,7 @@ function App() {
             <Layout>
               <Routes>
                 <Route path="/" element={<Navigate to="/library" replace />} />
-                <Route path="/library" element={<ContentLibrary />} />
+                <Route path="/library/*" element={<ContentLibrary />} />
                 <Route path="/content/:id" element={<ContentDetail />} />
                 <Route path="/profile" element={isSharedAccount ? <Navigate to="/library" replace /> : <UserProfile />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />

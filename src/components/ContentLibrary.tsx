@@ -20,21 +20,44 @@ export const ContentLibrary: React.FC = () => {
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
   const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
 
   useEffect(() => {
-    if (content && content.length > 0 && allCategories.length === 0) {
-      const cats = Array.from(new Set(content.map(item => item.category)));
-      setAllCategories(cats);
+    // Only derive categories and tags once from the full, unfiltered content list
+    // so that dropdowns always show all options even when filters are active.
+    if (!content || content.length === 0 || allCategories.length > 0 || allTags.length > 0) {
+      return;
     }
-  }, [content]);
+
+    const cats = Array.from(new Set(content.map(item => item.category)));
+    setAllCategories(cats);
+
+    const tags = new Set<string>();
+    content.forEach(item => {
+      item.tags.forEach(tag => tags.add(tag));
+    });
+    setAllTags(Array.from(tags));
+  }, [content, allCategories.length, allTags.length]);
+
+  // Build URL path from current filters
+  const buildPath = useCallback((type: string, category: string, tags: string[]) => {
+    const segments: string[] = [];
+    if (type) segments.push(type);
+    if (category) segments.push(encodeURIComponent(category));
+    if (tags.length > 0) {
+      segments.push(...tags.map(tag => encodeURIComponent(tag)));
+    }
+    return segments.length > 0 ? `/library/${segments.join('/')}` : '/library';
+  }, []);
 
   useEffect(() => {
     if (location.state?.selectedTag) {
       const tag = location.state.selectedTag;
-      setSelectedTags([tag]);
-      searchContent(searchQuery, selectedType, selectedCategory, [tag]);
+      const newPath = buildPath(selectedType, selectedCategory, [tag]);
+      navigate(newPath, { replace: true });
+      setSearchQuery('');
     }
-  }, [location.state]);
+  }, [location.state, selectedType, selectedCategory, buildPath, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -50,6 +73,68 @@ export const ContentLibrary: React.FC = () => {
   const performSearch = useCallback(async (query: string, type: string, category: string, tags: string[]) => {
     await searchContent(query, type, category, tags);
   }, [searchContent]);
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/library')) {
+      return;
+    }
+
+    const rawSegments = location.pathname
+      .slice('/library'.length)
+      .split('/')
+      .filter(Boolean);
+
+    const segments = rawSegments.map(segment => decodeURIComponent(segment));
+    const typeValues = Object.values(CONTENT_TYPE);
+
+    let derivedType = '';
+    let derivedCategory = '';
+    const derivedTags: string[] = [];
+
+    if (segments.length > 0) {
+      const maybeType = segments[0].toLowerCase();
+      if (typeValues.includes(maybeType as ContentType)) {
+        derivedType = maybeType;
+        segments.shift();
+      }
+    }
+
+    if (segments.length > 0) {
+      const maybeCategory = segments[0];
+      if (allCategories.includes(maybeCategory)) {
+        derivedCategory = maybeCategory;
+        segments.shift();
+      }
+    }
+
+    segments.forEach(segment => {
+      if (allTags.includes(segment)) {
+        derivedTags.push(segment);
+      }
+    });
+
+    const typeChanged = derivedType !== selectedType;
+    const categoryChanged = derivedCategory !== selectedCategory;
+    const tagsChanged = derivedTags.length !== selectedTags.length ||
+      derivedTags.some((tag, index) => tag !== selectedTags[index]);
+
+    if (typeChanged) {
+      setSelectedType(derivedType);
+    }
+    if (categoryChanged) {
+      setSelectedCategory(derivedCategory);
+    }
+    if (tagsChanged) {
+      setSelectedTags(derivedTags);
+    }
+
+    if (typeChanged || categoryChanged || tagsChanged) {
+      setSearchQuery('');
+      performSearch('', derivedType, derivedCategory, derivedTags);
+    }
+  }, [location.pathname, allCategories, allTags, selectedType, selectedCategory, selectedTags, performSearch]);
+
+
 
   const generateAutocomplete = useCallback((query: string) => {
     if (!query.trim() || query.trim().length < 2) {
@@ -116,13 +201,13 @@ export const ContentLibrary: React.FC = () => {
     if (result.type === 'title' && result.content) {
       navigate(`/content/${result.content.id}`);
     } else if (result.type === 'tag') {
-      setSelectedTags([result.value]);
+      const newPath = buildPath(selectedType, selectedCategory, [result.value]);
+      navigate(newPath, { replace: true });
       setSearchQuery('');
-      performSearch('', selectedType, selectedCategory, [result.value]);
     } else if (result.type === 'category') {
-      setSelectedCategory(result.value);
+      const newPath = buildPath(selectedType, result.value, selectedTags);
+      navigate(newPath, { replace: true });
       setSearchQuery('');
-      performSearch('', selectedType, result.value, selectedTags);
     }
     setShowAutocomplete(false);
     setSelectedAutocompleteIndex(-1);
@@ -165,24 +250,26 @@ export const ContentLibrary: React.FC = () => {
   };
 
   const handleTypeChange = (value: string) => {
-    setSelectedType(value);
-    performSearch(searchQuery, value, selectedCategory, selectedTags);
+    const newPath = buildPath(value, selectedCategory, selectedTags);
+    navigate(newPath, { replace: true });
   };
 
   const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    performSearch(searchQuery, selectedType, value, selectedTags);
+    const newPath = buildPath(selectedType, value, selectedTags);
+    navigate(newPath, { replace: true });
   };
 
   const handleTagClick = async (tag: string) => {
-    const newTags = selectedTags.includes(tag) ? selectedTags.filter(t => t !== tag) : [tag];
-    setSelectedTags(newTags);
-    await searchContent(searchQuery, selectedType, selectedCategory, newTags);
+    const newTags = selectedTags.includes(tag)
+      ? selectedTags.filter(t => t !== tag)
+      : [...selectedTags, tag];
+    const newPath = buildPath(selectedType, selectedCategory, newTags);
+    navigate(newPath, { replace: true });
   };
 
   const clearTagFilter = async () => {
-    setSelectedTags([]);
-    await searchContent(searchQuery, selectedType, selectedCategory, []);
+    const newPath = buildPath(selectedType, selectedCategory, []);
+    navigate(newPath, { replace: true });
   };
 
   const formatDuration = (seconds?: number) => {
@@ -219,8 +306,8 @@ export const ContentLibrary: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-    </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+      </div>
     );
   }
 
@@ -334,7 +421,7 @@ export const ContentLibrary: React.FC = () => {
             >
               <option value="">All Categories</option>
               {allCategories.map((category) => (
-               <option key={category} value={category}>{category}</option>
+                <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </div>
@@ -420,8 +507,8 @@ export const ContentLibrary: React.FC = () => {
                           handleTagClick(tag);
                         }}
                         className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${selectedTags.includes(tag)
-                            ? 'bg-brand-primary text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-brand-primary text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                       >
                         <Tag className="h-3 w-3 mr-1" />
