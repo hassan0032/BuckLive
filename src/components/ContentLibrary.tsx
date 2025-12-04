@@ -1,19 +1,25 @@
 import { BookOpen, Clock, Download, FileText, Loader2, Search, Tag, Video, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { getThumbnailUrl } from '../lib/supabase';
 import { Content, CONTENT_TYPE, ContentType, PAYMENT_TIER } from '../types';
 import { cn } from '../utils/helper';
 
 export const ContentLibrary: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { content, loading, searching, searchContent } = useContent();
   const navigate = useNavigate();
-  const location = useLocation();
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Initialize state from URL params
+  const [selectedType, setSelectedType] = useState<string>(searchParams.get('type') || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || '');
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    searchParams.get('tags') ? searchParams.get('tags')!.split(',') : []
+  );
+
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteResults, setAutocompleteResults] = useState<Array<{ type: 'title' | 'tag' | 'category'; value: string; content?: Content }>>([]);
   const [selectedAutocompleteIndex, setSelectedAutocompleteIndex] = useState(-1);
@@ -39,25 +45,54 @@ export const ContentLibrary: React.FC = () => {
     setAllTags(Array.from(tags));
   }, [content, allCategories.length, allTags.length]);
 
-  // Build URL path from current filters
-  const buildPath = useCallback((type: string, category: string, tags: string[]) => {
-    const segments: string[] = [];
-    if (type) segments.push(type);
-    if (category) segments.push(encodeURIComponent(category));
-    if (tags.length > 0) {
-      segments.push(...tags.map(tag => encodeURIComponent(tag)));
-    }
-    return segments.length > 0 ? `/library/${segments.join('/')}` : '/library';
-  }, []);
+  const performSearch = useCallback(async (query: string, type: string, category: string, tags: string[]) => {
+    await searchContent(query, type, category, tags);
+  }, [searchContent]);
 
+  const hasAppliedInitialFilters = useRef(false);
+
+  // Sync state with URL params
   useEffect(() => {
-    if (location.state?.selectedTag) {
-      const tag = location.state.selectedTag;
-      const newPath = buildPath(selectedType, selectedCategory, [tag]);
-      navigate(newPath, { replace: true });
+    if (loading) return;
+
+    const type = searchParams.get('type') || '';
+    const category = searchParams.get('category') || '';
+    const tagsStr = searchParams.get('tags');
+    const tags: string[] = tagsStr ? tagsStr.split(',') : [];
+
+    // Check if params match current state
+    const typeChanged = type !== selectedType;
+    const categoryChanged = category !== selectedCategory;
+    const tagsChanged = tags.length !== selectedTags.length ||
+      tags.some((tag, index) => tag !== selectedTags[index]);
+
+    const paramsChanged = typeChanged || categoryChanged || tagsChanged;
+    const hasFilters = type || category || tags.length > 0;
+
+    if (paramsChanged) {
+      if (typeChanged) setSelectedType(type);
+      if (categoryChanged) setSelectedCategory(category);
+      if (tagsChanged) setSelectedTags(tags);
+
       setSearchQuery('');
+      performSearch('', type, category, tags);
+    } else if (!hasAppliedInitialFilters.current && hasFilters) {
+      // Initial load with filters - content is currently "all", so we must search
+      performSearch('', type, category, tags);
+      hasAppliedInitialFilters.current = true;
     }
-  }, [location.state, selectedType, selectedCategory, buildPath, navigate]);
+
+  }, [searchParams, loading, selectedType, selectedCategory, selectedTags, performSearch]);
+
+  // Helper to update URL
+  const updateFilters = useCallback((type: string, category: string, tags: string[]) => {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (category) params.set('category', category);
+    if (tags.length > 0) params.set('tags', tags.join(','));
+
+    setSearchParams(params);
+  }, [setSearchParams]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -69,72 +104,6 @@ export const ContentLibrary: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const performSearch = useCallback(async (query: string, type: string, category: string, tags: string[]) => {
-    await searchContent(query, type, category, tags);
-  }, [searchContent]);
-
-  useEffect(() => {
-    if (!location.pathname.startsWith('/library')) {
-      return;
-    }
-
-    const rawSegments = location.pathname
-      .slice('/library'.length)
-      .split('/')
-      .filter(Boolean);
-
-    const segments = rawSegments.map(segment => decodeURIComponent(segment));
-    const typeValues = Object.values(CONTENT_TYPE);
-
-    let derivedType = '';
-    let derivedCategory = '';
-    const derivedTags: string[] = [];
-
-    if (segments.length > 0) {
-      const maybeType = segments[0].toLowerCase();
-      if (typeValues.includes(maybeType as ContentType)) {
-        derivedType = maybeType;
-        segments.shift();
-      }
-    }
-
-    if (segments.length > 0) {
-      const maybeCategory = segments[0];
-      if (allCategories.includes(maybeCategory)) {
-        derivedCategory = maybeCategory;
-        segments.shift();
-      }
-    }
-
-    segments.forEach(segment => {
-      if (allTags.includes(segment)) {
-        derivedTags.push(segment);
-      }
-    });
-
-    const typeChanged = derivedType !== selectedType;
-    const categoryChanged = derivedCategory !== selectedCategory;
-    const tagsChanged = derivedTags.length !== selectedTags.length ||
-      derivedTags.some((tag, index) => tag !== selectedTags[index]);
-
-    if (typeChanged) {
-      setSelectedType(derivedType);
-    }
-    if (categoryChanged) {
-      setSelectedCategory(derivedCategory);
-    }
-    if (tagsChanged) {
-      setSelectedTags(derivedTags);
-    }
-
-    if (typeChanged || categoryChanged || tagsChanged) {
-      setSearchQuery('');
-      performSearch('', derivedType, derivedCategory, derivedTags);
-    }
-  }, [location.pathname, allCategories, allTags, selectedType, selectedCategory, selectedTags, performSearch]);
-
-
 
   const generateAutocomplete = useCallback((query: string) => {
     if (!query.trim() || query.trim().length < 2) {
@@ -201,12 +170,10 @@ export const ContentLibrary: React.FC = () => {
     if (result.type === 'title' && result.content) {
       navigate(`/content/${result.content.id}`);
     } else if (result.type === 'tag') {
-      const newPath = buildPath(selectedType, selectedCategory, [result.value]);
-      navigate(newPath, { replace: true });
+      updateFilters(selectedType, selectedCategory, [result.value]);
       setSearchQuery('');
     } else if (result.type === 'category') {
-      const newPath = buildPath(selectedType, result.value, selectedTags);
-      navigate(newPath, { replace: true });
+      updateFilters(selectedType, result.value, selectedTags);
       setSearchQuery('');
     }
     setShowAutocomplete(false);
@@ -250,26 +217,22 @@ export const ContentLibrary: React.FC = () => {
   };
 
   const handleTypeChange = (value: string) => {
-    const newPath = buildPath(value, selectedCategory, selectedTags);
-    navigate(newPath, { replace: true });
+    updateFilters(value, selectedCategory, selectedTags);
   };
 
   const handleCategoryChange = (value: string) => {
-    const newPath = buildPath(selectedType, value, selectedTags);
-    navigate(newPath, { replace: true });
+    updateFilters(selectedType, value, selectedTags);
   };
 
   const handleTagClick = async (tag: string) => {
     const newTags = selectedTags.includes(tag)
       ? selectedTags.filter(t => t !== tag)
       : [...selectedTags, tag];
-    const newPath = buildPath(selectedType, selectedCategory, newTags);
-    navigate(newPath, { replace: true });
+    updateFilters(selectedType, selectedCategory, newTags);
   };
 
   const clearTagFilter = async () => {
-    const newPath = buildPath(selectedType, selectedCategory, []);
-    navigate(newPath, { replace: true });
+    updateFilters(selectedType, selectedCategory, []);
   };
 
   const formatDuration = (seconds?: number) => {
