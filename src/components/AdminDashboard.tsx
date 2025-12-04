@@ -83,10 +83,10 @@ export const AdminDashboard: React.FC = () => {
     const state = (location.state as AdminLocationState) || null;
     const tabParam = state?.forceTab;
 
-    if (tabParam && (allowedTabs as readonly string[]).includes(tabParam) && tabParam !== activeTab) {
+    if (tabParam && (allowedTabs as readonly string[]).includes(tabParam)) {
       handleSetActiveTab(tabParam as (typeof allowedTabs)[number]);
     }
-  }, [location.state, activeTab]);
+  }, [location.state]);
 
   const handleSetActiveTab = (tab: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback') => {
     setActiveTab(tab);
