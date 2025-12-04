@@ -63,7 +63,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const userId = user.id;
-    
+
     // Parse request body (optional - for manual invoice creation)
     let requestBody: any = {};
     try {
@@ -76,10 +76,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // If invoice data is provided, handle manual invoice creation
-    if (requestBody.community_id && requestBody.issue_date && requestBody.period_start && 
-        requestBody.period_end && requestBody.amount_cents !== undefined && 
-        requestBody.currency && requestBody.status) {
-      
+    if (requestBody.community_id && requestBody.issue_date && requestBody.period_start &&
+      requestBody.period_end && requestBody.amount_cents !== undefined &&
+      requestBody.currency && requestBody.status) {
+
       console.log("🔍 Manual invoice creation requested for community:", requestBody.community_id);
 
       // Verify user has permission to create invoice for this community
@@ -134,19 +134,19 @@ Deno.serve(async (req: Request) => {
 
       if (existingInvoice) {
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             message: "Invoice already exists for this community and period",
             data: existingInvoice,
-            created: 0 
+            created: 0
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      // Verify community exists
+      // Verify community exists and check if primary_manager is already set
       const { data: community, error: communityError } = await supabaseClient
         .from("communities")
-        .select("id")
+        .select("id, primary_manager")
         .eq("id", requestBody.community_id)
         .single();
 
@@ -155,6 +155,31 @@ Deno.serve(async (req: Request) => {
           JSON.stringify({ error: "Community not found" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
+      }
+
+      // If no primary manager is set, pick any manager of this community
+      if (!community.primary_manager) {
+        // Get any manager for this community
+        const { data: anyManager, error: managerFetchError } = await supabaseClient
+          .from("community_managers")
+          .select("user_id")
+          .eq("community_id", requestBody.community_id)
+          .limit(1)
+          .maybeSingle();
+
+        const primaryManagerId = managerFetchError ? null : (anyManager?.user_id || null);
+
+        const { error: updateError } = await supabaseClient
+          .from("communities")
+          .update({ primary_manager: primaryManagerId })
+          .eq("id", requestBody.community_id);
+
+        if (updateError) {
+          console.error("⚠️ Failed to set primary manager:", updateError);
+          // Don't fail the entire request, just log the error
+        } else {
+          console.log(`✅ Set user ${primaryManagerId} as primary manager for community ${requestBody.community_id}`);
+        }
       }
 
       // Calculate discount percentage for manual invoice creation
@@ -177,13 +202,13 @@ Deno.serve(async (req: Request) => {
         });
 
         // Sort by created_at
-        allCommunityMeta.sort((a, b) => 
+        allCommunityMeta.sort((a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
 
         // Find rank of the community for this invoice
         const rank = allCommunityMeta.findIndex(c => c.communityId === requestBody.community_id);
-        
+
         // Helper function to calculate discount percentage based on rank
         const getDiscountPercentage = (rank: number): number => {
           const newTotal = rank + 1;
@@ -198,7 +223,7 @@ Deno.serve(async (req: Request) => {
             default: return 0;
           }
         };
-        
+
         discountPercentage = rank >= 0 ? getDiscountPercentage(rank) : 0;
       }
 
@@ -246,7 +271,7 @@ Deno.serve(async (req: Request) => {
     // 1. Get communities managed by this user, ordered by created_at
     const { data: managerCommunities, error: cmError } = await supabaseClient
       .from("community_managers")
-      .select("community_id, communities:community_id(name, membership_tier, created_at)")
+      .select("community_id, communities:community_id(name, membership_tier, created_at, primary_manager)")
       .eq("user_id", userId);
 
     if (cmError) {
@@ -274,11 +299,12 @@ Deno.serve(async (req: Request) => {
         communityId: row.community_id,
         communityTier: (community?.membership_tier ?? "silver") as string,
         createdAt: community?.created_at || new Date().toISOString(),
+        primaryManager: community?.primary_manager || null,
       };
     });
 
     // Sort communities by created_at to generate invoices in order
-    communityMeta.sort((a, b) => 
+    communityMeta.sort((a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
 
@@ -328,11 +354,11 @@ Deno.serve(async (req: Request) => {
     // Helper function to calculate discount percentage based on rank
     const getDiscountPercentage = (rank: number): number => {
       const newTotal = rank + 1; // rank 0 = 1st community, rank 1 = 2nd community, etc.
-      
+
       if (newTotal >= 20) return 40;
       if (newTotal >= 10) return 36;
       if (newTotal >= 6) return 30;
-      
+
       switch (newTotal) {
         case 5: return 20;
         case 4: return 15;
@@ -350,9 +376,9 @@ Deno.serve(async (req: Request) => {
       // Rank is based on position in the sorted communityMeta list
       const rank = communityMeta.findIndex(c => c.communityId === meta.communityId);
       const discountPercentage = getDiscountPercentage(rank);
-      
+
       const baseAmountCents = meta.communityTier.toLowerCase() === "gold" ? 500000 : 250000;
-      
+
       return {
         community_id: meta.communityId,
         issue_date: today,
@@ -376,6 +402,37 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "Failed to create invoices" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Set primary manager for communities that don't have one
+    const communitiesWithoutPrimaryManager = communitiesNeedingInvoices
+      .filter((meta: { primaryManager: string | null }) => !meta.primaryManager)
+      .map((meta: { communityId: string }) => meta.communityId);
+
+    if (communitiesWithoutPrimaryManager.length > 0) {
+      // For each community without a primary manager, pick any manager
+      for (const communityId of communitiesWithoutPrimaryManager) {
+        // Get any manager for this community
+        const { data: anyManager, error: managerFetchError } = await supabaseClient
+          .from("community_managers")
+          .select("user_id")
+          .eq("community_id", communityId)
+          .limit(1)
+          .maybeSingle();
+
+        const primaryManagerId = managerFetchError ? null : (anyManager?.user_id || null);
+
+        const { error: updateError } = await supabaseClient
+          .from("communities")
+          .update({ primary_manager: primaryManagerId })
+          .eq("id", communityId);
+
+        if (updateError) {
+          console.error(`⚠️ Failed to set primary manager for community ${communityId}:`, updateError);
+        } else {
+          console.log(`✅ Set user ${primaryManagerId} as primary manager for community ${communityId}`);
+        }
+      }
     }
 
     console.log(
