@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { User as AppUser } from '../types';
 
 export const UserProfile: React.FC = () => {
-  const { user, isAdmin, isCommunityManager } = useAuth();
+  const { user, isAdmin, isCommunityManager, isMember } = useAuth();
   const { startDate, renewalDate } = useBilling();
   // Call stats hook unconditionally to keep hooks order stable across renders
   const stats = useContentStats(user?.id);
@@ -182,7 +182,7 @@ export const UserProfile: React.FC = () => {
             </div>
           </div>
 
-          {isCommunityManager && (
+          {(isCommunityManager || isMember) && (
             <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
               <Shield className="h-5 w-5 text-gray-400" />
               <div>

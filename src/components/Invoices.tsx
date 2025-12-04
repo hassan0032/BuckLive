@@ -65,13 +65,15 @@ function Invoices() {
     return null
   }
 
-  const handleDownload = (invoice_no: number) => {
-    const inv = invoices.find((i) => i.invoice_no === invoice_no)
+  const handleDownload = (invoiceId: string) => {
+    const inv = invoices.find((i) => i.id === invoiceId)
     if (!inv) return
 
     const formattedInvoiceNo = formatInvoiceNumber(inv.invoice_no, inv.communityCode)
     const amountCentsToDisplay = inv.calculatedAmountCents ?? inv.amountCents
     const formattedAmount = formatCurrency(amountCentsToDisplay, inv.currency)
+    const originalAmount = formatCurrency(inv.amountCents, inv.currency)
+    const discountPercent = inv.discountPercentage ?? 0
     const { container, opt } = generateInvoicePdf({
       invoiceNo: formattedInvoiceNo,
       amount: formattedAmount,
@@ -82,6 +84,8 @@ function Invoices() {
       tier: inv.communityTier ?? 'silver',
       billToName: inv.communityName ? `${inv.communityName} Management` : 'Community Manager',
       billToEmail: '',
+      originalAmount: originalAmount,
+      discountPercent: discountPercent,
     })
 
     html2pdf()
@@ -161,7 +165,7 @@ function Invoices() {
             onChange={(e) => setSelectedStatusFilter(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
           >
-            <option value="">All Status</option>
+            <option value="">All Statuses</option>
             <option value={INVOICE_STATUS.ISSUED}>Issued</option>
             <option value={INVOICE_STATUS.PAID}>Paid</option>
             <option value={INVOICE_STATUS.OTHER}>Other</option>
@@ -296,7 +300,7 @@ function Invoices() {
 
                 <div className="text-right">
                   <button
-                    onClick={() => handleDownload(row.invoice_no)}
+                    onClick={() => handleDownload(row.id)}
                     className="inline-flex items-center gap-2 text-white bg-brand-primary hover:bg-brand-primary/90 px-3 py-2 rounded-md text-sm"
                   >
                     <Download className="w-4 h-4" /> Download PDF
