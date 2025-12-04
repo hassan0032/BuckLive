@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isCommunityManager: boolean;
+  isMember: boolean;
   isSharedAccount: boolean;
 }
 
@@ -220,6 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     isAdmin: user?.role === 'admin',
     isCommunityManager: user?.role === 'community_manager',
+    isMember: user?.role === 'member',
     isSharedAccount: user?.is_shared_account || false,
   };
 
