@@ -165,7 +165,7 @@ function Invoices() {
             onChange={(e) => setSelectedStatusFilter(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
           >
-            <option value="">All Status</option>
+            <option value="">All Statuses</option>
             <option value={INVOICE_STATUS.ISSUED}>Issued</option>
             <option value={INVOICE_STATUS.PAID}>Paid</option>
             <option value={INVOICE_STATUS.OTHER}>Other</option>
