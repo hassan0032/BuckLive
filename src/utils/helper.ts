@@ -412,7 +412,7 @@ export function generateInvoicePdf({
         </thead>
         <tbody>
           <tr>
-            <td class="community-name">${community} - ${tier} Tier - ${periodStart} - ${periodEnd}</td>
+            <td class="community-name">${community} - ${tier.charAt(0).toUpperCase() + tier.slice(1)} Tier - ${periodStart} - ${periodEnd}</td>
             <td>${originalAmountDisplay}</td>
             <td>${originalAmountDisplay}</td>
           </tr>
