@@ -37,30 +37,30 @@
 -- ============================================================================
 
 -- Drop old policies first
-DROP POLICY IF EXISTS "Users can view own notifications" ON notifications
-DROP POLICY IF EXISTS "Admins can view all notifications" ON notifications
-DROP POLICY IF EXISTS "Admins can insert notifications" ON notifications
-DROP POLICY IF EXISTS "Admins can update notifications" ON notifications
-DROP POLICY IF EXISTS "Admins can delete notifications" ON notifications
-DROP POLICY IF EXISTS "Admins can read all notifications" ON admin_notifications
-DROP POLICY IF EXISTS "Community managers can read notifications" ON admin_notifications
-DROP POLICY IF EXISTS "Admins can create notifications" ON admin_notifications
-DROP POLICY IF EXISTS "Admins can delete notifications" ON admin_notifications
-DROP POLICY IF EXISTS "Users can view own read status" ON admin_notification_reads
-DROP POLICY IF EXISTS "Admins can view all read statuses" ON admin_notification_reads
-DROP POLICY IF EXISTS "Admins can insert read statuses" ON admin_notification_reads
-DROP POLICY IF EXISTS "Users can update own read status" ON admin_notification_reads
-DROP POLICY IF EXISTS "Admins can update read statuses" ON admin_notification_reads
-DROP POLICY IF EXISTS "Admins can delete read statuses" ON admin_notification_reads
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
+DROP POLICY IF EXISTS "Admins can view all notifications" ON notifications;
+DROP POLICY IF EXISTS "Admins can insert notifications" ON notifications;
+DROP POLICY IF EXISTS "Admins can update notifications" ON notifications;
+DROP POLICY IF EXISTS "Admins can delete notifications" ON notifications;
+DROP POLICY IF EXISTS "Admins can read all notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Community managers can read notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Admins can create notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Admins can delete notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Users can view own read status" ON admin_notification_reads;
+DROP POLICY IF EXISTS "Admins can view all read statuses" ON admin_notification_reads;
+DROP POLICY IF EXISTS "Admins can insert read statuses" ON admin_notification_reads;
+DROP POLICY IF EXISTS "Users can update own read status" ON admin_notification_reads;
+DROP POLICY IF EXISTS "Admins can update read statuses" ON admin_notification_reads;
+DROP POLICY IF EXISTS "Admins can delete read statuses" ON admin_notification_reads;
 -- Drop triggers and functions
-DROP TRIGGER IF EXISTS on_community_created ON communities
-DROP TRIGGER IF EXISTS on_admin_notification_created ON admin_notifications
-DROP FUNCTION IF EXISTS create_community_notification()
-DROP FUNCTION IF EXISTS create_admin_notification_read_entries()
+DROP TRIGGER IF EXISTS on_community_created ON communities;
+DROP TRIGGER IF EXISTS on_admin_notification_created ON admin_notifications;
+DROP FUNCTION IF EXISTS create_community_notification();
+DROP FUNCTION IF EXISTS create_admin_notification_read_entries();
 -- Drop old tables
-DROP TABLE IF EXISTS admin_notification_reads
-DROP TABLE IF EXISTS admin_notifications
-DROP TABLE IF EXISTS notifications
+DROP TABLE IF EXISTS admin_notification_reads;
+DROP TABLE IF EXISTS admin_notifications;
+DROP TABLE IF EXISTS notifications;
 -- ============================================================================
 -- STEP 2: Create unified notifications table
 -- ============================================================================
@@ -86,26 +86,26 @@ CREATE TABLE notifications (
   -- Timestamps
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   updated_at timestamptz DEFAULT timezone('utc', now())
-)
+);
 -- ============================================================================
 -- STEP 3: Create indexes for optimal performance
 -- ============================================================================
 
 -- User-specific queries with type filtering
-CREATE INDEX idx_notifications_user_type ON notifications(user_id, type)
+CREATE INDEX idx_notifications_user_type ON notifications(user_id, type);
 -- Read status queries
-CREATE INDEX idx_notifications_is_read ON notifications(is_read)
+CREATE INDEX idx_notifications_is_read ON notifications(is_read);
 -- Chronological ordering (newest first)
-CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC)
+CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
 -- Type filtering
-CREATE INDEX idx_notifications_type ON notifications(type)
+CREATE INDEX idx_notifications_type ON notifications(type);
 -- Combined index for common queries
-CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false
+CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;
 -- ============================================================================
 -- STEP 4: Enable RLS
 -- ============================================================================
 
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 -- STEP 5: Create RLS policies
 -- ============================================================================
@@ -115,37 +115,37 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY
 CREATE POLICY "Users can view own notifications"
   ON notifications FOR SELECT
   TO authenticated
-  USING (auth.uid() = user_id)
+  USING (auth.uid() = user_id);
 -- Admins can view all notifications
 CREATE POLICY "Admins can view all notifications"
   ON notifications FOR SELECT
   TO authenticated
-  USING (public.is_admin(auth.uid()))
+  USING (public.is_admin(auth.uid()));
 -- INSERT POLICIES
 -- Only admins can insert notifications directly
 CREATE POLICY "Admins can insert notifications"
   ON notifications FOR INSERT
   TO authenticated
-  WITH CHECK (public.is_admin(auth.uid()))
+  WITH CHECK (public.is_admin(auth.uid()));
 -- UPDATE POLICIES
 -- Users can update their own read status
 CREATE POLICY "Users can update own read status"
   ON notifications FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 -- Admins can update any notification
 CREATE POLICY "Admins can update all notifications"
   ON notifications FOR UPDATE
   TO authenticated
   USING (public.is_admin(auth.uid()))
-  WITH CHECK (public.is_admin(auth.uid()))
+  WITH CHECK (public.is_admin(auth.uid()));
 -- DELETE POLICIES
 -- Only admins can delete notifications
 CREATE POLICY "Admins can delete notifications"
   ON notifications FOR DELETE
   TO authenticated
-  USING (public.is_admin(auth.uid()))
+  USING (public.is_admin(auth.uid()));
 -- ============================================================================
 -- STEP 6: Create trigger functions
 -- ============================================================================
@@ -163,7 +163,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$
+$$;
 -- Function to create notification copies for all community managers
 CREATE OR REPLACE FUNCTION create_admin_notification_broadcast()
 RETURNS TRIGGER
@@ -189,7 +189,7 @@ BEGIN
   -- For other notifications, allow normal insert
   RETURN NEW;
 END;
-$$
+$$;
 -- ============================================================================
 -- STEP 7: Create triggers
 -- ============================================================================
@@ -198,13 +198,13 @@ $$
 CREATE TRIGGER on_community_created
   AFTER INSERT ON communities
   FOR EACH ROW
-  EXECUTE FUNCTION create_community_notification()
+  EXECUTE FUNCTION create_community_notification();
 -- Trigger for admin notification broadcasts
 CREATE TRIGGER on_admin_notification_broadcast
   BEFORE INSERT ON notifications
   FOR EACH ROW
   WHEN (NEW.type = 'admin' AND NEW.user_id IS NULL)
-  EXECUTE FUNCTION create_admin_notification_broadcast()
+  EXECUTE FUNCTION create_admin_notification_broadcast();
 -- ============================================================================
 -- STEP 8: Add updated_at trigger
 -- ============================================================================
@@ -215,8 +215,8 @@ BEGIN
   NEW.updated_at = timezone('utc', now());
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql
+$$ LANGUAGE plpgsql;
 CREATE TRIGGER update_notifications_updated_at
   BEFORE UPDATE ON notifications
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column()
+  EXECUTE FUNCTION update_updated_at_column();

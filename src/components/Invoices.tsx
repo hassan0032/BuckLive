@@ -79,9 +79,9 @@ function Invoices() {
       periodStart: new Date(inv.periodStart).toLocaleDateString(),
       periodEnd: new Date(inv.periodEnd).toLocaleDateString(),
       community: inv.communityName || 'Community',
-      tier: inv.communityTier ? inv.communityTier.charAt(0).toUpperCase() + inv.communityTier.slice(1) : 'Tier',
+      tier: inv.communityTier ?? 'silver',
       billToName: inv.communityName ? `${inv.communityName} Management` : 'Community Manager',
-      billToEmail: 'billing@bucklive.com',
+      billToEmail: '',
     })
 
     html2pdf()
