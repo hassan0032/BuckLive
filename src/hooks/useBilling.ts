@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, ensureCommunityManagerInvoices } from '../lib/supabase';
-import { withDiscountedAmounts } from '../utils/helper';
+import { applyDiscountFromDatabase } from '../utils/helper';
 
 function formatYMD(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -27,13 +27,12 @@ export function useBilling() {
 
     setIsLoading(true);
 
-    // Ensure invoices exist for this community manager (idempotent)
-    try {
-      await ensureCommunityManagerInvoices(user.id);
-    } catch (err) {
-      console.error('Error ensuring manager invoices:', err);
-      // Continue loading even if generation fails so the UI still works
-    }
+    // Note: Invoices are already generated on login via AuthContext
+    // This is just a fallback in case they weren't generated
+    // We don't await it to avoid blocking the UI
+    ensureCommunityManagerInvoices(user.id).catch(err => {
+      console.error('Error ensuring manager invoices (non-blocking):', err);
+    });
 
     // Fetch communities managed by the user
     const { data: managerCommunities, error: cmError } = await supabase
@@ -74,7 +73,7 @@ export function useBilling() {
     // Fetch existing invoices including community info
     const { data: existingInvoices, error: invoiceError } = await supabase
       .from('invoices')
-      .select('*, communities(name, membership_tier, code)')
+      .select('*, community:community_id(name, membership_tier, code)')
       .in('community_id', communityIds);
 
     if (invoiceError) {
@@ -94,24 +93,24 @@ export function useBilling() {
       amountCents: inv.amount_cents,
       currency: inv.currency,
       status: inv.status,
+      discountPercentage: inv.discount_percentage ?? 0,
 
       communityId: inv.community_id,
-      communityName: inv.communities?.name ?? null,
-      communityTier: inv.communities?.membership_tier ?? null,
-      communityCode: inv.communities?.code ?? null,
+      communityName: inv.community?.name ?? null,
+      communityTier: inv.community?.membership_tier ?? null,
+      communityCode: inv.community?.code ?? null,
 
       createdAt: inv.created_at,
-      // Used by withDiscountedAmounts to group per manager
       userId: user.id,
     }));
 
     // Sort descending by issue date for display
     normalized.sort(
-      (a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    // Apply discount logic based on number of communities for this manager
-    const discounted = withDiscountedAmounts(normalized);
+    // Apply discount logic using stored discount_percentage from database
+    const discounted = applyDiscountFromDatabase(normalized);
 
     setInvoices(discounted);
     setStartDate(discounted[discounted.length - 1]?.periodStart ?? null);
@@ -127,6 +126,69 @@ export function useBilling() {
     loadInvoices();
   }, [authLoading, loadInvoices]);
 
+  const createInvoice = async (invoiceData: {
+    community_id: string;
+    issue_date: string;
+    period_start: string;
+    period_end: string;
+    amount_cents: number;
+    currency: string;
+    status: string;
+  }) => {
+    setIsLoading(true);
+    try {
+      // Get the current session to pass auth header
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        throw new Error('Unable to get session for invoice creation');
+      }
+
+      // Call the create-first-invoice edge function (handles both automatic and manual creation)
+      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-first-invoice`;
+
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(invoiceData),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({ error: 'Failed to create invoice' }));
+        console.error('Failed to create invoice:', response.status, errorBody);
+        throw new Error(errorBody.error || 'Failed to create invoice');
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      // Handle case where invoice already exists
+      if (result.created === 0 && result.data) {
+        console.log(`ℹ Invoice already exists for community ${invoiceData.community_id}`);
+        return result.data;
+      }
+
+      const invoice = result.data;
+      console.log(`✅ Created invoice #${invoice.invoice_no} for community ${invoiceData.community_id}`);
+
+      // Refresh invoices list
+      await loadInvoices();
+
+      return invoice;
+    } catch (err) {
+      console.error('Unexpected error creating invoice:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return useMemo(
     () => ({
       enabled,
@@ -137,7 +199,9 @@ export function useBilling() {
       refresh: async () => {
         if (!authLoading) await loadInvoices();
       },
+      createInvoice,
     }),
     [enabled, startDate, renewalDate, invoices, isLoading, authLoading, loadInvoices]
   );
 }
+

@@ -179,7 +179,7 @@ export const adminResetUserPassword = async (userId: string, newPassword: string
   try {
     // Get the current session to pass auth header
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (!session) {
       return { data: null, error: { message: 'Not authenticated' } };
     }
@@ -250,97 +250,40 @@ export const getPDFUrl = (content: { url?: string; storage_pdf_path?: string }):
   return '';
 };
 
-// AUTO-GENERATE INVOICE FOR COMMUNITY MANAGER AFTER LOGIN
-export const ensureCommunityManagerInvoices = async (userId: string) => {
+// AUTO-GENERATE FIRST INVOICE FOR COMMUNITY MANAGER VIA EDGE FUNCTION AFTER LOGIN
+export const ensureCommunityManagerInvoices = async (_userId: string) => {
   try {
-    console.log("🔍 Checking if invoices need to be generated for user:", userId);
+    // Use the current session's access token to call the secured edge function
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    // 1. Get communities managed by this user
-    const { data: managerCommunities, error: cmError } = await supabase
-      .from('community_managers')
-      .select('community_id, communities:community_id(name, membership_tier)')
-      .eq('user_id', userId);
-
-    if (cmError) {
-      console.error("❌ Error loading community managers:", cmError);
+    if (sessionError || !session?.access_token) {
+      console.error("❌ Unable to get session for invoice generation:", sessionError);
       return;
     }
 
-    if (!managerCommunities || managerCommunities.length === 0) {
-      console.log("ℹ No managed communities found. Skipping invoice generation.");
-      return;
-    }
+    const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-first-invoice`;
 
-    const communityMeta = managerCommunities.map(row => {
-      const community = Array.isArray(row.communities)
-        ? row.communities[0]
-        : row.communities;
-
-      return {
-        communityId: row.community_id,
-        communityTier: community?.membership_tier ?? "silver",
-      };
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({}),
     });
 
-    const today = new Date().toISOString().slice(0, 10);
-
-    // 2. Fetch existing invoices for this period
-    const { data: existingInvoices, error: invoicesError } = await supabase
-      .from('invoices')
-      .select('community_id, period_start')
-      .in('community_id', communityMeta.map(c => c.communityId))
-      .eq('period_start', today); // check only invoices for this period
-
-    if (invoicesError) {
-      console.error("❌ Error fetching existing invoices:", invoicesError);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("❌ Failed to trigger create-first-invoice function:", response.status, errorBody);
       return;
     }
 
-    const communitiesWithoutInvoice = communityMeta.filter(
-      meta => !existingInvoices?.some(
-        inv => inv.community_id === meta.communityId && inv.period_start === today
-      )
-    );
-
-    if (communitiesWithoutInvoice.length === 0) {
-      console.log("✔ All communities already have invoices for today. No new invoice needed.");
-      return;
-    }
-
-    console.log("🆕 Communities missing invoices for this period:", communitiesWithoutInvoice);
-
-    // 3. Create invoice for communities missing one
-    for (const meta of communitiesWithoutInvoice) {
-      const amount = meta.communityTier.toLowerCase() === "gold" ? 500000 : 250000;
-      const nextYear = new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-        .toISOString()
-        .slice(0, 10);
-
-      const { data: inserted, error: insertError } = await supabase
-        .from('invoices')
-        .upsert([
-          {
-            community_id: meta.communityId,
-            issue_date: today,
-            period_start: today,
-            period_end: nextYear,
-            amount_cents: amount,
-            currency: 'USD',
-            status: 'issued',
-          },
-        ], { onConflict: ['community_id', 'period_start'], ignoreDuplicates: true })
-        .select();
-
-      if (insertError) {
-        console.error(`❌ Failed to create invoice for community ${meta.communityId}:`, insertError);
-      } else if (inserted && inserted.length > 0) {
-        console.log(`✅ Invoice created for community ${meta.communityId} (id: ${inserted[0].id})`);
-      } else {
-        console.log(`ℹ Invoice already exists for community ${meta.communityId} today, skipping.`);
-      }
-    }
-
+    const result = await response.json().catch(() => null);
+    console.log("✅ create-first-invoice function result:", result);
   } catch (err) {
-    console.error("❌ Unexpected error generating invoice:", err);
+    console.error("❌ Unexpected error calling create-first-invoice function:", err);
   }
 };

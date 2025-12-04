@@ -18,7 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const currentUserIdRef = useRef<string | null>(null);
   const isFetchingRef = useRef(false);
-  const invoiceGeneratedRef = useRef(false);
+  const invoiceGeneratedForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -85,10 +85,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('🔑 Final role set to:', appUser.role);
           currentUserIdRef.current = session.user.id;
           setUser(appUser);
-          if (appUser.role === "community_manager" && !invoiceGeneratedRef.current) {
-            invoiceGeneratedRef.current = true;
-            console.log("⚡ Generating invoices on initial session load...");
-            await ensureCommunityManagerInvoices(appUser.id);
+          
+          // Generate invoices immediately for community managers on login
+          if (appUser.role === "community_manager" && invoiceGeneratedForUserRef.current !== appUser.id) {
+            invoiceGeneratedForUserRef.current = appUser.id;
+            console.log("⚡ Generating invoices immediately on login for community manager:", appUser.id);
+            // Don't await - let it run in background so login isn't blocked
+            ensureCommunityManagerInvoices(appUser.id).catch(err => {
+              console.error("❌ Error generating invoices on login:", err);
+              // Reset ref on error so it can retry
+              invoiceGeneratedForUserRef.current = null;
+            });
           }
         } else {
           setUser(null);
@@ -170,16 +177,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log('🔑 Final role in auth state change:', appUser.role);
               currentUserIdRef.current = session.user.id;
               setUser(appUser);
-              if (appUser.role === "community_manager" && !invoiceGeneratedRef.current) {
-                invoiceGeneratedRef.current = true;
-                console.log("⚡ Generating invoices on auth state change...");
-                await ensureCommunityManagerInvoices(appUser.id);
+              
+              // Generate invoices immediately for community managers on login
+              if (appUser.role === "community_manager" && invoiceGeneratedForUserRef.current !== appUser.id) {
+                invoiceGeneratedForUserRef.current = appUser.id;
+                console.log("⚡ Generating invoices immediately on auth state change for community manager:", appUser.id);
+                // Don't await - let it run in background so login isn't blocked
+                ensureCommunityManagerInvoices(appUser.id).catch(err => {
+                  console.error("❌ Error generating invoices on login:", err);
+                  // Reset ref on error so it can retry
+                  invoiceGeneratedForUserRef.current = null;
+                });
               }
 
             } else {
               if (mounted) {
                 currentUserIdRef.current = null;
                 setUser(null);
+                invoiceGeneratedForUserRef.current = null; // Reset when user logs out
               }
             }
           } catch (error) {
