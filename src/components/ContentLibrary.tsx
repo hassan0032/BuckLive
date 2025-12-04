@@ -1,40 +1,98 @@
 import { BookOpen, Clock, Download, FileText, Loader2, Search, Tag, Video, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { getThumbnailUrl } from '../lib/supabase';
 import { Content, CONTENT_TYPE, ContentType, PAYMENT_TIER } from '../types';
 import { cn } from '../utils/helper';
 
 export const ContentLibrary: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { content, loading, searching, searchContent } = useContent();
   const navigate = useNavigate();
-  const location = useLocation();
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Initialize state from URL params
+  const [selectedType, setSelectedType] = useState<string>(searchParams.get('type') || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || '');
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    searchParams.get('tags') ? searchParams.get('tags')!.split(',') : []
+  );
+
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteResults, setAutocompleteResults] = useState<Array<{ type: 'title' | 'tag' | 'category'; value: string; content?: Content }>>([]);
   const [selectedAutocompleteIndex, setSelectedAutocompleteIndex] = useState(-1);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
   const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
 
   useEffect(() => {
-    if (content && content.length > 0 && allCategories.length === 0) {
-      const cats = Array.from(new Set(content.map(item => item.category)));
-      setAllCategories(cats);
+    // Only derive categories and tags once from the full, unfiltered content list
+    // so that dropdowns always show all options even when filters are active.
+    if (!content || content.length === 0 || allCategories.length > 0 || allTags.length > 0) {
+      return;
     }
-  }, [content]);
 
+    const cats = Array.from(new Set(content.map(item => item.category)));
+    setAllCategories(cats);
+
+    const tags = new Set<string>();
+    content.forEach(item => {
+      item.tags.forEach(tag => tags.add(tag));
+    });
+    setAllTags(Array.from(tags));
+  }, [content, allCategories.length, allTags.length]);
+
+  const performSearch = useCallback(async (query: string, type: string, category: string, tags: string[]) => {
+    await searchContent(query, type, category, tags);
+  }, [searchContent]);
+
+  const hasAppliedInitialFilters = useRef(false);
+
+  // Sync state with URL params
   useEffect(() => {
-    if (location.state?.selectedTag) {
-      const tag = location.state.selectedTag;
-      setSelectedTags([tag]);
-      searchContent(searchQuery, selectedType, selectedCategory, [tag]);
+    if (loading) return;
+
+    const type = searchParams.get('type') || '';
+    const category = searchParams.get('category') || '';
+    const tagsStr = searchParams.get('tags');
+    const tags: string[] = tagsStr ? tagsStr.split(',') : [];
+
+    // Check if params match current state
+    const typeChanged = type !== selectedType;
+    const categoryChanged = category !== selectedCategory;
+    const tagsChanged = tags.length !== selectedTags.length ||
+      tags.some((tag, index) => tag !== selectedTags[index]);
+
+    const paramsChanged = typeChanged || categoryChanged || tagsChanged;
+    const hasFilters = type || category || tags.length > 0;
+
+    if (paramsChanged) {
+      if (typeChanged) setSelectedType(type);
+      if (categoryChanged) setSelectedCategory(category);
+      if (tagsChanged) setSelectedTags(tags);
+
+      setSearchQuery('');
+      performSearch('', type, category, tags);
+    } else if (!hasAppliedInitialFilters.current && hasFilters) {
+      // Initial load with filters - content is currently "all", so we must search
+      performSearch('', type, category, tags);
+      hasAppliedInitialFilters.current = true;
     }
-  }, [location.state]);
+
+  }, [searchParams, loading, selectedType, selectedCategory, selectedTags, performSearch]);
+
+  // Helper to update URL
+  const updateFilters = useCallback((type: string, category: string, tags: string[]) => {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (category) params.set('category', category);
+    if (tags.length > 0) params.set('tags', tags.join(','));
+
+    setSearchParams(params);
+  }, [setSearchParams]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -46,10 +104,6 @@ export const ContentLibrary: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const performSearch = useCallback(async (query: string, type: string, category: string, tags: string[]) => {
-    await searchContent(query, type, category, tags);
-  }, [searchContent]);
 
   const generateAutocomplete = useCallback((query: string) => {
     if (!query.trim() || query.trim().length < 2) {
@@ -116,13 +170,11 @@ export const ContentLibrary: React.FC = () => {
     if (result.type === 'title' && result.content) {
       navigate(`/content/${result.content.id}`);
     } else if (result.type === 'tag') {
-      setSelectedTags([result.value]);
+      updateFilters(selectedType, selectedCategory, [result.value]);
       setSearchQuery('');
-      performSearch('', selectedType, selectedCategory, [result.value]);
     } else if (result.type === 'category') {
-      setSelectedCategory(result.value);
+      updateFilters(selectedType, result.value, selectedTags);
       setSearchQuery('');
-      performSearch('', selectedType, result.value, selectedTags);
     }
     setShowAutocomplete(false);
     setSelectedAutocompleteIndex(-1);
@@ -165,24 +217,22 @@ export const ContentLibrary: React.FC = () => {
   };
 
   const handleTypeChange = (value: string) => {
-    setSelectedType(value);
-    performSearch(searchQuery, value, selectedCategory, selectedTags);
+    updateFilters(value, selectedCategory, selectedTags);
   };
 
   const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    performSearch(searchQuery, selectedType, value, selectedTags);
+    updateFilters(selectedType, value, selectedTags);
   };
 
   const handleTagClick = async (tag: string) => {
-    const newTags = selectedTags.includes(tag) ? selectedTags.filter(t => t !== tag) : [tag];
-    setSelectedTags(newTags);
-    await searchContent(searchQuery, selectedType, selectedCategory, newTags);
+    const newTags = selectedTags.includes(tag)
+      ? selectedTags.filter(t => t !== tag)
+      : [...selectedTags, tag];
+    updateFilters(selectedType, selectedCategory, newTags);
   };
 
   const clearTagFilter = async () => {
-    setSelectedTags([]);
-    await searchContent(searchQuery, selectedType, selectedCategory, []);
+    updateFilters(selectedType, selectedCategory, []);
   };
 
   const formatDuration = (seconds?: number) => {
@@ -219,8 +269,8 @@ export const ContentLibrary: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-    </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+      </div>
     );
   }
 
@@ -334,7 +384,7 @@ export const ContentLibrary: React.FC = () => {
             >
               <option value="">All Categories</option>
               {allCategories.map((category) => (
-               <option key={category} value={category}>{category}</option>
+                <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </div>
@@ -420,8 +470,8 @@ export const ContentLibrary: React.FC = () => {
                           handleTagClick(tag);
                         }}
                         className={`inline-flex items-center px-2 py-1 text-xs rounded-md transition-all hover:scale-105 ${selectedTags.includes(tag)
-                            ? 'bg-brand-primary text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-brand-primary text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                       >
                         <Tag className="h-3 w-3 mr-1" />

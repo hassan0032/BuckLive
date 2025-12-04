@@ -2,10 +2,10 @@ import { Bell, Library, LogOut, Settings, User, Users } from 'lucide-react';
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotificationContext } from '../contexts/NotificationContext';
 import { signOut } from '../lib/supabase';
 import { Footer } from './Footer';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
-import { useNotifications } from '../hooks/useNotifications';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,13 +17,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
 
   // Fetch unread count for managers (admin notifications)
-  const { unreadCount: managerUnreadCount } = useAdminNotifications({ 
-    includeReadStatus: isCommunityManager && !isAdmin 
+  const { unreadCount: managerUnreadCount } = useAdminNotifications({
+    includeReadStatus: isCommunityManager && !isAdmin
   });
-  
-  // Fetch unread count for admins (community notifications)
-  const { unreadCount: adminUnreadCount } = useNotifications();
-  
+
+  // Fetch unread count for admins (community notifications) - uses unified context
+  const { unreadCount: adminUnreadCount } = useNotificationContext();
+
   // Use the appropriate unread count based on user role
   const unreadCount = isAdmin ? adminUnreadCount : managerUnreadCount;
 
@@ -88,7 +88,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       } catch {
                         // Ignore localStorage errors (e.g., in private mode)
                       }
-                      navigate('/admin');
+                      navigate('/admin', {
+                        state: {
+                          forceTab: 'notifications',
+                          // Include a timestamp so navigation is treated as a new
+                          // location even if we're already on /admin.
+                          ts: Date.now(),
+                        },
+                      });
                     } else {
                       navigate('/notifications');
                     }

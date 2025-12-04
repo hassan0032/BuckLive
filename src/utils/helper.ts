@@ -23,85 +23,39 @@ const BASE_COMMUNITY_PRICES = {
   gold: 5000,
 } as const;
 
-function getDiscountRate(newTotal: number) {
-  if (newTotal >= 20) return 0.4;
-  if (newTotal >= 10) return 0.36;
-  if (newTotal >= 6) return 0.3;
-
-  switch (newTotal) {
-    case 5:
-      return 0.2;
-    case 4:
-      return 0.15;
-    case 3:
-      return 0.1;
-    case 2:
-      return 0.05;
-    default:
-      return 0;
-  }
-}
-
-export function calculateCommunityPrice(existingCommunitiesCount: number, communityType: 'silver' | 'gold') {
-  const normalizedExisting = Math.max(0, existingCommunitiesCount || 0);
-  const newTotal = normalizedExisting + 1;
-  const basePrice = BASE_COMMUNITY_PRICES[communityType] ?? BASE_COMMUNITY_PRICES.silver;
-  const discountRate = getDiscountRate(newTotal);
-
-  return Math.round(basePrice * (1 - discountRate));
-}
-
 type PricingInput = {
   id?: string
   invoice_no: number
   userId?: string | null
+  communityId?: string | null
   issueDate?: string | null
   periodStart?: string | null
   communityTier?: 'gold' | 'silver' | undefined
   amountCents?: number
+  createdAt?: string | null
 }
 
-function getInvoiceKey(inv: PricingInput) {
-  return inv.id ?? `${inv.userId ?? 'unknown'}-${inv.invoice_no}`
-}
-
-function getInvoiceSortDate(inv: PricingInput) {
-  return inv.issueDate || inv.periodStart || ''
-}
-
-export function withDiscountedAmounts<T extends PricingInput>(invoices: T[]): Array<T & { calculatedAmountCents?: number }> {
-  const grouped = invoices.reduce<Map<string, T[]>>((acc, invoice) => {
-    const key = invoice.userId ?? 'unknown'
-    if (!acc.has(key)) {
-      acc.set(key, [])
-    }
-    acc.get(key)!.push(invoice)
-    return acc
-  }, new Map())
-
-  const calculatedMap = new Map<string, number>()
-
-  grouped.forEach((list) => {
-    const sorted = [...list].sort((a, b) => {
-      const aDate = new Date(getInvoiceSortDate(a)).getTime()
-      const bDate = new Date(getInvoiceSortDate(b)).getTime()
-      return aDate - bDate
-    })
-
-    sorted.forEach((invoice, index) => {
-      const price = calculateCommunityPrice(index, invoice.communityTier ?? 'silver')
-      calculatedMap.set(getInvoiceKey(invoice), price * 100)
-    })
-  })
-
+/**
+ * Apply discount using stored discount_percentage from database
+ * This replaces the old calculation logic and uses the value stored when invoice was created
+ */
+export function applyDiscountFromDatabase<T extends PricingInput & { discountPercentage?: number }>(
+  invoices: T[]
+): Array<T & { calculatedAmountCents?: number }> {
   return invoices.map((invoice) => {
-    const key = getInvoiceKey(invoice)
-    const cents = calculatedMap.get(key)
+    const discountPercentage = invoice.discountPercentage ?? 0;
+    const originalAmountCents = invoice.amountCents ?? 0;
+    
+    // Calculate discounted amount: original * (1 - discountPercentage / 100)
+    const discountedAmountCents = Math.round(
+      originalAmountCents * (1 - discountPercentage / 100)
+    );
+    
     return {
       ...invoice,
-      calculatedAmountCents: cents ?? invoice.amountCents,
-    }
-  })
+      calculatedAmountCents: discountedAmountCents,
+    };
+  });
 }
 
 type InvoicePdfData = {
@@ -458,7 +412,7 @@ export function generateInvoicePdf({
         </thead>
         <tbody>
           <tr>
-            <td class="community-name">${community} - ${tier} Tier - ${periodStart} - ${periodEnd}</td>
+            <td class="community-name">${community} - ${tier.charAt(0).toUpperCase() + tier.slice(1)} Tier - ${periodStart} - ${periodEnd}</td>
             <td>${originalAmountDisplay}</td>
             <td>${originalAmountDisplay}</td>
           </tr>
@@ -507,15 +461,15 @@ export function generateInvoicePdf({
     margin: [10, 10, 10, 10] as [number, number, number, number], // Reduced margins for Safari
     filename: `invoice-${invoiceNo}.pdf`,
     image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { 
+    html2canvas: {
       scale: 2,
       useCORS: true,
       logging: false,
       windowHeight: 1123, // A4 height in pixels at 96 DPI
     },
-    jsPDF: { 
-      unit: "pt", 
-      format: "a4", 
+    jsPDF: {
+      unit: "pt",
+      format: "a4",
       orientation: "portrait" as const,
       compress: true
     },

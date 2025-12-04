@@ -1,7 +1,7 @@
 import React, { FormEvent, useState } from 'react';
 import { Loader2, PlusCircle, Trash2, X, Bell, CheckCircle, Circle } from 'lucide-react';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
-import { useNotifications } from '../hooks/useNotifications';
+import { useNotificationContext } from '../contexts/NotificationContext';
 
 import { Notification } from '../types';
 
@@ -21,7 +21,7 @@ const AdminNotifications: React.FC = () => {
         deleteNotification: deleteAdminNotification,
     } = useAdminNotifications();
 
-    // For viewing user notifications from community creation
+    // For viewing user notifications from community creation - uses unified context
     const {
         notifications: userNotifications,
         loading: userLoading,
@@ -31,7 +31,7 @@ const AdminNotifications: React.FC = () => {
         unreadCount,
         markAsRead,
         deleteNotification: deleteUserNotification,
-    } = useNotifications();
+    } = useNotificationContext();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [title, setTitle] = useState('');

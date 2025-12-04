@@ -1,5 +1,6 @@
 import { BarChart3, Edit, FileText, Image as ImageIcon, Loader2, Plus, Trash2, Upload } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useCommunities } from '../hooks/useCommunities';
 import { useContent } from '../hooks/useContent';
 import { useDocuments } from '../hooks/useDocuments';
@@ -40,7 +41,13 @@ const generateAccessCode = () => {
   return result;
 };
 
+type AdminLocationState = {
+  forceTab?: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback';
+  ts?: number;
+} | null;
+
 export const AdminDashboard: React.FC = () => {
+  const location = useLocation();
   const { content, addContent, updateContent, deleteContent } = useContent();
   const { loading: communitiesLoading, communities, addCommunity, updateCommunity, deleteCommunity } = useCommunities();
   const [showForm, setShowForm] = useState(false);
@@ -67,6 +74,19 @@ export const AdminDashboard: React.FC = () => {
   const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents'>('details');
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
   const [deletingPdfId, setDeletingPdfId] = useState<string | null>(null);
+
+  // Sync active tab with navigation state so external navigation (e.g. header bell)
+  // can always force the "notifications" tab even when already on /admin, without
+  // changing the URL.
+  useEffect(() => {
+    const allowedTabs = ['content', 'communities', 'users', 'analytics', 'invoices', 'notifications', 'feedback'] as const;
+    const state = (location.state as AdminLocationState) || null;
+    const tabParam = state?.forceTab;
+
+    if (tabParam && (allowedTabs as readonly string[]).includes(tabParam) && tabParam !== activeTab) {
+      handleSetActiveTab(tabParam as (typeof allowedTabs)[number]);
+    }
+  }, [location.state, activeTab]);
 
   const handleSetActiveTab = (tab: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback') => {
     setActiveTab(tab);
@@ -652,8 +672,8 @@ export const AdminDashboard: React.FC = () => {
                       type="button"
                       onClick={() => setCommunityModalTab('details')}
                       className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${communityModalTab === 'details'
-                          ? 'border-brand-primary text-brand-primary'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                        ? 'border-brand-primary text-brand-primary'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                         }`}
                     >
                       Community Details
@@ -662,8 +682,8 @@ export const AdminDashboard: React.FC = () => {
                       type="button"
                       onClick={() => setCommunityModalTab('documents')}
                       className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${communityModalTab === 'documents'
-                          ? 'border-brand-primary text-brand-primary'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                        ? 'border-brand-primary text-brand-primary'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                         }`}
                     >
                       PDF Library
