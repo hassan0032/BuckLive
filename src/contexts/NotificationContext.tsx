@@ -29,6 +29,7 @@ interface NotificationContextType {
     creating: boolean;
     deletingId: string | null;
     markingAsReadId: string | null;
+    updatingId: string | null; // Alias for markingAsReadId for compatibility
     createNotification: (input: CreateNotificationInput) => Promise<CreateNotificationResult>;
     deleteNotification: (id: string) => Promise<DeleteNotificationResult>;
     markAsRead: (id: string) => Promise<MarkAsReadResult>;
@@ -39,7 +40,7 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user, isCommunityManager } = useAuth();
+    const { user, isCommunityManager, isAdmin } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -48,14 +49,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const [markingAsReadId, setMarkingAsReadId] = useState<string | null>(null);
     const [unreadCount, setUnreadCount] = useState(0);
 
+    // Determine notification type based on user role
+    const notificationType = isAdmin ? 'community_manager' : 'admin';
+    const shouldFetch = (isCommunityManager || isAdmin) && user;
+
     // Calculate unread count whenever notifications change
     useEffect(() => {
-        setUnreadCount(notifications.filter(n => !n.is_read).length);
-    }, [notifications]);
+        const relevantNotifications = notifications.filter(n => n.type === notificationType);
+        setUnreadCount(relevantNotifications.filter(n => !n.is_read).length);
+    }, [notifications, notificationType]);
 
     const fetchNotifications = useCallback(async () => {
-        // Only fetch for community managers
-        if (!isCommunityManager || !user) {
+        // Only fetch for community managers or admins
+        if (!shouldFetch) {
             setNotifications([]);
             setLoading(false);
             return;
@@ -64,12 +70,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         try {
             setLoading(true);
 
-            const { data, error: fetchError } = await supabase
+            let query = supabase
                 .from('notifications')
-                .select('*')
-                .eq('type', 'admin')
-                .eq('user_id', user.id)
+                .select(`
+                    *,
+                    user_profiles!notifications_user_id_fkey (
+                        first_name,
+                        last_name
+                    )
+                `)
+                .eq('user_id', user!.id)
+                .eq('type', notificationType)
                 .order('created_at', { ascending: false });
+
+            const { data, error: fetchError } = await query;
 
             if (fetchError) throw fetchError;
             setNotifications(data || []);
@@ -81,7 +95,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } finally {
             setLoading(false);
         }
-    }, [user, isCommunityManager]);
+    }, [user, isCommunityManager, isAdmin, shouldFetch]);
 
     const createNotification = useCallback(
         async ({ title, content }: CreateNotificationInput): Promise<CreateNotificationResult> => {
@@ -191,8 +205,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     throw new Error('User not authenticated');
                 }
 
-                // Get all unread notification IDs for this user
-                const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+                // Get all unread notification IDs for this user of the relevant type
+                const relevantNotifications = notifications.filter(n => n.type === notificationType && !n.is_read);
+                const unreadIds = relevantNotifications.map(n => n.id);
 
                 if (unreadIds.length === 0) {
                     return { error: null };
@@ -207,7 +222,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                         read_at: readDate
                     })
                     .eq('user_id', user.id)
-                    .eq('type', 'admin')
                     .eq('is_read', false)
                     .in('id', unreadIds);
 
@@ -215,11 +229,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
                 // Update local state
                 setNotifications(prev =>
-                    prev.map(n => ({
-                        ...n,
-                        is_read: true,
-                        read_at: readDate
-                    }))
+                    prev.map(n => 
+                        unreadIds.includes(n.id)
+                            ? { ...n, is_read: true, read_at: readDate }
+                            : n
+                    )
                 );
 
                 setError(null);
@@ -230,18 +244,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 return { error: message };
             }
         },
-        [notifications, user]
+        [notifications, user, notificationType]
     );
 
     // Initial fetch and real-time subscription
     useEffect(() => {
         fetchNotifications();
 
-        if (!isCommunityManager || !user) return;
+        if (!shouldFetch || !user) return;
 
         // Subscribe to real-time updates for notifications table
         const setupSubscription = async () => {
-            const channelName = `manager_notifications_${user.id}`;
+            const channelName = `notifications_${user.id}_${notificationType}`;
 
             const subscription = supabase
                 .channel(channelName)
@@ -268,7 +282,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return () => {
             subscriptionPromise.then(subscription => subscription.unsubscribe());
         };
-    }, [fetchNotifications, isCommunityManager, user]);
+    }, [fetchNotifications, shouldFetch, user, notificationType]);
 
     const value: NotificationContextType = {
         notifications,
@@ -278,6 +292,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         creating,
         deletingId,
         markingAsReadId,
+        updatingId: markingAsReadId, // Alias for compatibility
         createNotification,
         deleteNotification,
         markAsRead,
