@@ -179,15 +179,33 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        // Renewal invoices are always full year (not prorated)
+        // Get manager's billing date for renewal period calculation
+        let renewalPeriodEnd = addYears(todayYMD, 1); // fallback
+        let renewalDays = 365;
+
+        if (primaryManagerId) {
+          const { data: managerProfile, error: managerError } = await supabase
+            .from("user_profiles")
+            .select("billing_date")
+            .eq("id", primaryManagerId)
+            .single();
+
+          if (!managerError && managerProfile?.billing_date) {
+            renewalPeriodEnd = getNextBillingDate(managerProfile.billing_date, todayYMD);
+            renewalDays = daysBetween(todayYMD, renewalPeriodEnd);
+          }
+        }
+
+        // Renewal invoices are always full year (not prorated), but aligned to billing date
+        const isRenewalProrated = renewalDays < 364; // Very rare, but possible for leap years
         const finalAmount = applyDiscount(baseAmount, discountPercentage);
 
-        console.log(`Renewal: Community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, amount_cents=${baseAmount}, discount=${discountPercentage}%, finalAmount=${finalAmount}`);
+        console.log(`Renewal: Community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, periodStart=${todayYMD}, periodEnd=${renewalPeriodEnd}, days=${renewalDays}, isProrated=${isRenewalProrated}, amount_cents=${baseAmount}, discount=${discountPercentage}%, finalAmount=${finalAmount}`);
 
         const { error: insertError } = await supabase.from("invoices").insert({
           issue_date: todayYMD,
           period_start: todayYMD,
-          period_end: addYears(todayYMD, 1),
+          period_end: renewalPeriodEnd,
           amount_cents: baseAmount, // Store base amount WITHOUT discount
           full_year_amount_cents: baseAmount,
           currency: 'USD',
@@ -196,8 +214,8 @@ Deno.serve(async (req: Request) => {
           discount_percentage: discountPercentage,
           community_manager_email: managerEmail,
           community_manager_name: managerName,
-          is_prorated: false,
-          prorated_days: 365,
+          is_prorated: isRenewalProrated,
+          prorated_days: renewalDays,
         });
 
         if (insertError) {
@@ -293,28 +311,27 @@ Deno.serve(async (req: Request) => {
           // period_start is the community creation date
           const periodStart = communityCreatedAt ? formatYMD(new Date(communityCreatedAt)) : todayYMD;
 
-          // Calculate if this is the first community (billing_date same as period_start day/month)
-          // or a subsequent community (needs proration)
-          const nextBillingDate = getNextBillingDate(billingDate, periodStart);
-          const daysUntilBilling = daysBetween(periodStart, nextBillingDate);
+          // period_end is ALWAYS the next billing date occurrence
+          const periodEnd = getNextBillingDate(billingDate, periodStart);
+          const daysInPeriod = daysBetween(periodStart, periodEnd);
 
-          // If days until billing is roughly a year (355-375 days), treat as first/aligned community
-          const isProrated = daysUntilBilling < 355;
-          const proratedDays = isProrated ? daysUntilBilling : 365;
-          const periodEnd = isProrated ? nextBillingDate : addYears(periodStart, 1);
+          console.log(`DEBUG: community=${communityName}, billingDate=${billingDate}, periodStart=${periodStart}, periodEnd=${periodEnd}, daysInPeriod=${daysInPeriod}`);
 
-          // Calculate amount
-          let amountBeforeDiscount: number;
-          if (isProrated) {
-            amountBeforeDiscount = calculateProratedAmount(proratedDays, baseAmount);
-          } else {
-            amountBeforeDiscount = baseAmount;
-          }
+          // Apply proration if the period is less than 365 days (not a full year)
+          const isProrated = daysInPeriod < 365;
+          const proratedDays = daysInPeriod;
+
+          // Calculate amount - prorate if period is less than 364 days
+          const amountBeforeDiscount = isProrated
+            ? calculateProratedAmount(proratedDays, baseAmount)
+            : baseAmount;
+
+          console.log(`DEBUG: daysInPeriod=${daysInPeriod}, isProrated=${isProrated}, proratedDays=${proratedDays}, baseAmount=${baseAmount}, calculatedProrated=${calculateProratedAmount(proratedDays, baseAmount)}, amountBeforeDiscount=${amountBeforeDiscount}`);
 
           // Apply discount AFTER proration
           const finalAmount = applyDiscount(amountBeforeDiscount, discountPercentage);
 
-          console.log(`New Invoice: Community=${communityName}, tier=${tier}, periodStart=${periodStart}, periodEnd=${periodEnd}, isProrated=${isProrated}, proratedDays=${proratedDays}, amount_cents=${amountBeforeDiscount}, discount=${discountPercentage}%, finalAmount=${finalAmount}`);
+          console.log(`New Invoice: Community=${communityName}, tier=${tier}, periodStart=${periodStart}, periodEnd=${periodEnd}, daysInPeriod=${daysInPeriod}, isProrated=${isProrated}, proratedDays=${proratedDays}, amount_cents=${amountBeforeDiscount}, discount=${discountPercentage}%, finalAmount=${finalAmount}`);
 
           const { error: insertError } = await supabase.from("invoices").insert({
             issue_date: todayYMD,
