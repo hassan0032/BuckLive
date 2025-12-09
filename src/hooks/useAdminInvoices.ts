@@ -24,6 +24,13 @@ interface InvoiceData {
   communityTier: 'gold' | 'silver' | undefined
   id: string // Invoice ID for updates
   calculatedAmountCents?: number
+  // New fields for proration
+  isProrated?: boolean
+  proratedDays?: number
+  fullYearAmountCents?: number
+  communityManagerEmail?: string | null
+  communityManagerName?: string | null
+  createdAt?: string
 }
 
 export function useAdminInvoices() {
@@ -84,6 +91,12 @@ export function useAdminInvoices() {
           communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
           id: inv.id,
           createdAt: inv.created_at,
+          // New proration fields
+          isProrated: inv.is_prorated ?? false,
+          proratedDays: inv.prorated_days ?? undefined,
+          fullYearAmountCents: inv.full_year_amount_cents ?? undefined,
+          communityManagerEmail: inv.community_manager_email ?? null,
+          communityManagerName: inv.community_manager_name ?? null,
         }))
 
         setInvoices(applyDiscountFromDatabase(normalizedInvoices))
@@ -151,6 +164,13 @@ export function useAdminInvoices() {
         communityCode: inv.community?.code || null,
         communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
         id: inv.id,
+        createdAt: inv.created_at,
+        // New proration fields
+        isProrated: inv.is_prorated ?? false,
+        proratedDays: inv.prorated_days ?? undefined,
+        fullYearAmountCents: inv.full_year_amount_cents ?? undefined,
+        communityManagerEmail: inv.community_manager_email ?? null,
+        communityManagerName: inv.community_manager_name ?? null,
       }))
 
       setInvoices(applyDiscountFromDatabase(normalizedInvoices))
@@ -208,6 +228,12 @@ export function useAdminInvoices() {
             communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
             id: inv.id,
             createdAt: inv.created_at,
+            // New proration fields
+            isProrated: inv.is_prorated ?? false,
+            proratedDays: inv.prorated_days ?? undefined,
+            fullYearAmountCents: inv.full_year_amount_cents ?? undefined,
+            communityManagerEmail: inv.community_manager_email ?? null,
+            communityManagerName: inv.community_manager_name ?? null,
           })).sort(
             (a, b) => {
               const aDate = new Date(a.createdAt).getTime()

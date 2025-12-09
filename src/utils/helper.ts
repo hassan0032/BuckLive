@@ -70,6 +70,9 @@ type InvoicePdfData = {
   billToEmail: string
   originalAmount?: string
   discountPercent?: number
+  isProrated?: boolean
+  proratedDays?: number
+  fullYearAmountCents?: number
 }
 
 export function generateInvoicePdf({
@@ -84,6 +87,9 @@ export function generateInvoicePdf({
   billToEmail,
   originalAmount,
   discountPercent: providedDiscountPercent,
+  isProrated = false,
+  proratedDays,
+  fullYearAmountCents,
 }: InvoicePdfData) {
   // Helpers to parse and format currency consistently
   function parseCurrencyToCents(value?: string) {
@@ -101,21 +107,30 @@ export function generateInvoicePdf({
 
   // Determine base/original price from tier (2500 for silver, 5000 for gold)
   const tierKey = tier === 'gold' ? 'gold' : 'silver'
-  const basePriceCents = (BASE_COMMUNITY_PRICES as any)[tierKey]
+  const basePriceCents = fullYearAmountCents ?? ((BASE_COMMUNITY_PRICES as any)[tierKey]
     ? (BASE_COMMUNITY_PRICES as any)[tierKey] * 100
-    : BASE_COMMUNITY_PRICES.silver * 100
+    : BASE_COMMUNITY_PRICES.silver * 100)
+
+  // For prorated invoices, calculate the prorated amount before discount
+  let proratedAmountCents = basePriceCents
+  if (isProrated && proratedDays && proratedDays < 365) {
+    proratedAmountCents = Math.round((proratedDays / 365) * basePriceCents)
+  }
 
   const origCentsFromArg = parseCurrencyToCents(originalAmount)
-  const origCents = origCentsFromArg > 0 ? origCentsFromArg : basePriceCents
+  const origCents = origCentsFromArg > 0 ? origCentsFromArg : (isProrated ? proratedAmountCents : basePriceCents)
   const discountedCents = parseCurrencyToCents(amount)
   const discountCents = Math.max(0, origCents - discountedCents)
   const discountPercent = typeof providedDiscountPercent === 'number'
     ? providedDiscountPercent
     : origCents > 0 ? Number(((discountCents / origCents) * 100).toFixed(2)) : 0
 
+  const fullYearAmountDisplay = formatCentsToCurrency(basePriceCents)
+  const proratedAmountDisplay = formatCentsToCurrency(proratedAmountCents)
   const originalAmountDisplay = formatCentsToCurrency(origCents)
   const discountedAmountDisplay = formatCentsToCurrency(discountedCents)
   const discountAmountDisplay = formatCentsToCurrency(discountCents)
+  const proratedSavingsDisplay = formatCentsToCurrency(basePriceCents - proratedAmountCents)
 
   const html = `
   <style>
@@ -412,14 +427,24 @@ export function generateInvoicePdf({
         </thead>
         <tbody>
           <tr>
-            <td class="community-name">${community} - ${tier.charAt(0).toUpperCase() + tier.slice(1)} Tier - ${periodStart} - ${periodEnd}</td>
-            <td>${originalAmountDisplay}</td>
-            <td>${originalAmountDisplay}</td>
+            <td class="community-name">${community} - ${tier.charAt(0).toUpperCase() + tier.slice(1)} Tier${isProrated ? ` (Prorated ${proratedDays} days)` : ''} - ${periodStart} - ${periodEnd}</td>
+            <td>${isProrated ? fullYearAmountDisplay + '/yr' : originalAmountDisplay}</td>
+            <td>${isProrated ? proratedAmountDisplay : originalAmountDisplay}</td>
           </tr>
         </tbody>
       </table>
 
       <div class="totals-section">
+          ${isProrated ? `
+            <div class="total-row">
+              <p class="total-label">Full Year Rate:</p>
+              <p class="total-value">${fullYearAmountDisplay}</p>
+            </div>
+            <div class="total-row">
+              <p class="total-label">Prorated Amount (${proratedDays} days):</p>
+              <p class="total-value">${proratedAmountDisplay}</p>
+            </div>
+          ` : ''}
           ${discountPercent > 0 ? `
             <div class="total-row">
               <p class="total-label">Discount (${discountPercent}%):</p>

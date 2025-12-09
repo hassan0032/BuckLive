@@ -241,6 +241,29 @@ async function handleCreateUser(
 
       if (managerError) {
         console.error("Community manager assignment error:", managerError);
+      } else {
+        // Set as primary_manager if the community doesn't have one yet
+        const { data: community, error: communityError } = await supabaseAdmin
+          .from("communities")
+          .select("primary_manager")
+          .eq("id", community_id)
+          .single();
+
+        if (communityError) {
+          console.error("Error checking community primary_manager:", communityError);
+        } else if (!community?.primary_manager) {
+          // Set this user as the primary_manager
+          const { error: updateError } = await supabaseAdmin
+            .from("communities")
+            .update({ primary_manager: authData.user.id })
+            .eq("id", community_id);
+
+          if (updateError) {
+            console.error("Error setting primary_manager:", updateError);
+          } else {
+            console.log(`Set user ${authData.user.id} as primary_manager for community ${community_id}`);
+          }
+        }
       }
     }
 

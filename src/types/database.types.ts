@@ -48,11 +48,18 @@ export interface Database {
           amount_cents: number
           currency: string
           status: string
+          discount_percentage: number
+          community_manager_email: string | null
+          community_manager_name: string | null
+          full_year_amount_cents: number | null
+          prorated_days: number | null
+          is_prorated: boolean
           created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
-          user_id: string | null
+          user_id?: string | null
           community_id?: string | null
           invoice_no?: number
           issue_date?: string | null
@@ -61,7 +68,14 @@ export interface Database {
           amount_cents: number
           currency: string
           status: string
+          discount_percentage?: number
+          community_manager_email?: string | null
+          community_manager_name?: string | null
+          full_year_amount_cents?: number | null
+          prorated_days?: number | null
+          is_prorated?: boolean
           created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
@@ -74,7 +88,14 @@ export interface Database {
           amount_cents?: number
           currency?: string
           status?: string
+          discount_percentage?: number
+          community_manager_email?: string | null
+          community_manager_name?: string | null
+          full_year_amount_cents?: number | null
+          prorated_days?: number | null
+          is_prorated?: boolean
           created_at?: string | null
+          updated_at?: string | null
         }
       }
       communities: {
@@ -138,6 +159,7 @@ export interface Database {
           subscription_start_date: string | null
           subscription_end_date: string | null
           is_shared_account: boolean
+          billing_date: string | null
           created_at: string
           updated_at: string
         }
@@ -157,6 +179,7 @@ export interface Database {
           subscription_start_date?: string | null
           subscription_end_date?: string | null
           is_shared_account?: boolean
+          billing_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -176,6 +199,7 @@ export interface Database {
           subscription_start_date?: string | null
           subscription_end_date?: string | null
           is_shared_account?: boolean
+          billing_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -462,6 +486,21 @@ export interface Database {
       get_share_token_community_id: {
         Args: Record<string, never>
         Returns: string | null
+      }
+      calculate_prorated_amount: {
+        Args: {
+          p_start_date: string
+          p_end_date: string
+          p_base_amount_cents: number
+        }
+        Returns: number
+      }
+      get_next_billing_date: {
+        Args: {
+          p_billing_date: string
+          p_from_date?: string
+        }
+        Returns: string
       }
     }
     Enums: {

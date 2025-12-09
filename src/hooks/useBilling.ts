@@ -102,6 +102,13 @@ export function useBilling() {
 
       createdAt: inv.created_at,
       userId: user.id,
+
+      // New proration fields
+      isProrated: inv.is_prorated ?? false,
+      proratedDays: inv.prorated_days ?? undefined,
+      fullYearAmountCents: inv.full_year_amount_cents ?? undefined,
+      communityManagerEmail: inv.community_manager_email ?? null,
+      communityManagerName: inv.community_manager_name ?? null,
     }));
 
     // Sort descending by issue date for display
