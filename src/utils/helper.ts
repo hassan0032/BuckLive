@@ -130,7 +130,6 @@ export function generateInvoicePdf({
   const originalAmountDisplay = formatCentsToCurrency(origCents)
   const discountedAmountDisplay = formatCentsToCurrency(discountedCents)
   const discountAmountDisplay = formatCentsToCurrency(discountCents)
-  const proratedSavingsDisplay = formatCentsToCurrency(basePriceCents - proratedAmountCents)
 
   const html = `
   <style>

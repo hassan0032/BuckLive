@@ -84,6 +84,19 @@ function applyDiscount(amountCents: number, discountPercentage: number): number 
   return Math.round(amountCents * (1 - discountPercentage / 100));
 }
 
+/**
+ * BUCK LIVE COMMUNITY MANAGER INVOICING (v1.0 - FINAL)
+ * 
+ * Rules:
+ * 1. Billing starts on first login → billing_date set on first login
+ * 2. First invoice issued the night after first login
+ * 3. period_start = invoice issue date (today)
+ * 4. period_end = next occurrence of manager's billing_date
+ * 5. amount_cents = pre-discount amount (list price)
+ * 6. Discount applied only in frontend and PDF for flexibility
+ * 7. All future invoices align to same annual date
+ */
+
 // --- Main Function ---
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -180,8 +193,8 @@ Deno.serve(async (req: Request) => {
         }
 
         // Get manager's billing date for renewal period calculation
-        let renewalPeriodEnd = addYears(todayYMD, 1); // fallback
-        let renewalDays = 365;
+        let periodEnd = addYears(todayYMD, 1); // fallback
+        let daysInPeriod = 365;
 
         if (primaryManagerId) {
           const { data: managerProfile, error: managerError } = await supabase
@@ -191,22 +204,32 @@ Deno.serve(async (req: Request) => {
             .single();
 
           if (!managerError && managerProfile?.billing_date) {
-            renewalPeriodEnd = getNextBillingDate(managerProfile.billing_date, todayYMD);
-            renewalDays = daysBetween(todayYMD, renewalPeriodEnd);
+            periodEnd = getNextBillingDate(managerProfile.billing_date, todayYMD);
+            daysInPeriod = daysBetween(todayYMD, periodEnd);
           }
         }
+        
+        // Apply proration if the period is less than 365 days (not a full year)
+        const isProrated = daysInPeriod < 364;
+        const proratedDays = daysInPeriod;
 
-        // Renewal invoices are always full year (not prorated), but aligned to billing date
-        const isRenewalProrated = renewalDays < 364; // Very rare, but possible for leap years
-        const finalAmount = applyDiscount(baseAmount, discountPercentage);
+        // Calculate amount - prorate if period is less than 364 days
+        const amountBeforeDiscount = isProrated
+          ? calculateProratedAmount(proratedDays, baseAmount)
+          : baseAmount;
+        
+        console.log(`DEBUG: daysInPeriod=${daysInPeriod}, isProrated=${isProrated}, proratedDays=${proratedDays}, baseAmount=${baseAmount}, calculatedProrated=${calculateProratedAmount(proratedDays, baseAmount)}, amountBeforeDiscount=${amountBeforeDiscount}`);
 
-        console.log(`Renewal: Community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, periodStart=${todayYMD}, periodEnd=${renewalPeriodEnd}, days=${renewalDays}, isProrated=${isRenewalProrated}, amount_cents=${baseAmount}, discount=${discountPercentage}%, finalAmount=${finalAmount}`);
+        // Apply discount AFTER proration
+        const finalAmount = applyDiscount(amountBeforeDiscount, discountPercentage);
+
+        console.log(`Renewal: Community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, periodStart=${todayYMD}, periodEnd=${periodEnd}, daysInPeriod=${daysInPeriod}, isProrated=${isProrated}, amount_cents=${baseAmount}, discount=${discountPercentage}%, finalAmount=${finalAmount}`);
 
         const { error: insertError } = await supabase.from("invoices").insert({
           issue_date: todayYMD,
           period_start: todayYMD,
-          period_end: renewalPeriodEnd,
-          amount_cents: baseAmount, // Store base amount WITHOUT discount
+          period_end: periodEnd,
+          amount_cents: amountBeforeDiscount,
           full_year_amount_cents: baseAmount,
           currency: 'USD',
           status: 'issued',
@@ -214,8 +237,8 @@ Deno.serve(async (req: Request) => {
           discount_percentage: discountPercentage,
           community_manager_email: managerEmail,
           community_manager_name: managerName,
-          is_prorated: isRenewalProrated,
-          prorated_days: renewalDays,
+          is_prorated: isProrated,
+          prorated_days: proratedDays,
         });
 
         if (insertError) {
@@ -307,18 +330,15 @@ Deno.serve(async (req: Request) => {
 
           const discountPercentage = countError ? 0 : getDiscountPercentage(communityCount || 0);
 
-          // Determine period_start and period_end
-          // period_start is the community creation date
-          const periodStart = communityCreatedAt ? formatYMD(new Date(communityCreatedAt)) : todayYMD;
+          // We don't backdate invoices to community creation date to avoid billing for past time
+          const periodEnd = getNextBillingDate(billingDate, todayYMD); // period_end is ALWAYS the next billing date occurrence
 
-          // period_end is ALWAYS the next billing date occurrence
-          const periodEnd = getNextBillingDate(billingDate, periodStart);
-          const daysInPeriod = daysBetween(periodStart, periodEnd);
+          const daysInPeriod = daysBetween(todayYMD, periodEnd);
 
-          console.log(`DEBUG: community=${communityName}, billingDate=${billingDate}, periodStart=${periodStart}, periodEnd=${periodEnd}, daysInPeriod=${daysInPeriod}`);
+          console.log(`DEBUG: community=${communityName}, billingDate=${billingDate}, periodStart=${todayYMD}, periodEnd=${periodEnd}, daysInPeriod=${daysInPeriod}`);
 
           // Apply proration if the period is less than 365 days (not a full year)
-          const isProrated = daysInPeriod < 365;
+          const isProrated = daysInPeriod < 364;
           const proratedDays = daysInPeriod;
 
           // Calculate amount - prorate if period is less than 364 days
@@ -331,11 +351,11 @@ Deno.serve(async (req: Request) => {
           // Apply discount AFTER proration
           const finalAmount = applyDiscount(amountBeforeDiscount, discountPercentage);
 
-          console.log(`New Invoice: Community=${communityName}, tier=${tier}, periodStart=${periodStart}, periodEnd=${periodEnd}, daysInPeriod=${daysInPeriod}, isProrated=${isProrated}, proratedDays=${proratedDays}, amount_cents=${amountBeforeDiscount}, discount=${discountPercentage}%, finalAmount=${finalAmount}`);
+          console.log(`New Invoice: Community=${communityName}, tier=${tier}, periodStart=${todayYMD}, periodEnd=${periodEnd}, daysInPeriod=${daysInPeriod}, isProrated=${isProrated}, proratedDays=${proratedDays}, amount_cents=${amountBeforeDiscount}, discount=${discountPercentage}%, finalAmount=${finalAmount}`);
 
           const { error: insertError } = await supabase.from("invoices").insert({
             issue_date: todayYMD,
-            period_start: periodStart,
+            period_start: todayYMD,
             period_end: periodEnd,
             amount_cents: amountBeforeDiscount, // Store amount WITHOUT discount
             full_year_amount_cents: baseAmount,
