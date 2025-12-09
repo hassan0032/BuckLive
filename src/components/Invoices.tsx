@@ -76,9 +76,9 @@ function Invoices() {
     const discountPercent = inv.discountPercentage ?? 0
     
     // Get proration fields
-    const isProrated = inv.isProrated ?? false
-    const proratedDays = inv.proratedDays ?? undefined
-    const fullYearAmountCents = inv.fullYearAmountCents ?? undefined
+    // const isProrated = inv.isProrated ?? false
+    // const proratedDays = inv.proratedDays ?? undefined
+    // const fullYearAmountCents = inv.fullYearAmountCents ?? undefined
     
     // Use community manager info from invoice if available
     const billToName = inv.communityManagerName || (inv.communityName ? `${inv.communityName} Management` : 'Community Manager')
@@ -96,9 +96,9 @@ function Invoices() {
       billToEmail,
       originalAmount: originalAmount,
       discountPercent: discountPercent,
-      isProrated,
-      proratedDays,
-      fullYearAmountCents,
+      // isProrated,
+      // proratedDays,
+      // fullYearAmountCents,
     })
 
     html2pdf()
