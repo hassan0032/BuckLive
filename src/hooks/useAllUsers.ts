@@ -183,6 +183,26 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
             ], { onConflict: 'user_id,community_id' });
 
           if (managerError) throw managerError;
+
+          // Set billing_date for users who are promoted/created as community managers,
+          // but only if billing_date is not already set. This avoids overwriting an
+          // existing billing anchor when role changes in the future.
+          try {
+            const today = new Date().toISOString().slice(0, 10);
+            const { error: billingUpdateError } = await supabase
+              .from('user_profiles')
+              .update({ billing_date: today })
+              .eq('id', userId)
+              .is('billing_date', null);
+
+            if (billingUpdateError) {
+              console.error('Failed to set billing_date when promoting to community_manager:', billingUpdateError);
+            } else {
+              console.log(`Set billing_date=${today} for promoted community manager ${userId}`);
+            }
+          } catch (err) {
+            console.error('Unexpected error setting billing_date on role change:', err);
+          }
         } else if (updates.role !== 'community_manager' && currentUser.role === 'community_manager') {
           const { error: deleteManagerError } = await supabase
             .from('community_managers')
