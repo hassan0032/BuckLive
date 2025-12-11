@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { userId, firstName, lastName, email } = await req.json();
+    const { userId, firstName, lastName, email, password } = await req.json();
 
     if (!userId || !firstName || !lastName || !email) {
       return new Response(
@@ -65,9 +65,13 @@ Deno.serve(async (req: Request) => {
       throw profileError;
     }
 
-    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-      email,
-    });
+    // Prepare payload for updating auth record. Password is optional.
+    const authUpdatePayload: any = { email };
+    if (password) {
+      authUpdatePayload.password = String(password);
+    }
+
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, authUpdatePayload);
 
     if (authError) {
       throw authError;
