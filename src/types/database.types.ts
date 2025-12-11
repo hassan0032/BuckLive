@@ -107,11 +107,11 @@ export interface Database {
           is_active: boolean
           is_sharable: boolean
           membership_tier: 'silver' | 'gold'
-          is_sharable: boolean
           sharable_token: string | null
+          organization_id: string | null
+          primary_manager: string | null
           created_at: string
           updated_at: string
-          sharable_token: string | null
         }
         Insert: {
           id?: string
@@ -121,11 +121,11 @@ export interface Database {
           is_active?: boolean
           is_sharable?: boolean
           membership_tier: 'silver' | 'gold'
-          is_sharable?: boolean
           sharable_token?: string | null
+          organization_id?: string | null
+          primary_manager?: string | null
           created_at?: string
           updated_at?: string
-          sharable_token?: string | null
         }
         Update: {
           id?: string
@@ -135,11 +135,11 @@ export interface Database {
           is_active?: boolean
           is_sharable?: boolean
           membership_tier?: 'silver' | 'gold'
-          is_sharable?: boolean
           sharable_token?: string | null
+          organization_id?: string | null
+          primary_manager?: string | null
           created_at?: string
           updated_at?: string
-          sharable_token?: string | null
         }
       }
       user_profiles: {
@@ -149,7 +149,7 @@ export interface Database {
           first_name: string
           last_name: string
           avatar_url: string
-          role: 'member' | 'admin' | 'community_manager'
+          role: 'member' | 'admin' | 'community_manager' | 'organization_manager'
           community_id: string | null
           registration_type: 'access_code' | 'self_registered'
           stripe_customer_id: string | null
@@ -169,7 +169,7 @@ export interface Database {
           first_name?: string
           last_name?: string
           avatar_url?: string
-          role?: 'member' | 'admin' | 'community_manager'
+          role?: 'member' | 'admin' | 'community_manager' | 'organization_manager'
           community_id?: string | null
           registration_type?: 'access_code' | 'self_registered'
           stripe_customer_id?: string | null
@@ -189,7 +189,7 @@ export interface Database {
           first_name?: string
           last_name?: string
           avatar_url?: string
-          role?: 'member' | 'admin' | 'community_manager'
+          role?: 'member' | 'admin' | 'community_manager' | 'organization_manager'
           community_id?: string | null
           registration_type?: 'access_code' | 'self_registered'
           stripe_customer_id?: string | null
@@ -222,6 +222,52 @@ export interface Database {
           user_id?: string
           community_id?: string
           assigned_at?: string
+        }
+      }
+      organizations: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          billing_date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          billing_date: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          billing_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      organization_managers: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          user_id?: string
+          created_at?: string
         }
       }
       content: {

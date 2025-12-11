@@ -1,4 +1,4 @@
-import { Bell, Library, LogOut, Settings, User, Users } from 'lucide-react';
+import { Bell, Building2, Library, LogOut, Settings, User, Users } from 'lucide-react';
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,7 +12,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, isAdmin, isCommunityManager, isSharedAccount } = useAuth();
+  const { user, isAdmin, isCommunityManager, isOrganizationManager, isSharedAccount } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -35,6 +35,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'library', label: 'Library', icon: Library, path: '/library' },
     ...(isSharedAccount ? [] : [{ id: 'profile', label: 'Profile', icon: User, path: '/profile' }]),
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }] : []),
+    ...(isOrganizationManager ? [{ id: 'organization-manager', label: 'Organization', icon: Building2, path: '/organization-manager' }] : []),
     ...(isCommunityManager ? [{ id: 'community-manager', label: 'Manage', icon: Users, path: '/community-manager' }] : []),
   ];
 

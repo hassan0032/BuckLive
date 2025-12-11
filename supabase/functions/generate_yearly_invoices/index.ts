@@ -140,7 +140,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: expiringInvoices, error: fetchError } = await supabase
       .from("invoices")
-      .select("*, community:community_id(id, name, membership_tier, primary_manager, created_at)")
+      .select("*, community:community_id(id, name, membership_tier, primary_manager, organization_id, created_at)")
       .eq("period_end", todayYMD);
 
     if (fetchError) {
@@ -155,6 +155,7 @@ Deno.serve(async (req: Request) => {
         const communityName = community?.name;
         const communityId = inv.community_id;
         const primaryManagerId = community?.primary_manager;
+        const organizationId = community?.organization_id;
         const baseAmount = tier === 'gold' ? 500000 : 250000;
 
         if (!communityId) {
@@ -162,22 +163,81 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Get primary manager info
+        // Get manager info and discount based on whether this is an org or standalone community
         let managerEmail: string | null = null;
         let managerName: string | null = null;
         let discountPercentage = 0;
+        let periodEnd = addYears(todayYMD, 1); // fallback
+        let daysInPeriod = 365;
 
-        if (primaryManagerId) {
+        if (organizationId) {
+          // ORGANIZATION COMMUNITY - use org's billing date and org-based discount
+          console.log(`Processing renewal for org community: ${communityName}`);
+
+          // Get organization billing date
+          const { data: org, error: orgError } = await supabase
+            .from("organizations")
+            .select("billing_date")
+            .eq("id", organizationId)
+            .single();
+
+          if (!orgError && org?.billing_date) {
+            periodEnd = getNextBillingDate(org.billing_date, todayYMD);
+            daysInPeriod = daysBetween(todayYMD, periodEnd);
+          }
+
+          // Count total communities in this organization for discount
+          const { count, error: countError } = await supabase
+            .from("communities")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", organizationId);
+
+          if (!countError) {
+            discountPercentage = getDiscountPercentage(count || 0);
+            console.log(`Organization ${organizationId} has ${count} communities, discount: ${discountPercentage}%`);
+          }
+
+          // Get primary community manager for this community (for invoice metadata)
+          const { data: cmData, error: cmError } = await supabase
+            .from("community_managers")
+            .select("user_id")
+            .eq("community_id", communityId)
+            .limit(1)
+            .maybeSingle();
+
+          if (!cmError && cmData) {
+            const { data: managerProfile, error: managerError } = await supabase
+              .from("user_profiles")
+              .select("email, first_name, last_name")
+              .eq("id", cmData.user_id)
+              .single();
+
+            if (!managerError && managerProfile) {
+              managerEmail = managerProfile.email;
+              managerName = `${managerProfile.first_name || ''} ${managerProfile.last_name || ''}`.trim() || null;
+            }
+          }
+
+        } else if (primaryManagerId) {
+          // STANDALONE COMMUNITY - use primary manager's billing date and manager-based discount
+          console.log(`Processing renewal for standalone community: ${communityName}`);
+
           // Get manager profile
           const { data: managerProfile, error: managerError } = await supabase
             .from("user_profiles")
-            .select("email, first_name, last_name")
+            .select("email, first_name, last_name, billing_date")
             .eq("id", primaryManagerId)
             .single();
 
           if (!managerError && managerProfile) {
             managerEmail = managerProfile.email;
             managerName = `${managerProfile.first_name || ''} ${managerProfile.last_name || ''}`.trim() || null;
+
+            // Calculate period end based on manager's billing date
+            if (managerProfile.billing_date) {
+              periodEnd = getNextBillingDate(managerProfile.billing_date, todayYMD);
+              daysInPeriod = daysBetween(todayYMD, periodEnd);
+            }
           }
 
           // Count how many communities this primary_manager manages for discount
@@ -189,23 +249,6 @@ Deno.serve(async (req: Request) => {
           if (!countError) {
             discountPercentage = getDiscountPercentage(count || 0);
             console.log(`Primary manager ${primaryManagerId} has ${count} communities, discount: ${discountPercentage}%`);
-          }
-        }
-
-        // Get manager's billing date for renewal period calculation
-        let periodEnd = addYears(todayYMD, 1); // fallback
-        let daysInPeriod = 365;
-
-        if (primaryManagerId) {
-          const { data: managerProfile, error: managerError } = await supabase
-            .from("user_profiles")
-            .select("billing_date")
-            .eq("id", primaryManagerId)
-            .single();
-
-          if (!managerError && managerProfile?.billing_date) {
-            periodEnd = getNextBillingDate(managerProfile.billing_date, todayYMD);
-            daysInPeriod = daysBetween(todayYMD, periodEnd);
           }
         }
         
@@ -260,7 +303,7 @@ Deno.serve(async (req: Request) => {
     // Find active communities that don't have any invoice
     const { data: allCommunities, error: communitiesError } = await supabase
       .from("communities")
-      .select("id, name, membership_tier, primary_manager, created_at")
+      .select("id, name, membership_tier, primary_manager, organization_id, created_at")
       .eq("is_active", true);
 
     if (communitiesError) {
@@ -289,50 +332,114 @@ Deno.serve(async (req: Request) => {
         console.log(`Found ${communitiesWithoutInvoice.length} communities without invoices.`);
 
         for (const community of communitiesWithoutInvoice) {
-          const { id: communityId, name: communityName, membership_tier: tier, primary_manager: primaryManagerId, created_at: communityCreatedAt } = community;
+          const { id: communityId, name: communityName, membership_tier: tier, primary_manager: primaryManagerId, organization_id: organizationId, created_at: communityCreatedAt } = community;
           const baseAmount = tier === 'gold' ? 500000 : 250000;
 
-          if (!primaryManagerId) {
-            console.log(`Skipping community ${communityName}: No primary_manager assigned.`);
+          let managerEmail: string | null = null;
+          let managerName: string | null = null;
+          let billingDate: string | null = null;
+          let discountPercentage = 0;
+
+          if (organizationId) {
+            // ORGANIZATION COMMUNITY
+            console.log(`Processing new invoice for org community: ${communityName}`);
+
+            // Get organization billing date
+            const { data: org, error: orgError } = await supabase
+              .from("organizations")
+              .select("billing_date")
+              .eq("id", organizationId)
+              .single();
+
+            if (orgError || !org) {
+              console.error(`Error fetching organization for ${organizationId}:`, orgError);
+              results.errors.push(`Failed to fetch organization for community ${communityName}`);
+              continue;
+            }
+
+            billingDate = org.billing_date;
+
+            // Count total communities in this organization for discount
+            const { count: communityCount, error: countError } = await supabase
+              .from("communities")
+              .select("id", { count: "exact", head: true })
+              .eq("organization_id", organizationId);
+
+            discountPercentage = countError ? 0 : getDiscountPercentage(communityCount || 0);
+
+            // Get community manager for this community (for invoice metadata)
+            const { data: cmData, error: cmError } = await supabase
+              .from("community_managers")
+              .select("user_id")
+              .eq("community_id", communityId)
+              .limit(1)
+              .maybeSingle();
+
+            if (!cmError && cmData) {
+              const { data: managerProfile, error: managerError } = await supabase
+                .from("user_profiles")
+                .select("email, first_name, last_name")
+                .eq("id", cmData.user_id)
+                .single();
+
+              if (!managerError && managerProfile) {
+                managerEmail = managerProfile.email;
+                managerName = `${managerProfile.first_name || ''} ${managerProfile.last_name || ''}`.trim() || null;
+              }
+            }
+
+          } else if (primaryManagerId) {
+            // STANDALONE COMMUNITY
+            console.log(`Processing new invoice for standalone community: ${communityName}`);
+
+            // Get primary manager profile including billing_date
+            const { data: managerProfile, error: managerError } = await supabase
+              .from("user_profiles")
+              .select("email, first_name, last_name, billing_date")
+              .eq("id", primaryManagerId)
+              .single();
+
+            if (managerError || !managerProfile) {
+              console.error(`Error fetching manager profile for ${primaryManagerId}:`, managerError);
+              results.errors.push(`Failed to fetch manager profile for community ${communityName}`);
+              continue;
+            }
+
+            // CRITICAL: Skip if billing_date is NULL (manager hasn't logged in yet)
+            if (!managerProfile.billing_date) {
+              console.log(`Skipping community ${communityName}: Manager billing_date is NULL (waiting for first login).`);
+              results.skippedNoBillingDate++;
+              continue;
+            }
+
+            managerEmail = managerProfile.email;
+            managerName = `${managerProfile.first_name || ''} ${managerProfile.last_name || ''}`.trim() || null;
+            billingDate = managerProfile.billing_date;
+
+            // Count total communities for this manager for discount calculation
+            const { count: communityCount, error: countError } = await supabase
+              .from("communities")
+              .select("id", { count: "exact", head: true })
+              .eq("primary_manager", primaryManagerId);
+
+            discountPercentage = countError ? 0 : getDiscountPercentage(communityCount || 0);
+
+          } else {
+            // No primary_manager and no organization_id - skip
+            console.log(`Skipping community ${communityName}: No primary_manager or organization assigned.`);
             results.skippedNoBillingDate++;
             continue;
           }
 
-          // Get primary manager profile including billing_date
-          const { data: managerProfile, error: managerError } = await supabase
-            .from("user_profiles")
-            .select("email, first_name, last_name, billing_date")
-            .eq("id", primaryManagerId)
-            .single();
-
-          if (managerError || !managerProfile) {
-            console.error(`Error fetching manager profile for ${primaryManagerId}:`, managerError);
-            results.errors.push(`Failed to fetch manager profile for community ${communityName}`);
-            continue;
-          }
-
-          // CRITICAL: Skip if billing_date is NULL (manager hasn't logged in yet)
-          if (!managerProfile.billing_date) {
-            console.log(`Skipping community ${communityName}: Manager billing_date is NULL (waiting for first login).`);
+          // Now we have billingDate (from org or manager), calculate period
+          if (!billingDate) {
+            console.log(`Skipping community ${communityName}: No billing date available.`);
             results.skippedNoBillingDate++;
             continue;
           }
 
-          const managerEmail = managerProfile.email;
-          const managerName = `${managerProfile.first_name || ''} ${managerProfile.last_name || ''}`.trim() || null;
-          const billingDate = managerProfile.billing_date;
-
-          // Count total communities for this manager for discount calculation
-          const { count: communityCount, error: countError } = await supabase
-            .from("communities")
-            .select("id", { count: "exact", head: true })
-            .eq("primary_manager", primaryManagerId);
-
-          const discountPercentage = countError ? 0 : getDiscountPercentage(communityCount || 0);
-
-          // We don't backdate invoices to community creation date to avoid billing for past time
-          const periodEnd = getNextBillingDate(billingDate, todayYMD); // period_end is ALWAYS the next billing date occurrence
-
+          // Calculate period end based on billing date
+          const periodEnd = getNextBillingDate(billingDate, todayYMD);
           const daysInPeriod = daysBetween(todayYMD, periodEnd);
 
           console.log(`DEBUG: community=${communityName}, billingDate=${billingDate}, periodStart=${todayYMD}, periodEnd=${periodEnd}, daysInPeriod=${daysInPeriod}`);

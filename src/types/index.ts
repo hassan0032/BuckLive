@@ -2,6 +2,7 @@ export const ROLE = {
   MEMBER: 'member',
   ADMIN: 'admin',
   COMMUNITY_MANAGER: 'community_manager',
+  ORGANIZATION_MANAGER: 'organization_manager',
 } as const;
 export type Role = typeof ROLE[keyof typeof ROLE];
 
@@ -120,6 +121,17 @@ export interface Community {
   is_sharable?: boolean;
   sharable_token?: string | null;
   code: string;
+  organization_id?: string | null;
+  primary_manager?: string | null;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  description?: string;
+  billing_date: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CommunityManager {

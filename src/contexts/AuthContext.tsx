@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isCommunityManager: boolean;
+  isOrganizationManager: boolean;
   isMember: boolean;
   isSharedAccount: boolean;
 }
@@ -17,9 +18,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOrgManager, setIsOrgManager] = useState(false);
   const currentUserIdRef = useRef<string | null>(null);
   const isFetchingRef = useRef(false);
   const invoiceGeneratedForUserRef = useRef<string | null>(null);
+
+  // Check if user is in organization_managers table
+  const checkOrgManager = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('organization_managers')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking org manager status:', error);
+      return false;
+    }
+    return !!data;
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -87,6 +104,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           currentUserIdRef.current = session.user.id;
           setUser(appUser);
           
+          // Check if user is an organization manager (by table membership, not role)
+          const orgManagerStatus = await checkOrgManager(session.user.id);
+          setIsOrgManager(orgManagerStatus);
+          console.log('🏢 Organization manager status:', orgManagerStatus);
+          
           // Generate invoices immediately for community managers on login
           if (appUser.role === "community_manager" && invoiceGeneratedForUserRef.current !== appUser.id) {
             invoiceGeneratedForUserRef.current = appUser.id;
@@ -100,6 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           setUser(null);
+          setIsOrgManager(false);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
@@ -179,6 +202,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               currentUserIdRef.current = session.user.id;
               setUser(appUser);
               
+              // Check if user is an organization manager (by table membership, not role)
+              const orgManagerStatus = await checkOrgManager(session.user.id);
+              setIsOrgManager(orgManagerStatus);
+              console.log('🏢 Organization manager status:', orgManagerStatus);
+              
               // Generate invoices immediately for community managers on login
               if (appUser.role === "community_manager" && invoiceGeneratedForUserRef.current !== appUser.id) {
                 invoiceGeneratedForUserRef.current = appUser.id;
@@ -195,6 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (mounted) {
                 currentUserIdRef.current = null;
                 setUser(null);
+                setIsOrgManager(false);
                 invoiceGeneratedForUserRef.current = null; // Reset when user logs out
               }
             }
@@ -221,6 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     isAdmin: user?.role === 'admin',
     isCommunityManager: user?.role === 'community_manager',
+    isOrganizationManager: user?.role === 'organization_manager' || isOrgManager,
     isMember: user?.role === 'member',
     isSharedAccount: user?.is_shared_account || false,
   };
