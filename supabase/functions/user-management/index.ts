@@ -142,7 +142,7 @@ async function handleCreateUser(
   // Verify community exists
   const { data: community, error: communityError } = await supabaseAdmin
     .from("communities")
-    .select("id, primary_manager, organization_id")
+    .select("id, primary_manager")
     .eq("id", community_id)
     .single();
 
@@ -174,16 +174,8 @@ async function handleCreateUser(
   }
 
   const isAdmin = userProfile.role === "admin";
-  const isOrgManager = userProfile.role === "organization_manager";
   const isCommunityManager = userProfile.role === "community_manager";
   const isMember = userProfile.role === "member";
-
-  // Check if caller is an organization manager
-  const { data: orgManager, error: orgManagerError } = await supabaseAdmin
-    .from("organization_managers")
-    .select("organization_id")
-    .eq("user_id", callerId)
-    .maybeSingle();
 
   // Validate role permissions
   if (role && role !== "member") {
@@ -359,13 +351,6 @@ async function handleDeleteUser(
     );
   }
 
-  // if (!targetUser.community_id) {
-  //   return new Response(
-  //     JSON.stringify({ error: "Cannot delete users without a community" }),
-  //     { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  //   );
-  // }
-
   const { data: userProfile, error: userProfileError } = await supabaseAdmin
     .from("user_profiles")
     .select("role")
@@ -380,7 +365,6 @@ async function handleDeleteUser(
   }
 
   const isAdmin = userProfile.role === "admin";
-  const isOrgManager = userProfile.role === "organization_manager";
   const isCommunityManager = userProfile.role === "community_manager";
   const isMember = userProfile.role === "member";
 
@@ -422,208 +406,6 @@ async function handleDeleteUser(
     }
   }
 
-  if (isOrgManager) {
-    if (targetUser.role !== "member" && targetUser.role !== "community_manager") {
-      return new Response(
-        JSON.stringify({ error: "You can only delete members and community managers" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verify that the organization manager manages the user's community
-    const { data: orgManager, error: orgManagerError } = await supabaseAdmin
-      .from("organization_managers")
-      .select("organization_id")
-      .eq("user_id", userProfile.id)
-      .maybeSingle();
-
-    if (orgManagerError || !orgManager) {
-      return new Response(
-        JSON.stringify({ error: "You are not an organization manager" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { data: orgCommunities, error: orgCommunitiesError } = await supabaseAdmin
-      .from("communities")
-      .select("id, organization_id")
-      .eq("organization_id", orgManager.organization_id);
-
-    if (orgCommunitiesError || !orgCommunities) {
-      return new Response(
-        JSON.stringify({ error: "Could not verify organization communities" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const managesOrgCommunity = orgCommunities?.some(cm => cm.id === targetUser.organization_id);
-
-    if (!managesOrgCommunity) {
-      return new Response(
-        JSON.stringify({ error: "You do not manage the user's organization" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (orgManager.organization_id !== targetUser.organization_id) {
-      return new Response(
-        JSON.stringify({ error: "You can only delete users from your organization" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check if caller has permission to delete this user
-    if (isCommunityManager) {
-      // Verify that the community manager manages the user's community
-      const { data: targetUser, error: userError } = await supabaseAdmin
-        .from("user_profiles")
-        .select("community_id")
-        .eq("id", user_id)
-        .single();
-
-      if (userError || !targetUser) {
-        return new Response(
-          JSON.stringify({ error: "User not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (!targetUser.community_id) {
-        return new Response(
-          JSON.stringify({ error: "Cannot delete users without a community" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Verify that the community manager manages this community
-      const { data: managedCommunities, error: managerError } = await supabaseAdmin
-        .from("community_managers")
-        .select("community_id")
-        .eq("user_id", callerId);
-
-      if (managerError) {
-        return new Response(
-          JSON.stringify({ error: "Could not verify community manager permissions" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const managesCommunity = managedCommunities?.some(cm => cm.community_id === targetUser.community_id);
-
-      if (!managesCommunity) {
-        return new Response(
-          JSON.stringify({ error: "You do not manage the user's community" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    // Check if organization manager has permission to delete this user
-    if (isOrgManager && callerRole !== "admin") {
-      // Verify the user belongs to a community in the org manager's organization
-      const { data: targetUser, error: userError } = await supabaseAdmin
-        .from("user_profiles")
-        .select("community_id")
-        .eq("id", user_id)
-        .single();
-
-      if (userError || !targetUser) {
-        return new Response(
-          JSON.stringify({ error: "User not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (!targetUser.community_id) {
-        return new Response(
-          JSON.stringify({ error: "Cannot delete users without a community" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Verify the community belongs to the org manager's organization
-      const { data: community, error: communityError } = await supabaseAdmin
-        .from("communities")
-        .select("organization_id")
-        .eq("id", targetUser.community_id)
-        .single();
-
-      if (communityError || !community) {
-        return new Response(
-          JSON.stringify({ error: "Community not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (community.organization_id !== orgManager.organization_id) {
-        return new Response(
-          JSON.stringify({ error: "You can only delete users from communities in your organization" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    try {
-      // Before deleting, check if this user is a primary_manager for any communities
-      const { data: communitiesWithThisManager, error: communityFetchError } = await supabaseAdmin
-        .from("communities")
-        .select("id")
-        .eq("primary_manager", user_id);
-
-      if (communityFetchError) {
-        console.error("Error fetching communities with primary manager:", communityFetchError);
-      }
-
-      // Delete the user
-      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user_id);
-
-      if (deleteError) {
-        return new Response(
-          JSON.stringify({ error: deleteError.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // After deleting, update primary_manager for affected communities
-      if (communitiesWithThisManager && communitiesWithThisManager.length > 0) {
-        for (const community of communitiesWithThisManager) {
-          // Find another manager for this community (not the deleted user)
-          const { data: anotherManager, error: managerFetchError } = await supabaseAdmin
-            .from("community_managers")
-            .select("user_id")
-            .eq("community_id", community.id)
-            .neq("user_id", user_id)
-            .limit(1)
-            .maybeSingle();
-
-          const newPrimaryManagerId = managerFetchError ? null : (anotherManager?.user_id || null);
-
-          // Update the community's primary_manager
-          const { error: updateError } = await supabaseAdmin
-            .from("communities")
-            .update({ primary_manager: newPrimaryManagerId })
-            .eq("id", community.id);
-
-          if (updateError) {
-            console.error(`Failed to update primary_manager for community ${community.id}:`, updateError);
-          } else {
-            console.log(`Updated primary_manager for community ${community.id} to ${newPrimaryManagerId}`);
-          }
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ data: null, error: null }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } catch (error) {
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-  }
-
   async function handleResetPassword(
     request: ResetPasswordRequest,
     supabaseAdmin: ReturnType<typeof createClient>,
@@ -632,17 +414,8 @@ async function handleDeleteUser(
   ): Promise<Response> {
     const { user_id, new_password } = request;
 
-    // Check if caller is an organization manager
-    const { data: orgManager, error: orgManagerError } = await supabaseAdmin
-      .from("organization_managers")
-      .select("organization_id")
-      .eq("user_id", callerId)
-      .maybeSingle();
-
-    const isOrgManager = !orgManagerError && !!orgManager;
-
     // Check if caller has permission to reset this user's password
-    if (callerRole === "community_manager" && !isOrgManager) {
+    if (callerRole === "community_manager") {
       // Verify that the community manager manages the user's community
       const { data: targetUser, error: userError } = await supabaseAdmin
         .from("user_profiles")
@@ -682,51 +455,6 @@ async function handleDeleteUser(
       if (!managesCommunity) {
         return new Response(
           JSON.stringify({ error: "You do not manage the user's community" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    // Check if organization manager has permission to reset this user's password
-    if (isOrgManager && callerRole !== "admin") {
-      // Verify the user belongs to a community in the org manager's organization
-      const { data: targetUser, error: userError } = await supabaseAdmin
-        .from("user_profiles")
-        .select("community_id")
-        .eq("id", user_id)
-        .single();
-
-      if (userError || !targetUser) {
-        return new Response(
-          JSON.stringify({ error: "User not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (!targetUser.community_id) {
-        return new Response(
-          JSON.stringify({ error: "Cannot reset password for users without a community" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Verify the community belongs to the org manager's organization
-      const { data: community, error: communityError } = await supabaseAdmin
-        .from("communities")
-        .select("organization_id")
-        .eq("id", targetUser.community_id)
-        .single();
-
-      if (communityError || !community) {
-        return new Response(
-          JSON.stringify({ error: "Community not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (community.organization_id !== orgManager.organization_id) {
-        return new Response(
-          JSON.stringify({ error: "You can only reset passwords for users in communities in your organization" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
