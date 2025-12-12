@@ -178,7 +178,7 @@ async function handleCreateUser(
   const isMember = userProfile.role === "member";
 
   // Validate role permissions
-  if (role && role !== "member") {
+  if (!isMember) {
     // Only admins can create non-member roles
     if (callerRole !== "admin") {
       return new Response(
@@ -189,7 +189,7 @@ async function handleCreateUser(
   }
 
   // Check if caller has permission to create users in this community
-  if (callerRole === "community_manager") {
+  if (isCommunityManager) {
     // Verify that the community manager manages this community
     const { data: managedCommunities, error: managerError } = await supabaseAdmin
       .from("community_managers")
@@ -213,20 +213,6 @@ async function handleCreateUser(
     }
   }
 
-  // Verify community exists
-  const { data: community, error: communityError } = await supabaseAdmin
-    .from("communities")
-    .select("id")
-    .eq("id", community_id)
-    .single();
-
-  if (communityError || !community) {
-    return new Response(
-      JSON.stringify({ error: "Community not found" }),
-      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
   try {
     // Create the user with email confirmation enabled
     const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
@@ -236,7 +222,7 @@ async function handleCreateUser(
       user_metadata: {
         first_name,
         last_name,
-        role: role || "member",
+        role: requestedRole || "member",
         community_id,
         is_shared_account: is_shared_account || false,
       },
@@ -260,7 +246,7 @@ async function handleCreateUser(
     const { error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .update({
-        role: role || "member",
+        role: requestedRole || "member",
         registration_type: "access_code",
         is_shared_account: is_shared_account || false,
       })
@@ -295,7 +281,7 @@ async function handleCreateUser(
     }
 
     // If creating a community manager, add to community_managers table
-    if (role === "community_manager") {
+    if (isCommunityManager) {
       const { error: managerError } = await supabaseAdmin
         .from("community_managers")
         .insert([
@@ -406,83 +392,88 @@ async function handleDeleteUser(
     }
   }
 
-  async function handleResetPassword(
-    request: ResetPasswordRequest,
-    supabaseAdmin: ReturnType<typeof createClient>,
-    callerRole: string,
-    callerId: string
-  ): Promise<Response> {
-    const { user_id, new_password } = request;
+  return new Response(
+    JSON.stringify({ data: null, error: null }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
 
-    // Check if caller has permission to reset this user's password
-    if (callerRole === "community_manager") {
-      // Verify that the community manager manages the user's community
-      const { data: targetUser, error: userError } = await supabaseAdmin
-        .from("user_profiles")
-        .select("community_id")
-        .eq("id", user_id)
-        .single();
+async function handleResetPassword(
+  request: ResetPasswordRequest,
+  supabaseAdmin: ReturnType<typeof createClient>,
+  callerRole: string,
+  callerId: string
+): Promise<Response> {
+  const { user_id, new_password } = request;
 
-      if (userError || !targetUser) {
-        return new Response(
-          JSON.stringify({ error: "User not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+  // Check if caller has permission to reset this user's password
+  if (callerRole === "community_manager") {
+    // Verify that the community manager manages the user's community
+    const { data: targetUser, error: userError } = await supabaseAdmin
+      .from("user_profiles")
+      .select("community_id")
+      .eq("id", user_id)
+      .single();
 
-      if (!targetUser.community_id) {
-        return new Response(
-          JSON.stringify({ error: "Cannot reset password for users without a community" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Verify that the community manager manages this community
-      const { data: managedCommunities, error: managerError } = await supabaseAdmin
-        .from("community_managers")
-        .select("community_id")
-        .eq("user_id", callerId);
-
-      if (managerError) {
-        return new Response(
-          JSON.stringify({ error: "Could not verify community manager permissions" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const managesCommunity = managedCommunities?.some(cm => cm.community_id === targetUser.community_id);
-
-      if (!managesCommunity) {
-        return new Response(
-          JSON.stringify({ error: "You do not manage the user's community" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (userError || !targetUser) {
+      return new Response(
+        JSON.stringify({ error: "User not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    try {
-      // Reset the password
-      const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(
-        user_id,
-        { password: new_password }
-      );
-
-      if (resetError) {
-        return new Response(
-          JSON.stringify({ error: resetError.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
+    if (!targetUser.community_id) {
       return new Response(
-        JSON.stringify({ data: null, error: null }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Cannot reset password for users without a community" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    } catch (error) {
+    }
+
+    // Verify that the community manager manages this community
+    const { data: managedCommunities, error: managerError } = await supabaseAdmin
+      .from("community_managers")
+      .select("community_id")
+      .eq("user_id", callerId);
+
+    if (managerError) {
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: "Could not verify community manager permissions" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const managesCommunity = managedCommunities?.some(cm => cm.community_id === targetUser.community_id);
+
+    if (!managesCommunity) {
+      return new Response(
+        JSON.stringify({ error: "You do not manage the user's community" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  }
+
+  try {
+    // Reset the password
+    const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(
+      user_id,
+      { password: new_password }
+    );
+
+    if (resetError) {
+      return new Response(
+        JSON.stringify({ error: resetError.message }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ data: null, error: null }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 }
