@@ -88,7 +88,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     try {
       // Get the current session to pass auth header
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         return { data: null, error: 'Not authenticated' };
       }
@@ -204,7 +204,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     try {
       // Get the current session to pass auth header
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         return { error: 'Not authenticated' };
       }

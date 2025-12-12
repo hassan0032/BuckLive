@@ -7,6 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const ROLES = {
+  MEMBER: "member",
+  ADMIN: "admin",
+  COMMUNITY_MANAGER: "community_manager",
+} as const;
+type Role = typeof ROLES[keyof typeof ROLES];
+
 interface CreateUserRequest {
   action: "create";
   email: string;
@@ -14,7 +21,7 @@ interface CreateUserRequest {
   first_name: string;
   last_name: string;
   community_id: string;
-  role?: "member" | "admin" | "community_manager";
+  role?: Role;
   is_shared_account?: boolean;
 }
 
@@ -127,15 +134,60 @@ Deno.serve(async (req: Request) => {
 async function handleCreateUser(
   request: CreateUserRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
-  const { email, password, first_name, last_name, community_id, role, is_shared_account } = request;
+  const { email, password, first_name, last_name, community_id, role: requestedRole, is_shared_account } = request;
+
+  if (!community_id) {
+    return new Response(
+      JSON.stringify({ error: "Community ID is required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Verify community exists
+  const { data: community, error: communityError } = await supabaseAdmin
+    .from("communities")
+    .select("id, primary_manager")
+    .eq("id", community_id)
+    .single();
+
+  if (communityError || !community) {
+    return new Response(
+      JSON.stringify({ error: "Community not found" }),
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  if (!requestedRole) {
+    return new Response(
+      JSON.stringify({ error: "Role is required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const { data: userProfile, error: userProfileError } = await supabaseAdmin
+    .from("user_profiles")
+    .select("role")
+    .eq("id", callerId)
+    .single();
+
+  if (userProfileError || !userProfile) {
+    return new Response(
+      JSON.stringify({ error: "Could not verify caller permissions" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const isAdmin = userProfile.role === ROLES.ADMIN;
+  const isCommunityManager = userProfile.role === ROLES.COMMUNITY_MANAGER;
+  const isMember = userProfile.role === ROLES.MEMBER;
 
   // Validate role permissions
-  if (role && role !== "member") {
+  if (!isMember) {
     // Only admins can create non-member roles
-    if (callerRole !== "admin") {
+    if (callerRole !== ROLES.ADMIN) {
       return new Response(
         JSON.stringify({ error: "Only admins can create users with admin or community_manager roles" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -144,7 +196,7 @@ async function handleCreateUser(
   }
 
   // Check if caller has permission to create users in this community
-  if (callerRole === "community_manager") {
+  if (isCommunityManager) {
     // Verify that the community manager manages this community
     const { data: managedCommunities, error: managerError } = await supabaseAdmin
       .from("community_managers")
@@ -168,20 +220,6 @@ async function handleCreateUser(
     }
   }
 
-  // Verify community exists
-  const { data: community, error: communityError } = await supabaseAdmin
-    .from("communities")
-    .select("id")
-    .eq("id", community_id)
-    .single();
-
-  if (communityError || !community) {
-    return new Response(
-      JSON.stringify({ error: "Community not found" }),
-      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
   try {
     // Create the user with email confirmation enabled
     const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
@@ -191,7 +229,7 @@ async function handleCreateUser(
       user_metadata: {
         first_name,
         last_name,
-        role: role || "member",
+        role: requestedRole || ROLES.MEMBER,
         community_id,
         is_shared_account: is_shared_account || false,
       },
@@ -215,7 +253,7 @@ async function handleCreateUser(
     const { error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .update({
-        role: role || "member",
+        role: requestedRole || ROLES.MEMBER,
         registration_type: "access_code",
         is_shared_account: is_shared_account || false,
       })
@@ -227,8 +265,30 @@ async function handleCreateUser(
       // We could attempt to roll back, but for now just log the error
     }
 
+    // If creating a community manager, set their billing_date now if it's not already set.
+    // This ensures admin-created/staff-created community managers get a billing anchor immediately
+    // (only updates when billing_date IS NULL so it won't overwrite existing values).
+    if (requestedRole === ROLES.COMMUNITY_MANAGER) {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const { error: billingUpdateError } = await supabaseAdmin
+          .from('user_profiles')
+          .update({ billing_date: today })
+          .eq('id', authData.user.id)
+          .is('billing_date', null);
+
+        if (billingUpdateError) {
+          console.error('Failed to set billing_date on created community manager:', billingUpdateError);
+        } else {
+          console.log(`Set billing_date=${today} for new community manager ${authData.user.id}`);
+        }
+      } catch (err) {
+        console.error('Unexpected error setting billing_date for new community manager:', err);
+      }
+    }
+
     // If creating a community manager, add to community_managers table
-    if (role === "community_manager") {
+    if (isCommunityManager) {
       const { error: managerError } = await supabaseAdmin
         .from("community_managers")
         .insert([
@@ -259,35 +319,64 @@ async function handleCreateUser(
 async function handleDeleteUser(
   request: DeleteUserRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
   const { user_id } = request;
 
-  // Check if caller has permission to delete this user
-  if (callerRole === "community_manager") {
-    // Verify that the community manager manages the user's community
-    const { data: targetUser, error: userError } = await supabaseAdmin
-      .from("user_profiles")
-      .select("community_id")
-      .eq("id", user_id)
-      .single();
+  if (!user_id) {
+    return new Response(
+      JSON.stringify({ error: "User ID is required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
-    if (userError || !targetUser) {
-      return new Response(
-        JSON.stringify({ error: "User not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+  const { data: targetUser, error: userError } = await supabaseAdmin
+    .from("user_profiles")
+    .select("*")
+    .eq("id", user_id)
+    .single();
 
-    if (!targetUser.community_id) {
+  if (userError || !targetUser) {
+    return new Response(
+      JSON.stringify({ error: "User not found" }),
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const { data: userProfile, error: userProfileError } = await supabaseAdmin
+    .from("user_profiles")
+    .select("role")
+    .eq("id", callerId)
+    .single();
+
+  if (userProfileError || !userProfile) {
+    return new Response(
+      JSON.stringify({ error: "Could not verify caller permissions" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const isAdmin = userProfile.role === ROLES.ADMIN;
+  const isCommunityManager = userProfile.role === ROLES.COMMUNITY_MANAGER;
+  const isMember = userProfile.role === ROLES.MEMBER;
+
+  if (isMember) {
+    return new Response(
+      JSON.stringify({ error: "You are not authorized to delete users" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  if (isCommunityManager) {
+    if (targetUser.role !== ROLES.MEMBER) {
       return new Response(
-        JSON.stringify({ error: "Cannot delete users without a community" }),
+        JSON.stringify({ error: "You can only delete members" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Verify that the community manager manages this community
+    // Verify that the community manager manages the user's community
     const { data: managedCommunities, error: managerError } = await supabaseAdmin
       .from("community_managers")
       .select("community_id")
@@ -300,9 +389,9 @@ async function handleDeleteUser(
       );
     }
 
-    const managesCommunity = managedCommunities?.some(cm => cm.community_id === targetUser.community_id);
+    const managesMemberCommunity = managedCommunities?.some(cm => cm.community_id === targetUser.community_id);
 
-    if (!managesCommunity) {
+    if (!managesMemberCommunity) {
       return new Response(
         JSON.stringify({ error: "You do not manage the user's community" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -310,77 +399,22 @@ async function handleDeleteUser(
     }
   }
 
-  try {
-    // Before deleting, check if this user is a primary_manager for any communities
-    const { data: communitiesWithThisManager, error: communityFetchError } = await supabaseAdmin
-      .from("communities")
-      .select("id")
-      .eq("primary_manager", user_id);
-
-    if (communityFetchError) {
-      console.error("Error fetching communities with primary manager:", communityFetchError);
-    }
-
-    // Delete the user
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user_id);
-
-    if (deleteError) {
-      return new Response(
-        JSON.stringify({ error: deleteError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // After deleting, update primary_manager for affected communities
-    if (communitiesWithThisManager && communitiesWithThisManager.length > 0) {
-      for (const community of communitiesWithThisManager) {
-        // Find another manager for this community (not the deleted user)
-        const { data: anotherManager, error: managerFetchError } = await supabaseAdmin
-          .from("community_managers")
-          .select("user_id")
-          .eq("community_id", community.id)
-          .neq("user_id", user_id)
-          .limit(1)
-          .maybeSingle();
-
-        const newPrimaryManagerId = managerFetchError ? null : (anotherManager?.user_id || null);
-
-        // Update the community's primary_manager
-        const { error: updateError } = await supabaseAdmin
-          .from("communities")
-          .update({ primary_manager: newPrimaryManagerId })
-          .eq("id", community.id);
-
-        if (updateError) {
-          console.error(`Failed to update primary_manager for community ${community.id}:`, updateError);
-        } else {
-          console.log(`Updated primary_manager for community ${community.id} to ${newPrimaryManagerId}`);
-        }
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ data: null, error: null }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+  return new Response(
+    JSON.stringify({ data: null, error: null }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
 }
 
 async function handleResetPassword(
   request: ResetPasswordRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
   const { user_id, new_password } = request;
 
   // Check if caller has permission to reset this user's password
-  if (callerRole === "community_manager") {
+  if (callerRole === ROLES.COMMUNITY_MANAGER) {
     // Verify that the community manager manages the user's community
     const { data: targetUser, error: userError } = await supabaseAdmin
       .from("user_profiles")
