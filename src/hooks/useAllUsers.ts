@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Role, User } from '../types';
+import { ROLE, Role, User } from '../types';
 
 interface UseAllUsersFilters {
   communityId?: string;
-  role?: 'member' | 'admin' | 'community_manager';
+  role?: Role;
   searchTerm?: string;
 }
 
@@ -47,7 +47,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
       const formattedUsers: User[] = (data || []).map(profile => ({
         id: profile.id,
         email: profile.email,
-        role: profile.role,
+        role: profile.role as Role,
         created_at: profile.created_at,
         community_id: profile.community_id,
         registration_type: profile.registration_type,
@@ -88,7 +88,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     try {
       // Get the current session to pass auth header
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         return { data: null, error: 'Not authenticated' };
       }
@@ -133,7 +133,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     email?: string;
     first_name?: string;
     last_name?: string;
-    role?: 'member' | 'admin' | 'community_manager';
+    role?: Role;
     community_id?: string;
     is_shared_account?: boolean;
   }) => {
@@ -172,7 +172,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
       if (updateError) throw updateError;
 
       if (updates.role) {
-        if (updates.role === 'community_manager' && currentUser.role !== 'community_manager') {
+        if (updates.role === ROLE.COMMUNITY_MANAGER && currentUser.role !== ROLE.COMMUNITY_MANAGER) {
           const { error: managerError } = await supabase
             .from('community_managers')
             .upsert([
@@ -183,7 +183,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
             ], { onConflict: 'user_id,community_id' });
 
           if (managerError) throw managerError;
-        } else if (updates.role !== 'community_manager' && currentUser.role === 'community_manager') {
+        } else if (updates.role !== ROLE.COMMUNITY_MANAGER && currentUser.role === ROLE.COMMUNITY_MANAGER) {
           const { error: deleteManagerError } = await supabase
             .from('community_managers')
             .delete()
@@ -204,7 +204,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     try {
       // Get the current session to pass auth header
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         return { error: 'Not authenticated' };
       }

@@ -96,10 +96,8 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const isAdmin = userProfile.role === "admin";
-
       // If not admin, check if user is a community manager for this community
-      if (!isAdmin) {
+      if (userProfile.role !== "admin") {
         const { data: managerCheck, error: managerError } = await supabaseClient
           .from("community_managers")
           .select("community_id")

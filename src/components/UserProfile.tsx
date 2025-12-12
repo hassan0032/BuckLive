@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useContentStats } from '../hooks/useContentStats';
 import { useBilling } from '../hooks/useBilling';
 import { supabase } from '../lib/supabase';
-import { User as AppUser } from '../types';
+import { User as AppUser, ROLE, ROLE_DISPLAY_NAME } from '../types';
 
 export const UserProfile: React.FC = () => {
   const { user, isAdmin, isCommunityManager, isMember } = useAuth();
@@ -177,7 +177,7 @@ export const UserProfile: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-700">Role</p>
               <p className="text-sm text-[#363f49] capitalize">
-                {(displayUser.role || 'Member').replace(/_/g, ' ')}
+                {(displayUser.role ? ROLE_DISPLAY_NAME[displayUser.role] : ROLE.MEMBER).replace(/_/g, ' ')}
               </p>
             </div>
           </div>

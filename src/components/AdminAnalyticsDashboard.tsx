@@ -107,9 +107,18 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
                   <Building2 className="h-4 w-4 text-blue-600" />
                 </div>
-                <span className="text-sm text-gray-700">Managers</span>
+                <span className="text-sm text-gray-700">Organization Managers</span>
               </div>
-              <span className="text-lg font-semibold text-[#363f49]">{analytics.usersByRole.community_manager}</span>
+              <span className="text-lg font-semibold text-[#363f49]">{analytics.usersByRole.organizationManager}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                  <Users className="h-4 w-4 text-blue-600" />
+                </div>
+                <span className="text-sm text-gray-700">Community Managers</span>
+              </div>
+              <span className="text-lg font-semibold text-[#363f49]">{analytics.usersByRole.communityManager}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">

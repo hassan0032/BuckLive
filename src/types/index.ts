@@ -5,6 +5,13 @@ export const ROLE = {
   ORGANIZATION_MANAGER: 'organization_manager',
 } as const;
 export type Role = typeof ROLE[keyof typeof ROLE];
+export const ROLE_DISPLAY_NAME = {
+  [ROLE.MEMBER]: 'Member',
+  [ROLE.ADMIN]: 'Admin',
+  [ROLE.COMMUNITY_MANAGER]: 'Community Manager',
+  [ROLE.ORGANIZATION_MANAGER]: 'Organization Manager',
+} as const;
+export type RoleDisplayName = typeof ROLE_DISPLAY_NAME[keyof typeof ROLE_DISPLAY_NAME];
 
 export const REGISTRATION_TYPE = {
   ACCESS_CODE: 'access_code',
@@ -212,7 +219,7 @@ export interface AuthState {
 }
 
 // Unified notification type
-export type NotificationType = 'admin' | 'community_manager';
+export type NotificationType = typeof ROLE.ADMIN | typeof ROLE.COMMUNITY_MANAGER;
 
 export interface Notification {
   id: string;

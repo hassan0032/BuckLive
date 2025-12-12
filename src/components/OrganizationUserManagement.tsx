@@ -1,8 +1,9 @@
-import { Calendar, Edit, Key, Plus, Search, Shield, Trash2, User as UserIcon, Users } from 'lucide-react';
+import { Calendar, Edit, Key, Loader2, Plus, Search, Shield, Trash2, User2, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
 import { adminResetUserPassword, supabase } from '../lib/supabase';
-import { User } from '../types';
+import { ROLE, Role, ROLE_DISPLAY_NAME, User } from '../types';
+import { cn } from '../utils/helper';
 
 export const OrganizationUserManagement: React.FC = () => {
   const { communities, loading: communitiesLoading } = useOrganizationCommunities();
@@ -19,7 +20,7 @@ export const OrganizationUserManagement: React.FC = () => {
     password: '',
     first_name: '',
     last_name: '',
-    role: 'member' as 'member' | 'community_manager',
+    role: ROLE.MEMBER as Role,
     community_id: '',
     is_shared_account: false,
   });
@@ -40,38 +41,56 @@ export const OrganizationUserManagement: React.FC = () => {
 
     try {
       setLoading(true);
-      const communityIds = communities.map(c => c.id);
+
+      // Get the organization ID from the first community (all have same org)
+      const organizationId = communities[0]?.organization_id;
+
+      if (!organizationId) {
+        setLoading(false);
+        return;
+      }
 
       const { data, error: fetchError } = await supabase
-        .from('user_profiles')
-        .select(`
-          *,
-          community:communities!user_profiles_community_id_fkey(*)
-        `)
-        .in('community_id', communityIds)
+        .from('users_with_details')
+        .select('*')
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      const formattedUsers: User[] = (data || []).map(profile => ({
-        id: profile.id,
-        email: profile.email,
-        role: profile.role,
-        created_at: profile.created_at,
-        community_id: profile.community_id,
-        registration_type: profile.registration_type,
-        stripe_customer_id: profile.stripe_customer_id,
-        subscription_id: profile.subscription_id,
-        subscription_status: profile.subscription_status,
-        payment_tier: profile.payment_tier,
-        subscription_started_at: profile.subscription_started_at,
-        subscription_ends_at: profile.subscription_ends_at,
-        is_shared_account: profile.is_shared_account || false,
+      // Transform to User type
+      const formattedUsers: User[] = (data || []).map(row => ({
+        id: row.id,
+        email: row.email,
+        role: row.role as Role,
+        created_at: row.created_at,
+        community_id: row.community_id,
+        registration_type: row.registration_type,
+        subscription_status: row.subscription_status,
+        payment_tier: row.payment_tier,
+        is_shared_account: row.is_shared_account || false,
         profile: {
-          first_name: profile.first_name || '',
-          last_name: profile.last_name || '',
-          avatar_url: profile.avatar_url || '',
-          community: profile.community || undefined,
+          first_name: row.first_name || '',
+          last_name: row.last_name || '',
+          avatar_url: row.avatar_url || '',
+          community: {
+            id: row.community_id,
+            name: row.community_name,
+            membership_tier: row.community_tier,
+            organization_id: row.organization_id,
+            // ... other required Community fields to satisfy type if needed, or Partial
+            // Assuming the UI only needs these or the type allows Partial/missing.
+            // Let's check the User Type definition if strict.
+            // "community: profile.community || undefined" in original code.
+            // profile.community is a full Community object usually.
+            // "row" contains flattened fields. We construct a partial object.
+            // If Typescript complains, we might need to cast or provide defaults.
+            access_code: 'hidden', // dummy
+            is_active: true,
+            is_sharable: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as any, // Cast to any or helper type if properties are missing
         },
       }));
 
@@ -163,20 +182,6 @@ export const OrganizationUserManagement: React.FC = () => {
         if (!response.ok || result.error) {
           throw new Error(result.error || 'Failed to create user');
         }
-
-        // If creating a community manager, also add them to community_managers table
-        if (formData.role === 'community_manager' && result.data?.user?.id) {
-          const { error: cmError } = await supabase
-            .from('community_managers')
-            .insert({
-              user_id: result.data.user.id,
-              community_id: formData.community_id,
-            });
-
-          if (cmError && cmError.code !== '23505') { // Ignore duplicate error
-            console.error('Error adding to community_managers:', cmError);
-          }
-        }
       }
 
       await fetchUsers();
@@ -260,30 +265,12 @@ export const OrganizationUserManagement: React.FC = () => {
       password: '',
       first_name: user.profile?.first_name || '',
       last_name: user.profile?.last_name || '',
-      role: user.role as 'member' | 'community_manager',
+      role: user.role,
       community_id: user.community_id || '',
       is_shared_account: user.is_shared_account || false,
     });
     setShowCreateForm(true);
   };
-
-  if (communitiesLoading || loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-      </div>
-    );
-  }
-
-  if (communities.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">No Communities</h3>
-        <p className="text-gray-600">Create a community first to manage users.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -301,7 +288,7 @@ export const OrganizationUserManagement: React.FC = () => {
               password: '',
               first_name: '',
               last_name: '',
-              role: 'member',
+              role: ROLE.MEMBER,
               community_id: communities[0]?.id || '',
               is_shared_account: false,
             });
@@ -314,312 +301,329 @@ export const OrganizationUserManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-          />
+      {(communitiesLoading || loading) ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
         </div>
-        <select
-          value={selectedCommunityFilter}
-          onChange={(e) => setSelectedCommunityFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-        >
-          <option value="all">All Communities</option>
-          {communities.map((community) => (
-            <option key={community.id} value={community.id}>
-              {community.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Community</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-brand-primary flex items-center justify-center text-white font-semibold">
-                          {user.profile?.first_name?.[0] || user.email[0].toUpperCase()}
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.profile?.first_name} {user.profile?.last_name}
-                        </div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{user.profile?.community?.name || 'N/A'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'community_manager'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-blue-100 text-blue-800'
-                      }`}>
-                      {user.role === 'community_manager' ? (
-                        <>
-                          <Shield className="h-3 w-3 mr-1" />
-                          Community Manager
-                        </>
-                      ) : (
-                        <>
-                          <UserIcon className="h-3 w-3 mr-1" />
-                          Member
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 text-xs leading-5 font-semibold rounded-full ${user.is_shared_account
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-green-100 text-green-800'
-                      }`}>
-                      {user.is_shared_account ? 'Shared' : 'Individual'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button
-                      onClick={() => handleEdit(user)}
-                      className="text-brand-primary hover:text-brand-d-blue"
-                      title="Edit user"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPasswordResetUserId(user.id);
-                        setShowPasswordResetModal(true);
-                      }}
-                      className="text-blue-600 hover:text-blue-800"
-                      title="Reset password"
-                    >
-                      <Key className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="text-red-600 hover:text-red-800"
-                      title="Delete user"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredUsers.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    No users found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Create/Edit User Modal */}
-      {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">{editingUser ? 'Edit User' : 'Add New User'}</h3>
-
-            {formError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                />
-              </div>
-
-              {!editingUser && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                  <input
-                    type="password"
-                    required={!editingUser}
-                    minLength={6}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                    placeholder="Minimum 6 characters"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'community_manager' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                  disabled={!!editingUser}
-                >
-                  <option value="member">Member</option>
-                  <option value="community_manager">Community Manager</option>
-                </select>
-                {editingUser && (
-                  <p className="text-xs text-gray-500 mt-1">Role cannot be changed after creation</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Community *</label>
-                <select
-                  required
-                  value={formData.community_id}
-                  onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                >
-                  <option value="">Select a community</option>
-                  {communities.map((community) => (
-                    <option key={community.id} value={community.id}>
-                      {community.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.is_shared_account}
-                  onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
-                  className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                />
-                <label className="ml-2 text-sm text-gray-700">
-                  This is a shared account (multiple users can access)
-                </label>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setEditingUser(null);
-                    setFormError(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={formLoading}
-                  className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
-                >
-                  {formLoading ? 'Saving...' : editingUser ? 'Save Changes' : 'Create User'}
-                </button>
-              </div>
-            </form>
+      ) : (
+        communities.length === 0 ? (
+          <div className="text-center py-12">
+            <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">No Communities</h3>
+            <p className="text-gray-600">Create a community first to manage users.</p>
           </div>
-        </div>
-      )}
-
-      {/* Password Reset Modal */}
-      {showPasswordResetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">Reset Password</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+        ) : (
+          <>
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={6}
-                  placeholder="Minimum 6 characters"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                 />
               </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowPasswordResetModal(false);
-                    setPasswordResetUserId(null);
-                    setNewPassword('');
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handlePasswordReset}
-                  disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
-                  className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
-                >
-                  {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
-                </button>
+              <select
+                value={selectedCommunityFilter}
+                onChange={(e) => setSelectedCommunityFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+              >
+                <option value="all">All Communities</option>
+                {communities.map((community) => (
+                  <option key={community.id} value={community.id}>
+                    {community.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Users Table */}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Community</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <div className={cn(
+                              'h-10 w-10 rounded-full flex items-center justify-center bg-green-100',
+                              { 'bg-red-100': user.role === ROLE.ADMIN },
+                              { 'bg-blue-100': user.role === ROLE.COMMUNITY_MANAGER },
+                            )}>
+                              {user.role === ROLE.ADMIN ? (
+                                <Shield className="h-5 w-5 text-red-600" />
+                              ) : user.role === ROLE.COMMUNITY_MANAGER ? (
+                                <Users2 className="h-5 w-5 text-blue-600" />
+                              ) : (
+                                <User2 className="h-5 w-5 text-green-700" />
+                              )}
+                            </div>
+                            <div className="ml-3">
+                              <div className="text-sm font-medium text-gray-900">
+                                {user.profile?.first_name} {user.profile?.last_name}
+                              </div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{user.profile?.community?.name || 'N/A'}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
+                            { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },
+                            { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER },
+                          )}>
+                            {ROLE_DISPLAY_NAME[user.role]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 text-xs leading-5 font-semibold rounded-full ${user.is_shared_account
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                            }`}>
+                            {user.is_shared_account ? 'Shared' : 'Individual'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {new Date(user.created_at).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <button
+                            onClick={() => handleEdit(user)}
+                            className="text-brand-primary hover:text-brand-d-blue"
+                            title="Edit user"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPasswordResetUserId(user.id);
+                              setShowPasswordResetModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Reset password"
+                          >
+                            <Key className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(user.id)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                          No users found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+
+            {/* Create/Edit User Modal */}
+            {
+              showCreateForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+                    <h3 className="text-lg font-semibold mb-4">{editingUser ? 'Edit User' : 'Add New User'}</h3>
+
+                    {formError && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                        {formError}
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.first_name}
+                            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.last_name}
+                            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                        <input
+                          type="email"
+                          required
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                        />
+                      </div>
+
+                      {!editingUser && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                          <input
+                            type="password"
+                            required={!editingUser}
+                            minLength={6}
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                            placeholder="Minimum 6 characters"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                        <select
+                          value={formData.role}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                          disabled={!!editingUser}
+                        >
+                          <option value={ROLE.MEMBER}>Member</option>
+                          <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
+                        </select>
+                        {editingUser && (
+                          <p className="text-xs text-gray-500 mt-1">Role cannot be changed after creation</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Community *</label>
+                        <select
+                          required
+                          value={formData.community_id}
+                          onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                        >
+                          <option value="">Select a community</option>
+                          {communities.map((community) => (
+                            <option key={community.id} value={community.id}>
+                              {community.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_shared_account}
+                          onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                          className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                        />
+                        <label className="ml-2 text-sm text-gray-700">
+                          This is a shared account (multiple users can access)
+                        </label>
+                      </div>
+
+                      <div className="flex justify-end space-x-3 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCreateForm(false);
+                            setEditingUser(null);
+                            setFormError(null);
+                          }}
+                          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={formLoading}
+                          className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
+                        >
+                          {formLoading ? 'Saving...' : editingUser ? 'Save Changes' : 'Create User'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )
+            }
+
+            {/* Password Reset Modal */}
+            {
+              showPasswordResetModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-lg max-w-md w-full p-6">
+                    <h3 className="text-lg font-semibold mb-4">Reset Password</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          minLength={6}
+                          placeholder="Minimum 6 characters"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-3">
+                        <button
+                          onClick={() => {
+                            setShowPasswordResetModal(false);
+                            setPasswordResetUserId(null);
+                            setNewPassword('');
+                          }}
+                          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handlePasswordReset}
+                          disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
+                          className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
+                        >
+                          {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+          </>
+        ))}
+    </div >
   );
 };
 

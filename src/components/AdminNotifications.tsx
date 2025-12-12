@@ -3,7 +3,7 @@ import { Loader2, PlusCircle, Trash2, X, Bell, CheckCircle, Circle } from 'lucid
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import { useNotificationContext } from '../contexts/NotificationContext';
 
-import { Notification } from '../types';
+import { Notification, ROLE } from '../types';
 
 type TabType = 'create' | 'view';
 
@@ -104,11 +104,11 @@ const AdminNotifications: React.FC = () => {
     };
 
     // Filter for community notifications only
-    const communityNotifications = (userNotifications || []).filter(n => n.type === 'community_manager');
+    const communityNotifications = (userNotifications || []).filter(n => n.type === ROLE.COMMUNITY_MANAGER);
 
     const formatUserName = (notification: Notification) => {
         // For community notifications, the manager's name is stored in the content field
-        if (notification.type === 'community_manager' && notification.content) {
+        if (notification.type === ROLE.COMMUNITY_MANAGER && notification.content) {
             return notification.content;
         }
 

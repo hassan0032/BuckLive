@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .select('id')
       .eq('user_id', userId)
       .maybeSingle();
-    
+
     if (error) {
       console.error('Error checking org manager status:', error);
       return false;
@@ -103,14 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('🔑 Final role set to:', appUser.role);
           currentUserIdRef.current = session.user.id;
           setUser(appUser);
-          
+
           // Check if user is an organization manager (by table membership, not role)
           const orgManagerStatus = await checkOrgManager(session.user.id);
           setIsOrgManager(orgManagerStatus);
           console.log('🏢 Organization manager status:', orgManagerStatus);
-          
+
           // Generate invoices immediately for community managers on login
-          if (appUser.role === "community_manager" && invoiceGeneratedForUserRef.current !== appUser.id) {
+          if (appUser.role === ROLE.COMMUNITY_MANAGER && invoiceGeneratedForUserRef.current !== appUser.id) {
             invoiceGeneratedForUserRef.current = appUser.id;
             console.log("⚡ Generating invoices immediately on login for community manager:", appUser.id);
             // Don't await - let it run in background so login isn't blocked
@@ -201,14 +201,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log('🔑 Final role in auth state change:', appUser.role);
               currentUserIdRef.current = session.user.id;
               setUser(appUser);
-              
+
               // Check if user is an organization manager (by table membership, not role)
               const orgManagerStatus = await checkOrgManager(session.user.id);
               setIsOrgManager(orgManagerStatus);
               console.log('🏢 Organization manager status:', orgManagerStatus);
-              
+
               // Generate invoices immediately for community managers on login
-              if (appUser.role === "community_manager" && invoiceGeneratedForUserRef.current !== appUser.id) {
+              if (appUser.role === ROLE.COMMUNITY_MANAGER && invoiceGeneratedForUserRef.current !== appUser.id) {
                 invoiceGeneratedForUserRef.current = appUser.id;
                 console.log("⚡ Generating invoices immediately on auth state change for community manager:", appUser.id);
                 // Don't await - let it run in background so login isn't blocked
@@ -248,10 +248,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextType = {
     user,
     loading,
-    isAdmin: user?.role === 'admin',
-    isCommunityManager: user?.role === 'community_manager',
-    isOrganizationManager: user?.role === 'organization_manager' || isOrgManager,
-    isMember: user?.role === 'member',
+    isAdmin: user?.role === ROLE.ADMIN,
+    isCommunityManager: user?.role === ROLE.COMMUNITY_MANAGER,
+    isOrganizationManager: user?.role === ROLE.ORGANIZATION_MANAGER || isOrgManager,
+    isMember: user?.role === ROLE.MEMBER,
     isSharedAccount: user?.is_shared_account || false,
   };
 

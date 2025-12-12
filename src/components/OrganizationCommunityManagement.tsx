@@ -1,8 +1,8 @@
-import { Edit, Key, Loader2, Plus, Shield, Trash2, Users, UserPlus } from 'lucide-react';
+import { Key, Loader2, Plus, Shield, Trash2, UserPlus, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
 import { useCommunities } from '../hooks/useCommunities';
-import { Community, PAYMENT_TIER, PaymentTier } from '../types';
+import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
+import { Community, PaymentTier } from '../types';
 
 interface CommunityManager {
   user_id: string;

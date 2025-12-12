@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Notification } from '../types';
+import { Notification, ROLE } from '../types';
 import { useAuth } from './AuthContext';
 
 interface CreateNotificationInput {
@@ -50,7 +50,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const [unreadCount, setUnreadCount] = useState(0);
 
     // Determine notification type based on user role
-    const notificationType = isAdmin ? 'community_manager' : 'admin';
+    const notificationType = isAdmin ? ROLE.COMMUNITY_MANAGER : ROLE.ADMIN;
     const shouldFetch = (isCommunityManager || isAdmin) && user;
 
     // Calculate unread count whenever notifications change
@@ -229,7 +229,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
                 // Update local state
                 setNotifications(prev =>
-                    prev.map(n => 
+                    prev.map(n =>
                         unreadIds.includes(n.id)
                             ? { ...n, is_read: true, read_at: readDate }
                             : n

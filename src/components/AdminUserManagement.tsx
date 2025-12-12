@@ -1,9 +1,9 @@
-import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User as UserIcon, Users } from 'lucide-react';
+import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
 import { adminResetUserPassword } from '../lib/supabase';
-import { PAYMENT_TIER, ROLE, Role } from '../types';
+import { PAYMENT_TIER, ROLE, Role, ROLE_DISPLAY_NAME } from '../types';
 import { cn } from '../utils/helper';
 
 interface FormData {
@@ -61,6 +61,7 @@ export const AdminUserManagement: React.FC = () => {
   const stats = {
     totalUsers: users.length,
     admins: users.filter(u => u.role === ROLE.ADMIN).length,
+    superAdmins: users.filter(u => u.role === ROLE.ORGANIZATION_MANAGER).length,
     communityManagers: users.filter(u => u.role === ROLE.COMMUNITY_MANAGER).length,
     members: users.filter(u => u.role === ROLE.MEMBER).length,
     goldTier: users.filter(u => u.payment_tier === PAYMENT_TIER.GOLD).length,
@@ -314,16 +315,19 @@ export const AdminUserManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className={cn(
-                        'h-10 w-10 rounded-full flex items-center justify-center bg-brand-beige-light',
+                        'h-10 w-10 rounded-full flex items-center justify-center bg-green-100',
                         { 'bg-red-100': user.role === ROLE.ADMIN },
+                        { 'bg-purple-100': user.role === ROLE.ORGANIZATION_MANAGER },
                         { 'bg-blue-100': user.role === ROLE.COMMUNITY_MANAGER },
                       )}>
                         {user.role === ROLE.ADMIN ? (
                           <Shield className="h-5 w-5 text-red-600" />
+                        ) : user.role === ROLE.ORGANIZATION_MANAGER ? (
+                          <Building2 className="h-5 w-5 text-purple-600" />
                         ) : user.role === ROLE.COMMUNITY_MANAGER ? (
-                          <Building2 className="h-5 w-5 text-blue-600" />
+                          <Users2 className="h-5 w-5 text-blue-600" />
                         ) : (
-                          <UserIcon className="h-5 w-5 text-brand-primary" />
+                          <User2 className="h-5 w-5 text-green-700" />
                         )}
                       </div>
                       <div className="ml-3">
@@ -348,11 +352,12 @@ export const AdminUserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700',
+                    <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
                       { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },
-                      { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER }
+                      { 'bg-purple-100 text-purple-700': user.role === ROLE.ORGANIZATION_MANAGER },
+                      { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER },
                     )}>
-                      {user.role === ROLE.COMMUNITY_MANAGER ? 'MANAGER' : user.role.toUpperCase()}
+                      {ROLE_DISPLAY_NAME[user.role]}
                     </span>
                   </td>
                   <td className="px-6 py-4">

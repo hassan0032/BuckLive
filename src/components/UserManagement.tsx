@@ -1,8 +1,10 @@
-import { Calendar, Edit, Key, Mail, Plus, Search, Trash2, User as UserIcon, Users } from 'lucide-react';
+import { Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCommunityUsers } from '../hooks/useCommunityUsers';
 import { adminResetUserPassword } from '../lib/supabase';
+import { ROLE, ROLE_DISPLAY_NAME } from '../types';
+import { cn } from '../utils/helper';
 
 interface UserManagementProps {
   communityId: string;
@@ -228,8 +230,18 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-brand-beige-light flex items-center justify-center">
-                          <UserIcon className="h-5 w-5 text-brand-primary" />
+                        <div className={cn(
+                          'h-10 w-10 rounded-full flex items-center justify-center bg-green-100',
+                          { 'bg-red-100': user.role === ROLE.ADMIN },
+                          { 'bg-blue-100': user.role === ROLE.COMMUNITY_MANAGER },
+                        )}>
+                          {user.role === ROLE.ADMIN ? (
+                            <Shield className="h-5 w-5 text-red-600" />
+                          ) : user.role === ROLE.COMMUNITY_MANAGER ? (
+                            <Users2 className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <User2 className="h-5 w-5 text-green-700" />
+                          )}
                         </div>
                         <div className="ml-3">
                           <div className="flex items-center space-x-2">
@@ -256,8 +268,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-700">
-                        {user.role.toUpperCase()}
+                      <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
+                        { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },
+                        { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER },
+                      )}>
+                        {ROLE_DISPLAY_NAME[user.role]}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -394,23 +409,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                   </div>
                 )}
 
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="is_shared_account"
-                      checked={formData.is_shared_account}
-                      onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
-                      className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                    />
-                    <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
-                      Shared Account
-                    </label>
-                    <span className="text-xs text-gray-500">
-                      (Multiple users can use this account)
-                    </span>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_shared_account"
+                    checked={formData.is_shared_account}
+                    onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                    className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                  />
+                  <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
+                    Shared Account
+                  </label>
+                  <span className="text-xs text-gray-500">
+                    (Multiple users can use this account)
+                  </span>
+                </div>
 
-                  {/* {editingUser && formData.is_shared_account && (
+                {/* {editingUser && formData.is_shared_account && (
                   <div className="flex items-center space-x-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                     <Users className="h-4 w-4 text-purple-600" />
                     <span className="text-sm text-purple-700">
