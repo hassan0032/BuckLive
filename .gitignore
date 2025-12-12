@@ -25,5 +25,6 @@ dist-ssr
 .env
 
 .cursor
+.agent
 docs
 supabase/.*
