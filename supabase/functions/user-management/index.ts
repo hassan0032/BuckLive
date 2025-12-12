@@ -7,6 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const ROLES = {
+  MEMBER: "member",
+  ADMIN: "admin",
+  COMMUNITY_MANAGER: "community_manager",
+} as const;
+type Role = typeof ROLES[keyof typeof ROLES];
+
 interface CreateUserRequest {
   action: "create";
   email: string;
@@ -14,7 +21,7 @@ interface CreateUserRequest {
   first_name: string;
   last_name: string;
   community_id: string;
-  role?: "member" | "admin" | "community_manager";
+  role?: Role;
   is_shared_account?: boolean;
 }
 
@@ -127,7 +134,7 @@ Deno.serve(async (req: Request) => {
 async function handleCreateUser(
   request: CreateUserRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
   const { email, password, first_name, last_name, community_id, role: requestedRole, is_shared_account } = request;
@@ -173,14 +180,14 @@ async function handleCreateUser(
     );
   }
 
-  const isAdmin = userProfile.role === "admin";
-  const isCommunityManager = userProfile.role === "community_manager";
-  const isMember = userProfile.role === "member";
+  const isAdmin = userProfile.role === ROLES.ADMIN;
+  const isCommunityManager = userProfile.role === ROLES.COMMUNITY_MANAGER;
+  const isMember = userProfile.role === ROLES.MEMBER;
 
   // Validate role permissions
   if (!isMember) {
     // Only admins can create non-member roles
-    if (callerRole !== "admin") {
+    if (callerRole !== ROLES.ADMIN) {
       return new Response(
         JSON.stringify({ error: "Only admins can create users with admin or community_manager roles" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -222,7 +229,7 @@ async function handleCreateUser(
       user_metadata: {
         first_name,
         last_name,
-        role: requestedRole || "member",
+        role: requestedRole || ROLES.MEMBER,
         community_id,
         is_shared_account: is_shared_account || false,
       },
@@ -246,7 +253,7 @@ async function handleCreateUser(
     const { error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .update({
-        role: requestedRole || "member",
+        role: requestedRole || ROLES.MEMBER,
         registration_type: "access_code",
         is_shared_account: is_shared_account || false,
       })
@@ -261,7 +268,7 @@ async function handleCreateUser(
     // If creating a community manager, set their billing_date now if it's not already set.
     // This ensures admin-created/staff-created community managers get a billing anchor immediately
     // (only updates when billing_date IS NULL so it won't overwrite existing values).
-    if (requestedRole === "community_manager") {
+    if (requestedRole === ROLES.COMMUNITY_MANAGER) {
       try {
         const today = new Date().toISOString().slice(0, 10);
         const { error: billingUpdateError } = await supabaseAdmin
@@ -312,7 +319,7 @@ async function handleCreateUser(
 async function handleDeleteUser(
   request: DeleteUserRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
   const { user_id } = request;
@@ -350,9 +357,9 @@ async function handleDeleteUser(
     );
   }
 
-  const isAdmin = userProfile.role === "admin";
-  const isCommunityManager = userProfile.role === "community_manager";
-  const isMember = userProfile.role === "member";
+  const isAdmin = userProfile.role === ROLES.ADMIN;
+  const isCommunityManager = userProfile.role === ROLES.COMMUNITY_MANAGER;
+  const isMember = userProfile.role === ROLES.MEMBER;
 
   if (isMember) {
     return new Response(
@@ -362,7 +369,7 @@ async function handleDeleteUser(
   }
 
   if (isCommunityManager) {
-    if (targetUser.role !== "member") {
+    if (targetUser.role !== ROLES.MEMBER) {
       return new Response(
         JSON.stringify({ error: "You can only delete members" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -401,13 +408,13 @@ async function handleDeleteUser(
 async function handleResetPassword(
   request: ResetPasswordRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
   const { user_id, new_password } = request;
 
   // Check if caller has permission to reset this user's password
-  if (callerRole === "community_manager") {
+  if (callerRole === ROLES.COMMUNITY_MANAGER) {
     // Verify that the community manager manages the user's community
     const { data: targetUser, error: userError } = await supabaseAdmin
       .from("user_profiles")
