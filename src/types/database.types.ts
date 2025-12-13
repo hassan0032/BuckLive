@@ -153,7 +153,6 @@ export interface Database {
           subscription_start_date: string | null
           subscription_end_date: string | null
           is_shared_account: boolean
-          billing_date: string | null
           created_at: string
           updated_at: string
         }
@@ -173,7 +172,6 @@ export interface Database {
           subscription_start_date?: string | null
           subscription_end_date?: string | null
           is_shared_account?: boolean
-          billing_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -193,7 +191,6 @@ export interface Database {
           subscription_start_date?: string | null
           subscription_end_date?: string | null
           is_shared_account?: boolean
-          billing_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -488,12 +485,10 @@ export interface Database {
           is_shared_account: boolean;
           created_at: string;
           updated_at: string;
-          billing_date: string | null;
           community_name: string | null;
           community_tier: string | null;
           organization_id: string | null;
           organization_name: string | null;
-          organization_billing_date: string | null;
         }
       }
     }

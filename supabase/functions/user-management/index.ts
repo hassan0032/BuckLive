@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// @ts-ignore
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -42,10 +43,10 @@ type UserManagementRequest = CreateUserRequest | DeleteUserRequest | ResetPasswo
 
 interface CommunityData {
   id: string;
-  primary_manager: string | null;
   organization_id: string | null;
 }
 
+// @ts-ignore
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -57,7 +58,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     // Get Supabase credentials
+    // @ts-ignore
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    // @ts-ignore
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
@@ -77,6 +80,7 @@ Deno.serve(async (req: Request) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
     const supabaseClient = createClient(
       supabaseUrl,
+      // @ts-ignore
       Deno.env.get("SUPABASE_ANON_KEY")!,
       {
         global: {
@@ -202,7 +206,7 @@ async function handleCreateUser(
     // Verify community exists
     const { data: communityData, error: communityError } = await supabaseAdmin
       .from("communities")
-      .select("id, primary_manager, organization_id")
+      .select("id, organization_id")
       .eq("id", community_id)
       .single();
 
@@ -296,7 +300,7 @@ async function handleCreateUser(
       );
     }
 
-    const managesCommunity = managedCommunities?.some(cm => cm.community_id === community_id);
+    const managesCommunity = managedCommunities?.some((cm: { community_id: string }) => cm.community_id === community_id);
 
     if (!managesCommunity) {
       return new Response(
@@ -400,7 +404,7 @@ async function handleCreateUser(
       // Ensure unique and valid
       const uniqueIds = [...new Set(communitiesToManage)];
 
-      const managerInserts = uniqueIds.map(cid => ({
+      const managerInserts = uniqueIds.map((cid: string) => ({
         user_id: authData.user!.id,
         community_id: cid,
         created_by: callerId,
@@ -420,39 +424,6 @@ async function handleCreateUser(
         );
       } else {
         console.log(`✅ Assigned user ${authData.user.id} as community manager for community ${community_id}`);
-        // Set as primary_manager if the community doesn't have one yet
-        if (!community?.primary_manager && !community?.organization_id) {
-          // Set this user as the primary_manager
-          const { error: updateError } = await supabaseAdmin
-            .from("communities")
-            .update({ primary_manager: authData.user.id })
-            .eq("id", community_id);
-
-          if (updateError) {
-            console.error("Error setting primary_manager:", updateError);
-          } else {
-            console.log(`Set user ${authData.user.id} as primary_manager for community ${community_id}`);
-          }
-
-          // If creating a community manager, set their billing_date now if it's not already set.
-          // This ensures admin-created/staff-created community managers get a billing anchor immediately
-          // (only updates when billing_date IS NULL so it won't overwrite existing values).
-          try {
-            const today = new Date().toISOString().slice(0, 10);
-            const { error: billingUpdateError } = await supabaseAdmin
-              .from('user_profiles')
-              .update({ billing_date: today })
-              .eq('id', authData.user.id);
-
-            if (billingUpdateError) {
-              console.error('Failed to set billing_date on created community manager:', billingUpdateError);
-            } else {
-              console.log(`Set billing_date=${today} for new community manager ${authData.user.id}`);
-            }
-          } catch (err) {
-            console.error('Unexpected error setting billing_date for new community manager:', err);
-          }
-        }
       }
     }
 
@@ -635,8 +606,6 @@ async function handleDeleteUser(
 
   try {
     console.log(`Deleting user: ${user_id}`);
-    // Note: Previously we checked for primary_manager and reassigned.
-    // With multi-manager support and primary_manager removal, we no longer need to do this.
     // The database constraint (DELETE CASCADE) on community_managers table will handle cleanup of manager assignments.
 
     // Delete the user
@@ -750,7 +719,7 @@ async function handleResetPassword(
       );
     }
 
-    const managesMemberCommunity = managedCommunities?.some(cm => cm.community_id === targetUser.community_id);
+    const managesMemberCommunity = managedCommunities?.some((cm: { community_id: string }) => cm.community_id === targetUser.community_id);
 
     if (!managesMemberCommunity) {
       return new Response(

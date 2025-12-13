@@ -159,7 +159,6 @@ Deno.serve(async (req: Request) => {
 
           // For discount calculation, we need to determine if this is an organization community or standalone
           // Since we removed primary_manager, we'll check if there's an organization_id
-
           let discountPercentage = 0;
 
           if (community.organization_id) {
