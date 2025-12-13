@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { applyDiscountFromDatabase } from '../utils/helper';
+import { Invoice } from '../types';
 
 export function useBilling() {
   const { user, isCommunityManager, loading: authLoading } = useAuth();
   const enabled = !!user && isCommunityManager;
 
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [startDate, setStartDate] = useState<string | null>(null);
   const [renewalDate, setRenewalDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +27,7 @@ export function useBilling() {
     // Fetch communities managed by the user
     const { data: managerCommunities, error: cmError } = await supabase
       .from('community_managers')
-      .select('community_id, communities:community_id(name, membership_tier, code)')
+      .select('community_id')
       .eq('user_id', user.id);
 
     if (cmError || !managerCommunities) {
@@ -36,33 +37,21 @@ export function useBilling() {
       return;
     }
 
-    const communityMeta = managerCommunities
-      .map((row) => {
-        const community = Array.isArray(row.communities)
-          ? row.communities[0]
-          : row.communities;
+    const communityIds = managerCommunities.map((c) => c.community_id);
 
-        return {
-          communityId: row.community_id,
-          communityName: community?.name ?? 'Community',
-          communityTier: community?.membership_tier ?? null,
-          communityCode: community?.code ?? null,
-        };
-      })
-      .filter((c) => !!c.communityId);
-
-    if (communityMeta.length === 0) {
+    if (communityIds.length === 0) {
       setInvoices([]);
       setIsLoading(false);
       return;
     }
 
-    const communityIds = communityMeta.map((c) => c.communityId);
-
-    // Fetch existing invoices including community info
+    // Fetch existing invoices including community info and organization info
     const { data: existingInvoices, error: invoiceError } = await supabase
       .from('invoices')
-      .select('*')
+      .select(`
+        *,
+        organization:organization_id (name)
+      `)
       .in('community_id', communityIds);
 
     if (invoiceError) {
@@ -72,28 +61,28 @@ export function useBilling() {
       return;
     }
 
-    const normalized = (existingInvoices || []).map((inv) => ({
+    // Map to Invoice type
+    const normalized: Invoice[] = (existingInvoices || []).map((inv: any) => ({
       id: inv.id,
-      invoice_no: inv.invoice_no,
+      invoice_no: Number(inv.invoice_no),
       issueDate: inv.issue_date,
       periodStart: inv.period_start,
       periodEnd: inv.period_end,
 
-      amountCents: inv.amount_cents,
+      amountCents: Number(inv.amount_cents),
       currency: inv.currency,
       status: inv.status,
       discountPercentage: inv.discount_percentage ?? 0,
 
       communityId: inv.community_id,
       communityName: inv.community_name ?? null,
-      communityTier: inv.community_tier ?? null,
       communityCode: inv.community_code ?? null,
+      communityTier: inv.community_tier ?? null,
+
+      organizationId: inv.organization_id ?? null,
+      organizationName: inv.organization?.name ?? null,
 
       createdAt: inv.created_at,
-      userId: user.id,
-
-      communityManagerEmail: inv.community_manager_email ?? null,
-      communityManagerName: inv.community_manager_name ?? null,
     }));
 
     // Sort descending by issue date for display
@@ -101,10 +90,10 @@ export function useBilling() {
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    // Apply discount logic using stored discount_percentage from database
+    // Apply discount logic
     const discounted = applyDiscountFromDatabase(normalized);
 
-    setInvoices(discounted);
+    setInvoices(discounted as Invoice[]);
     setStartDate(discounted[discounted.length - 1]?.periodStart ?? null);
     setRenewalDate(discounted[0]?.periodEnd ?? null);
     setIsLoading(false);
@@ -132,4 +121,5 @@ export function useBilling() {
     [enabled, startDate, renewalDate, invoices, isLoading, authLoading, loadInvoices]
   );
 }
+
 

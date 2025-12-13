@@ -263,3 +263,23 @@ export interface CommunityDocument {
   createdAt?: string;
   createdBy?: string | null;
 }
+
+export interface Invoice {
+  id: string;
+  communityId: string | null;
+  communityName: string | null;
+  communityCode: string | null;
+  communityTier: PaymentTier;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  invoice_no: number;
+  issueDate: string;
+  periodStart: string;
+  periodEnd: string;
+  amountCents: number;
+  currency: string;
+  status: string;
+  discountPercentage: number;
+  calculatedAmountCents?: number;
+  createdAt: string;
+}

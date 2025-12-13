@@ -30,9 +30,14 @@ type PricingInput = {
   communityId?: string | null
   issueDate?: string | null
   periodStart?: string | null
+  periodEnd?: string | null
   communityTier?: 'gold' | 'silver' | undefined
   amountCents?: number
   createdAt?: string | null
+  currency?: string
+  status?: string
+  communityName?: string | null
+  communityCode?: string | null
 }
 
 /**

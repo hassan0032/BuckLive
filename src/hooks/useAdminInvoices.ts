@@ -3,36 +3,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useCommunities } from './useCommunities'
 import { applyDiscountFromDatabase } from '../utils/helper'
-import { InvoiceStatus, buildInvoiceStatus } from '../types'
+import { InvoiceStatus, buildInvoiceStatus, Invoice, PaymentTier } from '../types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const client = createClient(supabaseUrl, supabaseAnonKey)
 
-interface InvoiceData {
-  invoice_no: number
-  issueDate: string
-  periodStart: string
-  periodEnd: string
-  amountCents: number
-  currency: string
-  status: string
-  discountPercentage?: number
-  communityId: string | null
-  communityName: string | null
-  communityCode: string | null
-  communityTier: 'gold' | 'silver' | undefined
-  id: string // Invoice ID for updates
-  calculatedAmountCents?: number
-  communityManagerEmail?: string | null
-  communityManagerName?: string | null
-  createdAt?: string
-}
-
 export function useAdminInvoices() {
   const { isAdmin, loading: authLoading } = useAuth()
   const { communities, loading: communitiesLoading } = useCommunities()
-  const [invoices, setInvoices] = useState<InvoiceData[]>([])
+  const [invoices, setInvoices] = useState<Invoice[]>([])
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +35,7 @@ export function useAdminInvoices() {
       try {
         let query = client
           .from('invoices')
-          .select('*')
+          .select('*, organization:organization_id(name)')
           .order('period_start', { ascending: false })
 
         // Filter by community if selected
@@ -72,7 +52,7 @@ export function useAdminInvoices() {
           return
         }
 
-        const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
+        const normalizedInvoices: Invoice[] = (data || []).map((inv: any) => ({
           invoice_no: Number(inv.invoice_no),
           issueDate: inv.issue_date,
           periodStart: inv.period_start,
@@ -84,11 +64,13 @@ export function useAdminInvoices() {
           communityId: inv.community_id,
           communityName: inv.community_name || null,
           communityCode: inv.community_code || null,
-          communityTier: inv.community_tier as 'gold' | 'silver' | undefined,
+          communityTier: inv.community_tier as PaymentTier,
           id: inv.id,
           createdAt: inv.created_at,
           communityManagerEmail: inv.community_manager_email ?? null,
           communityManagerName: inv.community_manager_name ?? null,
+          organizationId: inv.organization_id ?? null,
+          organizationName: inv.organization?.name ?? null,
         }))
 
         setInvoices(applyDiscountFromDatabase(normalizedInvoices))
@@ -142,7 +124,7 @@ export function useAdminInvoices() {
         return
       }
 
-      const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
+      const normalizedInvoices: Invoice[] = (data || []).map((inv: any) => ({
         invoice_no: Number(inv.invoice_no),
         issueDate: inv.issue_date,
         periodStart: inv.period_start,
@@ -154,11 +136,13 @@ export function useAdminInvoices() {
         communityId: inv.community_id,
         communityName: inv.community_name || null,
         communityCode: inv.community_code || null,
-        communityTier: inv.community_tier as 'gold' | 'silver' | undefined,
+        communityTier: inv.community_tier as PaymentTier,
         id: inv.id,
         createdAt: inv.created_at,
         communityManagerEmail: inv.community_manager_email ?? null,
         communityManagerName: inv.community_manager_name ?? null,
+        organizationId: inv.organization_id ?? null,
+        organizationName: inv.organization?.name ?? null,
       }))
 
       setInvoices(applyDiscountFromDatabase(normalizedInvoices))
@@ -186,7 +170,7 @@ export function useAdminInvoices() {
         try {
           let query = client
             .from('invoices')
-            .select(`*, community:community_id(name, membership_tier, code)`)
+            .select(`*, community:community_id(name, membership_tier, code, organization:organization_id(name))`)
             .order('period_start', { ascending: false })
 
           if (selectedCommunityId) {
@@ -201,7 +185,7 @@ export function useAdminInvoices() {
             return
           }
 
-          const normalizedInvoices: InvoiceData[] = (data || []).map((inv: any) => ({
+          const normalizedInvoices: Invoice[] = (data || []).map((inv: any) => ({
             invoice_no: Number(inv.invoice_no),
             issueDate: inv.issue_date,
             periodStart: inv.period_start,
@@ -213,11 +197,13 @@ export function useAdminInvoices() {
             communityId: inv.community_id,
             communityName: inv.community?.name || null,
             communityCode: inv.community?.code || null,
-            communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
+            communityTier: inv.community?.membership_tier as PaymentTier,
             id: inv.id,
             createdAt: inv.created_at,
             communityManagerEmail: inv.community_manager_email ?? null,
             communityManagerName: inv.community_manager_name ?? null,
+            organizationId: inv.organization_id ?? inv.community?.organization?.id ?? null,
+            organizationName: inv.community?.organization?.name ?? null, // Note: This depends on the specific query used in refresh
           })).sort(
             (a, b) => {
               const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
