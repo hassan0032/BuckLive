@@ -250,40 +250,4 @@ export const getPDFUrl = (content: { url?: string; storage_pdf_path?: string }):
   return '';
 };
 
-// AUTO-GENERATE FIRST INVOICE FOR COMMUNITY MANAGER VIA EDGE FUNCTION AFTER LOGIN
-export const ensureCommunityManagerInvoices = async (_userId: string) => {
-  try {
-    // Use the current session's access token to call the secured edge function
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (sessionError || !session?.access_token) {
-      console.error("❌ Unable to get session for invoice generation:", sessionError);
-      return;
-    }
-
-    const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-first-invoice`;
-
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({}),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("❌ Failed to trigger create-first-invoice function:", response.status, errorBody);
-      return;
-    }
-
-    const result = await response.json().catch(() => null);
-    console.log("✅ create-first-invoice function result:", result);
-  } catch (err) {
-    console.error("❌ Unexpected error calling create-first-invoice function:", err);
-  }
-};
+// End of file

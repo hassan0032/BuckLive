@@ -74,16 +74,11 @@ function Invoices() {
     const formattedAmount = formatCurrency(amountCentsToDisplay, inv.currency)
     const originalAmount = formatCurrency(inv.amountCents, inv.currency)
     const discountPercent = inv.discountPercentage ?? 0
-    
-    // Get proration fields
-    // const isProrated = inv.isProrated ?? false
-    // const proratedDays = inv.proratedDays ?? undefined
-    // const fullYearAmountCents = inv.fullYearAmountCents ?? undefined
-    
+
     // Use community manager info from invoice if available
     const billToName = inv.communityManagerName || (inv.communityName ? `${inv.communityName} Management` : 'Community Manager')
     const billToEmail = inv.communityManagerEmail || ''
-    
+
     const { container, opt } = generateInvoicePdf({
       invoiceNo: formattedInvoiceNo,
       amount: formattedAmount,
@@ -96,9 +91,6 @@ function Invoices() {
       billToEmail,
       originalAmount: originalAmount,
       discountPercent: discountPercent,
-      // isProrated,
-      // proratedDays,
-      // fullYearAmountCents,
     })
 
     html2pdf()

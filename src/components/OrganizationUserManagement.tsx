@@ -23,6 +23,7 @@ export const OrganizationUserManagement: React.FC = () => {
     role: ROLE.MEMBER as Role,
     community_id: '',
     is_shared_account: false,
+    managed_community_ids: [] as string[],
   });
 
   const [formLoading, setFormLoading] = useState(false);
@@ -58,6 +59,23 @@ export const OrganizationUserManagement: React.FC = () => {
 
       if (fetchError) throw fetchError;
 
+      // Fetch managed communities for these users
+      const userIds = data?.map(u => u.id) || [];
+      const { data: managersData } = await supabase
+        .from('community_managers')
+        .select('user_id, community_id')
+        .in('user_id', userIds);
+
+      const managersMap = new Map<string, string[]>();
+      if (managersData) {
+        managersData.forEach((item: any) => {
+          if (!managersMap.has(item.user_id)) {
+            managersMap.set(item.user_id, []);
+          }
+          managersMap.get(item.user_id)?.push(item.community_id);
+        });
+      }
+
       // Transform to User type
       const formattedUsers: User[] = (data || []).map(row => ({
         id: row.id,
@@ -69,6 +87,7 @@ export const OrganizationUserManagement: React.FC = () => {
         subscription_status: row.subscription_status,
         payment_tier: row.payment_tier,
         is_shared_account: row.is_shared_account || false,
+        managed_community_ids: managersMap.get(row.id) || [],
         profile: {
           first_name: row.first_name || '',
           last_name: row.last_name || '',
@@ -78,19 +97,13 @@ export const OrganizationUserManagement: React.FC = () => {
             name: row.community_name,
             membership_tier: row.community_tier,
             organization_id: row.organization_id,
-            // ... other required Community fields to satisfy type if needed, or Partial
-            // Assuming the UI only needs these or the type allows Partial/missing.
-            // Let's check the User Type definition if strict.
-            // "community: profile.community || undefined" in original code.
-            // profile.community is a full Community object usually.
-            // "row" contains flattened fields. We construct a partial object.
-            // If Typescript complains, we might need to cast or provide defaults.
             access_code: 'hidden', // dummy
             is_active: true,
             is_sharable: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          } as any, // Cast to any or helper type if properties are missing
+            code: row.community_code || '', // Needs to be handled if not in view
+          } as any,
         },
       }));
 
@@ -127,30 +140,62 @@ export const OrganizationUserManagement: React.FC = () => {
 
     try {
       if (editingUser) {
-        const userToEdit = users.find(u => u.id === editingUser);
-        if (userToEdit) {
-          const { error: updateError } = await supabase
-            .from('user_profiles')
-            .update({
-              email: formData.email,
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              community_id: formData.community_id,
-              is_shared_account: formData.is_shared_account,
-            })
-            .eq('id', editingUser);
+        // We use the edge function for updates now to handle manager role syncing properly?
+        // Actually, OrganizationUserManagement was doing direct updates to profile.
+        // It should match AdminUserManagement practice.
+        // But `useAllUsers`'s `updateUser` does direct profile update then handles managers.
+        // Here we don't have that hook. We should implement similar logic.
 
-          if (updateError) throw updateError;
+        // 1. Update Profile
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({
+            email: formData.email,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            community_id: formData.role === ROLE.MEMBER ? formData.community_id : null,
+            is_shared_account: formData.is_shared_account,
+          })
+          .eq('id', editingUser);
+
+        if (updateError) throw updateError;
+
+        // 2. Handle Managers
+        if (formData.role === ROLE.COMMUNITY_MANAGER) {
+          // Replace all managed communities with new list
+          const { error: deleteError } = await supabase
+            .from('community_managers')
+            .delete()
+            .eq('user_id', editingUser);
+
+          if (deleteError) throw deleteError;
+
+          if (formData.managed_community_ids.length > 0) {
+            const { error: insertError } = await supabase
+              .from('community_managers')
+              .insert(formData.managed_community_ids.map(cid => ({
+                user_id: editingUser,
+                community_id: cid
+              })));
+
+            if (insertError) throw insertError;
+          }
         }
+
       } else {
         // Create new user
         if (!formData.password || formData.password.length < 6) {
           throw new Error('Password must be at least 6 characters');
         }
 
-        if (!formData.community_id) {
+        if (formData.role === ROLE.MEMBER && !formData.community_id) {
           throw new Error('Please select a community');
         }
+        if (formData.role === ROLE.COMMUNITY_MANAGER && formData.managed_community_ids.length === 0) {
+          throw new Error('Please select at least one community');
+        }
+
+        const effectiveCommunityId = formData.role === ROLE.MEMBER ? formData.community_id : null;
 
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -171,9 +216,10 @@ export const OrganizationUserManagement: React.FC = () => {
             password: formData.password,
             first_name: formData.first_name,
             last_name: formData.last_name,
-            community_id: formData.community_id,
+            community_id: effectiveCommunityId,
             role: formData.role,
             is_shared_account: formData.is_shared_account,
+            managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
           }),
         });
 
@@ -192,9 +238,10 @@ export const OrganizationUserManagement: React.FC = () => {
         password: '',
         first_name: '',
         last_name: '',
-        role: 'member',
+        role: ROLE.MEMBER,
         community_id: '',
         is_shared_account: false,
+        managed_community_ids: [],
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -268,6 +315,7 @@ export const OrganizationUserManagement: React.FC = () => {
       role: user.role,
       community_id: user.community_id || '',
       is_shared_account: user.is_shared_account || false,
+      managed_community_ids: user.managed_community_ids || [],
     });
     setShowCreateForm(true);
   };
@@ -291,6 +339,7 @@ export const OrganizationUserManagement: React.FC = () => {
               role: ROLE.MEMBER,
               community_id: communities[0]?.id || '',
               is_shared_account: false,
+              managed_community_ids: [],
             });
             setShowCreateForm(true);
           }}
@@ -380,8 +429,18 @@ export const OrganizationUserManagement: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{user.profile?.community?.name || 'N/A'}</div>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            {user.role === ROLE.COMMUNITY_MANAGER ? (
+                              <span className="text-xs text-gray-500" title={user.managed_community_ids?.map(id => communities.find(c => c.id === id)?.name).join(', ')}>
+                                {user.managed_community_ids?.length
+                                  ? user.managed_community_ids.length > 1 ? `${user.managed_community_ids.length} Communities` : communities.find(c => c.id === user.managed_community_ids?.[0])?.name
+                                  : 'No Communities'}
+                              </span>
+                            ) : (
+                              user.profile?.community?.name || 'N/A'
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
@@ -446,86 +505,88 @@ export const OrganizationUserManagement: React.FC = () => {
             </div>
 
             {/* Create/Edit User Modal */}
-            {
-              showCreateForm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                  <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-                    <h3 className="text-lg font-semibold mb-4">{editingUser ? 'Edit User' : 'Add New User'}</h3>
+            {showCreateForm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+                  <h3 className="text-lg font-semibold mb-4">{editingUser ? 'Edit User' : 'Add New User'}</h3>
 
-                    {formError && (
-                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                        {formError}
-                      </div>
-                    )}
+                  {formError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                      {formError}
+                    </div>
+                  )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.first_name}
-                            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.last_name}
-                            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                          />
-                        </div>
-                      </div>
-
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                         <input
-                          type="email"
+                          type="text"
                           required
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          value={formData.first_name}
+                          onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
                         />
                       </div>
-
-                      {!editingUser && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                          <input
-                            type="password"
-                            required={!editingUser}
-                            minLength={6}
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                            placeholder="Minimum 6 characters"
-                          />
-                        </div>
-                      )}
-
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-                        <select
-                          value={formData.role}
-                          onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.last_name}
+                          onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                          disabled={!!editingUser}
-                        >
-                          <option value={ROLE.MEMBER}>Member</option>
-                          <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
-                        </select>
-                        {editingUser && (
-                          <p className="text-xs text-gray-500 mt-1">Role cannot be changed after creation</p>
-                        )}
+                        />
                       </div>
+                    </div>
 
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                      />
+                    </div>
+
+                    {!editingUser && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Community *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                        <input
+                          type="password"
+                          required={!editingUser}
+                          minLength={6}
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                          placeholder="Minimum 6 characters"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                      <select
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                        disabled={!!editingUser}
+                      >
+                        <option value={ROLE.MEMBER}>Member</option>
+                        <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
+                      </select>
+                      {editingUser && (
+                        <p className="text-xs text-gray-500 mt-1">Role cannot be changed after creation</p>
+                      )}
+                    </div>
+
+                    {formData.role === ROLE.MEMBER && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Community *
+                        </label>
                         <select
                           required
                           value={formData.community_id}
@@ -540,87 +601,115 @@ export const OrganizationUserManagement: React.FC = () => {
                           ))}
                         </select>
                       </div>
+                    )}
 
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.is_shared_account}
-                          onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
-                          className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                        />
-                        <label className="ml-2 text-sm text-gray-700">
-                          This is a shared account (multiple users can access)
+                    {formData.role === ROLE.COMMUNITY_MANAGER && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Managed Communities
                         </label>
+                        <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto p-2 space-y-2">
+                          {communities.map(community => (
+                            <div key={community.id} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                id={`managed-${community.id}`}
+                                checked={formData.managed_community_ids.includes(community.id)}
+                                onChange={(e) => {
+                                  const newIds = e.target.checked
+                                    ? [...formData.managed_community_ids, community.id]
+                                    : formData.managed_community_ids.filter(id => id !== community.id);
+                                  setFormData({ ...formData, managed_community_ids: newIds });
+                                }}
+                                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
+                              />
+                              <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
+                                {community.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Select all communities this manager should control.</p>
                       </div>
+                    )}
 
-                      <div className="flex justify-end space-x-3 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCreateForm(false);
-                            setEditingUser(null);
-                            setFormError(null);
-                          }}
-                          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={formLoading}
-                          className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
-                        >
-                          {formLoading ? 'Saving...' : editingUser ? 'Save Changes' : 'Create User'}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_shared_account}
+                        onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                        className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                      />
+                      <label className="ml-2 text-sm text-gray-700">
+                        This is a shared account (multiple users can access)
+                      </label>
+                    </div>
+
+                    <div className="flex justify-end space-x-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCreateForm(false);
+                          setEditingUser(null);
+                          setFormError(null);
+                        }}
+                        className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={formLoading}
+                        className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
+                      >
+                        {formLoading ? 'Saving...' : editingUser ? 'Save Changes' : 'Create User'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              )
-            }
+              </div>
+            )}
 
             {/* Password Reset Modal */}
-            {
-              showPasswordResetModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                  <div className="bg-white rounded-lg max-w-md w-full p-6">
-                    <h3 className="text-lg font-semibold mb-4">Reset Password</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                        <input
-                          type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          minLength={6}
-                          placeholder="Minimum 6 characters"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-3">
-                        <button
-                          onClick={() => {
-                            setShowPasswordResetModal(false);
-                            setPasswordResetUserId(null);
-                            setNewPassword('');
-                          }}
-                          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handlePasswordReset}
-                          disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
-                          className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
-                        >
-                          {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
-                        </button>
-                      </div>
+            {showPasswordResetModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg max-w-md w-full p-6">
+                  <h3 className="text-lg font-semibold mb-4">Reset Password</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        minLength={6}
+                        placeholder="Minimum 6 characters"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        onClick={() => {
+                          setShowPasswordResetModal(false);
+                          setPasswordResetUserId(null);
+                          setNewPassword('');
+                        }}
+                        className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handlePasswordReset}
+                        disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
+                        className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
+                      >
+                        {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
+                      </button>
                     </div>
                   </div>
                 </div>
-              )
-            }
+              </div>
+            )}
           </>
         ))}
     </div >

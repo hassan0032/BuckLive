@@ -78,7 +78,7 @@ export const useAdminOrganizations = () => {
     }
   }, []);
 
-  const addOrganization = async (orgData: { name: string; description?: string; billing_date: string }) => {
+  const addOrganization = async (orgData: { name: string; description?: string }) => {
     try {
       const { data, error } = await supabase
         .from('organizations')

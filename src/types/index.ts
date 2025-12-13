@@ -101,10 +101,10 @@ export interface User {
   stripe_customer_id?: string;
   subscription_id?: string;
   subscription_status?: SubscriptionStatus;
-  payment_tier?: PaymentTier;
   subscription_started_at?: string;
   subscription_ends_at?: string;
   is_shared_account?: boolean;
+  managed_community_ids?: string[];
   needsPayment?: boolean;
   profile?: {
     first_name?: string;
@@ -129,14 +129,12 @@ export interface Community {
   sharable_token?: string | null;
   code: string;
   organization_id?: string | null;
-  primary_manager?: string | null;
 }
 
 export interface Organization {
   id: string;
   name: string;
   description?: string;
-  billing_date: string;
   created_at: string;
   updated_at: string;
 }

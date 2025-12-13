@@ -1,16 +1,16 @@
-import { Building2, FileText, Loader2, TrendingUp, Users } from 'lucide-react';
+import { Building2, Loader2, TrendingUp, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useOrganization } from '../hooks/useOrganization';
 import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { OrganizationCommunityManagement } from './OrganizationCommunityManagement';
 import { OrganizationInvoices } from './OrganizationInvoices';
 import { OrganizationUserManagement } from './OrganizationUserManagement';
-import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 export const OrganizationManagerDashboard: React.FC = () => {
   const { organization, loading: orgLoading } = useOrganization();
   const { communities, loading: communitiesLoading } = useOrganizationCommunities();
-  
+
   const [activeTab, setActiveTab] = useState<'overview' | 'communities' | 'users' | 'analytics' | 'invoices'>('overview');
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
 
@@ -72,51 +72,46 @@ export const OrganizationManagerDashboard: React.FC = () => {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'overview'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'overview'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             Overview
           </button>
           <button
             onClick={() => setActiveTab('communities')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'communities'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'communities'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             Communities
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'users'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'users'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             Users
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'analytics'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'analytics'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             Analytics
           </button>
           <button
             onClick={() => setActiveTab('invoices')}
-            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${
-              activeTab === 'invoices'
-                ? 'border-brand-primary text-brand-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'invoices'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             Invoices
           </button>
@@ -148,17 +143,7 @@ export const OrganizationManagerDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">Billing Date</p>
-                  <p className="text-lg font-bold text-green-600">
-                    {new Date(organization.billing_date).toLocaleDateString()}
-                  </p>
-                </div>
-                <FileText className="h-8 w-8 text-green-600" />
-              </div>
-            </div>
+
 
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex items-center">
@@ -189,9 +174,8 @@ export const OrganizationManagerDashboard: React.FC = () => {
                     </p>
                   </div>
                   <span
-                    className={`text-xs font-semibold px-2 py-1 rounded ${
-                      community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}
+                    className={`text-xs font-semibold px-2 py-1 rounded ${community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}
                   >
                     {community.is_active ? 'ACTIVE' : 'INACTIVE'}
                   </span>

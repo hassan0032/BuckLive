@@ -49,11 +49,10 @@ export interface Database {
           currency: string
           status: string
           discount_percentage: number
-          community_manager_email: string | null
-          community_manager_name: string | null
           full_year_amount_cents: number | null
-          prorated_days: number | null
-          is_prorated: boolean
+          community_code: string | null
+          community_name: string | null
+          community_tier: string | null
           created_at: string | null
           updated_at: string | null
         }
@@ -61,6 +60,9 @@ export interface Database {
           id?: string
           user_id?: string | null
           community_id?: string | null
+          community_code?: string | null
+          community_name?: string | null
+          community_tier?: string | null
           invoice_no?: number
           issue_date?: string | null
           period_start: string
@@ -69,11 +71,7 @@ export interface Database {
           currency: string
           status: string
           discount_percentage?: number
-          community_manager_email?: string | null
-          community_manager_name?: string | null
           full_year_amount_cents?: number | null
-          prorated_days?: number | null
-          is_prorated?: boolean
           created_at?: string | null
           updated_at?: string | null
         }
@@ -81,6 +79,9 @@ export interface Database {
           id?: string
           user_id?: string | null
           community_id?: string | null
+          community_code?: string | null
+          community_name?: string | null
+          community_tier?: string | null
           invoice_no?: number
           issue_date?: string | null
           period_start?: string
@@ -89,11 +90,7 @@ export interface Database {
           currency?: string
           status?: string
           discount_percentage?: number
-          community_manager_email?: string | null
-          community_manager_name?: string | null
           full_year_amount_cents?: number | null
-          prorated_days?: number | null
-          is_prorated?: boolean
           created_at?: string | null
           updated_at?: string | null
         }
@@ -109,7 +106,6 @@ export interface Database {
           membership_tier: 'silver' | 'gold'
           sharable_token: string | null
           organization_id: string | null
-          primary_manager: string | null
           created_at: string
           updated_at: string
         }
@@ -123,7 +119,6 @@ export interface Database {
           membership_tier: 'silver' | 'gold'
           sharable_token?: string | null
           organization_id?: string | null
-          primary_manager?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -137,7 +132,6 @@ export interface Database {
           membership_tier?: 'silver' | 'gold'
           sharable_token?: string | null
           organization_id?: string | null
-          primary_manager?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -229,7 +223,6 @@ export interface Database {
           id: string
           name: string
           description: string | null
-          billing_date: string
           created_at: string
           updated_at: string
         }
@@ -237,7 +230,6 @@ export interface Database {
           id?: string
           name: string
           description?: string | null
-          billing_date: string
           created_at?: string
           updated_at?: string
         }
@@ -245,7 +237,6 @@ export interface Database {
           id?: string
           name?: string
           description?: string | null
-          billing_date?: string
           created_at?: string
           updated_at?: string
         }
@@ -554,14 +545,6 @@ export interface Database {
       get_share_token_community_id: {
         Args: Record<string, never>
         Returns: string | null
-      }
-      calculate_prorated_amount: {
-        Args: {
-          p_start_date: string
-          p_end_date: string
-          p_base_amount_cents: number
-        }
-        Returns: number
       }
       get_next_billing_date: {
         Args: {

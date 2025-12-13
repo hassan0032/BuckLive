@@ -24,6 +24,7 @@ interface CreateUserRequest {
   community_id?: string;
   role?: Role;
   is_shared_account?: boolean;
+  managed_community_ids?: string[]; // Optional list of communities to manage if role is community_manager
 }
 
 interface DeleteUserRequest {
@@ -118,20 +119,19 @@ Deno.serve(async (req: Request) => {
     switch (request.action) {
       case "create":
         return await handleCreateUser(request, supabaseAdmin, callerRole, user.id);
-
       case "delete":
         return await handleDeleteUser(request, supabaseAdmin, callerRole, user.id);
-
       case "reset_password":
         return await handleResetPassword(request, supabaseAdmin, callerRole, user.id);
-
       default:
         return new Response(
           JSON.stringify({ error: "Invalid action" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
-  } catch (error) {
+
+  } catch (error: any) {
+
     console.error("Error in user-management edge function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
@@ -146,7 +146,16 @@ async function handleCreateUser(
   callerRole: string,
   callerId: string
 ): Promise<Response> {
-  const { email, password, first_name, last_name, community_id, role: requestedRole, is_shared_account } = request;
+  const {
+    email,
+    password,
+    first_name,
+    last_name,
+    community_id,
+    role: requestedRole,
+    is_shared_account,
+    managed_community_ids
+  } = request;
 
   // Validate required fields
   if (!email || !password || !first_name || !last_name) {
@@ -295,6 +304,16 @@ async function handleCreateUser(
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Check managed_community_ids permissions if provided?
+    // Usually only Admins will use this via Admin Dashboard, but let's be safe.
+    if (managed_community_ids && managed_community_ids.length > 0) {
+      // Community Managers can't assign management of other communities
+      return new Response(
+        JSON.stringify({ error: "Community Managers cannot assign management rights to others" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
   }
 
   try {
@@ -312,6 +331,7 @@ async function handleCreateUser(
       );
     }
 
+
     console.log(`Creating user: ${email} with role ${requestedRole} for community ${community_id}`);
 
     // Create the user with email confirmation enabled
@@ -323,7 +343,7 @@ async function handleCreateUser(
         first_name,
         last_name,
         role: requestedRole || ROLE.MEMBER,
-        community_id,
+        community_id: requestedRole === ROLE.MEMBER ? community_id : null,
         is_shared_account: is_shared_account || false,
       },
     });
@@ -373,15 +393,22 @@ async function handleCreateUser(
         );
       }
 
+      const communitiesToManage = managed_community_ids && managed_community_ids.length > 0
+        ? managed_community_ids
+        : [community_id]; // Default to user's assigned community if no list provided
+
+      // Ensure unique and valid
+      const uniqueIds = [...new Set(communitiesToManage)];
+
+      const managerInserts = uniqueIds.map(cid => ({
+        user_id: authData.user!.id,
+        community_id: cid,
+        created_by: callerId,
+      }));
+
       const { error: managerError } = await supabaseAdmin
         .from("community_managers")
-        .insert([
-          {
-            user_id: authData.user.id,
-            community_id: community_id,
-            created_by: callerId,
-          },
-        ]);
+        .insert(managerInserts);
 
       if (managerError) {
         console.error("❌ Community manager assignment error:", managerError);
@@ -445,7 +472,7 @@ async function handleCreateUser(
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -608,18 +635,12 @@ async function handleDeleteUser(
 
   try {
     console.log(`Deleting user: ${user_id}`);
-
-    // Before deleting, check if this user is a primary_manager for any communities
-    const { data: communitiesWithThisManager, error: communityFetchError } = await supabaseAdmin
-      .from("communities")
-      .select("id")
-      .eq("primary_manager", user_id);
-
-    if (communityFetchError) {
-      console.error("❌ Error fetching communities with primary manager:", communityFetchError);
-    }
+    // Note: Previously we checked for primary_manager and reassigned.
+    // With multi-manager support and primary_manager removal, we no longer need to do this.
+    // The database constraint (DELETE CASCADE) on community_managers table will handle cleanup of manager assignments.
 
     // Delete the user
+    // This will cascade delete their profile and community_managers entries
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user_id);
 
     if (deleteError) {
@@ -632,39 +653,11 @@ async function handleDeleteUser(
 
     console.log(`✅ User ${user_id} deleted successfully`);
 
-    // After deleting, update primary_manager for affected communities
-    if (communitiesWithThisManager?.length) {
-      for (const community of communitiesWithThisManager) {
-        // Find another manager for this community (not the deleted user)
-        const { data: anotherManager, error: managerFetchError } = await supabaseAdmin
-          .from("community_managers")
-          .select("user_id")
-          .eq("community_id", community.id)
-          .neq("user_id", user_id)
-          .limit(1)
-          .maybeSingle();
-
-        const newPrimaryManagerId = managerFetchError ? null : (anotherManager?.user_id || null);
-
-        // Update the community's primary_manager
-        const { error: updateError } = await supabaseAdmin
-          .from("communities")
-          .update({ primary_manager: newPrimaryManagerId })
-          .eq("id", community.id);
-
-        if (updateError) {
-          console.error(`Failed to update primary_manager for community ${community.id}:`, updateError);
-        } else {
-          console.log(`Updated primary_manager for community ${community.id} to ${newPrimaryManagerId}`);
-        }
-      }
-    }
-
     return new Response(
       JSON.stringify({ data: null, error: null }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -860,7 +853,7 @@ async function handleResetPassword(
       JSON.stringify({ data: null, error: null }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

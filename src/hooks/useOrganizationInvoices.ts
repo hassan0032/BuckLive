@@ -17,8 +17,8 @@ export const useOrganizationInvoices = () => {
 
     try {
       setLoading(true);
-      
-      // Get org id
+
+      // Get org id for the user
       const { data: managerRecord, error: managerError } = await supabase
         .from('organization_managers')
         .select('organization_id')
@@ -31,32 +31,16 @@ export const useOrganizationInvoices = () => {
         return;
       }
 
-      // Get communities in org
-      const { data: communities, error: communitiesError } = await supabase
-        .from('communities')
-        .select('id, name, membership_tier, code')
-        .eq('organization_id', managerRecord.organization_id);
-
-      if (communitiesError) throw communitiesError;
-
-      const communityIds = communities?.map(c => c.id) || [];
-      if (communityIds.length === 0) {
-        setInvoices([]);
-        return;
-      }
-
-      // Fetch invoices
+      // Fetch invoices directly by organization_id
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .select('*')
-        .in('community_id', communityIds)
+        .eq('organization_id', managerRecord.organization_id)
         .order('created_at', { ascending: false });
 
       if (invoiceError) throw invoiceError;
 
-      // Join community info manually since we already have it and to avoid complex joins in one query if strict RLS
       const enrichedInvoices = invoiceData?.map(inv => {
-        const community = communities?.find(c => c.id === inv.community_id);
         return {
           id: inv.id,
           invoice_no: inv.invoice_no,
@@ -68,14 +52,16 @@ export const useOrganizationInvoices = () => {
           status: inv.status,
           discountPercentage: inv.discount_percentage ?? 0,
           communityId: inv.community_id,
-          communityName: community?.name || 'Unknown Community',
-          communityTier: community?.membership_tier || 'silver',
-          communityCode: community?.code || null,
+          communityName: inv.community_name ?? null,
+          communityTier: inv.community_tier ?? null,
+          communityCode: inv.community_code ?? null,
           createdAt: inv.created_at,
+          organizationId: inv.organization_id // Added field if needed
         };
       });
 
-      // Apply discount logic using helper
+      // Apply discount logic using helper (if it still relies on frontend calc, but invoices now have discount_percentage)
+      // The helper 'applyDiscountFromDatabase' likely just uses the discount_percentage from the object if present.
       const discounted = applyDiscountFromDatabase(enrichedInvoices || []);
       setInvoices(discounted);
 

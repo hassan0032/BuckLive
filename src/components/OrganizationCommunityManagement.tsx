@@ -1,34 +1,24 @@
-import { Key, Loader2, Plus, Shield, Trash2, UserPlus, Users } from 'lucide-react';
+import { Key, Loader2, Plus, Shield, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useCommunities } from '../hooks/useCommunities';
 import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
 import { Community, PaymentTier } from '../types';
 
-interface CommunityManager {
-  user_id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-}
+
 
 export const OrganizationCommunityManagement: React.FC = () => {
-  const { 
-    communities, 
-    loading, 
-    addCommunity, 
-    assignCommunityManager, 
-    removeCommunityManager,
-    getCommunityManagers,
-    refetch 
+  const {
+    communities,
+    loading,
+    addCommunity,
+    refetch
   } = useOrganizationCommunities();
   const { generateAccessCode } = useCommunities();
-  
+
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showManagerModal, setShowManagerModal] = useState(false);
-  const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
-  const [communityManagers, setCommunityManagers] = useState<CommunityManager[]>([]);
-  const [loadingManagers, setLoadingManagers] = useState(false);
-  
+
+
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -36,8 +26,8 @@ export const OrganizationCommunityManagement: React.FC = () => {
     membership_tier: 'silver' as PaymentTier,
     is_active: true,
   });
-  
-  const [managerEmail, setManagerEmail] = useState('');
+
+
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,51 +59,7 @@ export const OrganizationCommunityManagement: React.FC = () => {
     }
   };
 
-  const handleOpenManagerModal = async (community: Community) => {
-    setSelectedCommunity(community);
-    setShowManagerModal(true);
-    setLoadingManagers(true);
-    
-    const managers = await getCommunityManagers(community.id);
-    setCommunityManagers(managers);
-    setLoadingManagers(false);
-  };
 
-  const handleAssignManager = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCommunity) return;
-
-    setActionLoading(true);
-    try {
-      const { error } = await assignCommunityManager(selectedCommunity.id, managerEmail);
-      if (error) throw new Error(error);
-      
-      // Refresh managers list
-      const managers = await getCommunityManagers(selectedCommunity.id);
-      setCommunityManagers(managers);
-      setManagerEmail('');
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to assign manager');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRemoveManager = async (userId: string) => {
-    if (!selectedCommunity) return;
-    if (!confirm('Are you sure you want to remove this manager?')) return;
-
-    try {
-      const { error } = await removeCommunityManager(selectedCommunity.id, userId);
-      if (error) throw new Error(error);
-      
-      // Refresh managers list
-      const managers = await getCommunityManagers(selectedCommunity.id);
-      setCommunityManagers(managers);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to remove manager');
-    }
-  };
 
   const handleGenerateNewCode = () => {
     setFormData({ ...formData, access_code: generateAccessCode() });
@@ -182,11 +128,10 @@ export const OrganizationCommunityManagement: React.FC = () => {
                     <span className="text-sm text-gray-600">Tier</span>
                   </div>
                   <span
-                    className={`text-xs font-semibold px-2 py-1 rounded ${
-                      community.membership_tier === 'gold'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-gray-200 text-gray-700'
-                    }`}
+                    className={`text-xs font-semibold px-2 py-1 rounded ${community.membership_tier === 'gold'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-gray-200 text-gray-700'
+                      }`}
                   >
                     {community.membership_tier.toUpperCase()}
                   </span>
@@ -195,21 +140,12 @@ export const OrganizationCommunityManagement: React.FC = () => {
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm text-gray-600">Status</span>
                   <span
-                    className={`text-xs font-semibold px-2 py-1 rounded ${
-                      community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}
+                    className={`text-xs font-semibold px-2 py-1 rounded ${community.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}
                   >
                     {community.is_active ? 'ACTIVE' : 'INACTIVE'}
                   </span>
                 </div>
-
-                <button
-                  onClick={() => handleOpenManagerModal(community)}
-                  className="w-full flex items-center justify-center space-x-2 p-3 bg-brand-beige-light text-brand-primary rounded-lg hover:bg-brand-beige transition-colors"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span className="text-sm font-semibold">Manage Community Managers</span>
-                </button>
               </div>
             </div>
           ))}
@@ -335,78 +271,6 @@ export const OrganizationCommunityManagement: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Manage Managers Modal */}
-      {showManagerModal && selectedCommunity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">
-              Manage Managers for {selectedCommunity.name}
-            </h3>
-            
-            <div className="space-y-4 mb-6">
-              <h4 className="text-sm font-medium text-gray-700">Current Managers</h4>
-              {loadingManagers ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-brand-primary" />
-                </div>
-              ) : communityManagers.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">No managers assigned</p>
-              ) : (
-                <ul className="space-y-2">
-                  {communityManagers.map(m => (
-                    <li key={m.user_id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                      <span className="text-sm">{m.first_name} {m.last_name} ({m.email})</span>
-                      <button
-                        onClick={() => handleRemoveManager(m.user_id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <form onSubmit={handleAssignManager} className="space-y-4 border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700">Assign New Manager</h4>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">User Email</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="Enter user email"
-                  value={managerEmail}
-                  onChange={e => setManagerEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                />
-                <p className="text-xs text-gray-500 mt-1">User must already exist in the system.</p>
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowManagerModal(false);
-                    setSelectedCommunity(null);
-                    setCommunityManagers([]);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  Close
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue disabled:opacity-50"
-                >
-                  {actionLoading ? 'Assigning...' : 'Assign Manager'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
-  );
-};
+  )
+}

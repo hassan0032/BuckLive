@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as AppUser, REGISTRATION_TYPE, ROLE } from '../types';
-import { ensureCommunityManagerInvoices } from '../lib/supabase';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -87,7 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             stripe_customer_id: profile?.stripe_customer_id,
             subscription_id: profile?.subscription_id,
             subscription_status: profile?.subscription_status,
-            payment_tier: profile?.payment_tier,
             subscription_started_at: profile?.subscription_started_at,
             subscription_ends_at: profile?.subscription_ends_at,
             is_shared_account: profile?.is_shared_account || false,
@@ -108,18 +106,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const orgManagerStatus = await checkOrgManager(session.user.id);
           setIsOrgManager(orgManagerStatus);
           console.log('🏢 Organization manager status:', orgManagerStatus);
-
-          // Generate invoices immediately for community managers on login
-          if (appUser.role === ROLE.COMMUNITY_MANAGER && invoiceGeneratedForUserRef.current !== appUser.id) {
-            invoiceGeneratedForUserRef.current = appUser.id;
-            console.log("⚡ Generating invoices immediately on login for community manager:", appUser.id);
-            // Don't await - let it run in background so login isn't blocked
-            ensureCommunityManagerInvoices(appUser.id).catch(err => {
-              console.error("❌ Error generating invoices on login:", err);
-              // Reset ref on error so it can retry
-              invoiceGeneratedForUserRef.current = null;
-            });
-          }
         } else {
           setUser(null);
           setIsOrgManager(false);
@@ -185,7 +171,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 stripe_customer_id: profile?.stripe_customer_id,
                 subscription_id: profile?.subscription_id,
                 subscription_status: profile?.subscription_status,
-                payment_tier: profile?.payment_tier,
                 subscription_started_at: profile?.subscription_started_at,
                 subscription_ends_at: profile?.subscription_ends_at,
                 is_shared_account: profile?.is_shared_account || false,
@@ -206,19 +191,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const orgManagerStatus = await checkOrgManager(session.user.id);
               setIsOrgManager(orgManagerStatus);
               console.log('🏢 Organization manager status:', orgManagerStatus);
-
-              // Generate invoices immediately for community managers on login
-              if (appUser.role === ROLE.COMMUNITY_MANAGER && invoiceGeneratedForUserRef.current !== appUser.id) {
-                invoiceGeneratedForUserRef.current = appUser.id;
-                console.log("⚡ Generating invoices immediately on auth state change for community manager:", appUser.id);
-                // Don't await - let it run in background so login isn't blocked
-                ensureCommunityManagerInvoices(appUser.id).catch(err => {
-                  console.error("❌ Error generating invoices on login:", err);
-                  // Reset ref on error so it can retry
-                  invoiceGeneratedForUserRef.current = null;
-                });
-              }
-
             } else {
               if (mounted) {
                 currentUserIdRef.current = null;

@@ -17,7 +17,7 @@ export const useOrganizationCommunities = () => {
 
     try {
       setLoading(true);
-      
+
       // First get the organization ID for this user
       const { data: managerRecord, error: managerError } = await supabase
         .from('organization_managers')
@@ -72,7 +72,7 @@ export const useOrganizationCommunities = () => {
         .select('organization_id')
         .eq('user_id', user?.id)
         .single();
-        
+
       if (!managerRecord) throw new Error('No organization found');
 
       const { data, error } = await supabase
@@ -92,78 +92,6 @@ export const useOrganizationCommunities = () => {
     }
   };
 
-  const assignCommunityManager = async (communityId: string, email: string) => {
-    try {
-      // Find user by email
-      const { data: userProfile, error: userError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (userError || !userProfile) throw new Error('User not found');
-
-      // Assign to community
-      const { error: assignError } = await supabase
-        .from('community_managers')
-        .insert({
-          community_id: communityId,
-          user_id: userProfile.id
-        });
-
-      if (assignError) {
-        if (assignError.code === '23505') throw new Error('User is already a manager for this community');
-        throw assignError;
-      }
-
-      return { error: null };
-    } catch (err) {
-      return { error: err instanceof Error ? err.message : 'Failed to assign manager' };
-    }
-  };
-
-  const removeCommunityManager = async (communityId: string, userId: string) => {
-    try {
-      const { error } = await supabase
-        .from('community_managers')
-        .delete()
-        .eq('community_id', communityId)
-        .eq('user_id', userId);
-
-      if (error) throw error;
-      return { error: null };
-    } catch (err) {
-      return { error: err instanceof Error ? err.message : 'Failed to remove manager' };
-    }
-  };
-
-  const getCommunityManagers = async (communityId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('community_managers')
-        .select(`
-          user_id,
-          user_profiles:user_id (
-            email,
-            first_name,
-            last_name
-          )
-        `)
-        .eq('community_id', communityId);
-
-      if (error) throw error;
-      return data?.map((m: any) => ({
-        user_id: m.user_id,
-        email: m.user_profiles?.email || '',
-        first_name: m.user_profiles?.first_name || '',
-        last_name: m.user_profiles?.last_name || '',
-      })) || [];
-    } catch (err) {
-      console.error('Error fetching community managers:', err);
-      return [];
-    }
-  };
-
   useEffect(() => {
     fetchCommunities();
   }, [user, isOrganizationManager]);
@@ -173,9 +101,6 @@ export const useOrganizationCommunities = () => {
     loading,
     error,
     addCommunity,
-    assignCommunityManager,
-    removeCommunityManager,
-    getCommunityManagers,
     refetch: fetchCommunities
   };
 };

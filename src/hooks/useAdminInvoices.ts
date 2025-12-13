@@ -24,10 +24,6 @@ interface InvoiceData {
   communityTier: 'gold' | 'silver' | undefined
   id: string // Invoice ID for updates
   calculatedAmountCents?: number
-  // New fields for proration
-  isProrated?: boolean
-  proratedDays?: number
-  fullYearAmountCents?: number
   communityManagerEmail?: string | null
   communityManagerName?: string | null
   createdAt?: string
@@ -59,7 +55,7 @@ export function useAdminInvoices() {
       try {
         let query = client
           .from('invoices')
-          .select(`*, community:community_id(name, membership_tier, code)`)
+          .select('*')
           .order('period_start', { ascending: false })
 
         // Filter by community if selected
@@ -86,15 +82,11 @@ export function useAdminInvoices() {
           status: inv.status,
           discountPercentage: inv.discount_percentage ?? 0,
           communityId: inv.community_id,
-          communityName: inv.community?.name || null,
-          communityCode: inv.community?.code || null,
-          communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
+          communityName: inv.community_name || null,
+          communityCode: inv.community_code || null,
+          communityTier: inv.community_tier as 'gold' | 'silver' | undefined,
           id: inv.id,
           createdAt: inv.created_at,
-          // New proration fields
-          isProrated: inv.is_prorated ?? false,
-          proratedDays: inv.prorated_days ?? undefined,
-          fullYearAmountCents: inv.full_year_amount_cents ?? undefined,
           communityManagerEmail: inv.community_manager_email ?? null,
           communityManagerName: inv.community_manager_name ?? null,
         }))
@@ -135,7 +127,7 @@ export function useAdminInvoices() {
     try {
       let query = client
         .from('invoices')
-        .select(`*, community:community_id(name, membership_tier, code)`)
+        .select('*')
         .order('period_start', { ascending: false })
 
       if (selectedCommunityId) {
@@ -160,15 +152,11 @@ export function useAdminInvoices() {
         status: inv.status,
         discountPercentage: inv.discount_percentage ?? 0,
         communityId: inv.community_id,
-        communityName: inv.community?.name || null,
-        communityCode: inv.community?.code || null,
-        communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
+        communityName: inv.community_name || null,
+        communityCode: inv.community_code || null,
+        communityTier: inv.community_tier as 'gold' | 'silver' | undefined,
         id: inv.id,
         createdAt: inv.created_at,
-        // New proration fields
-        isProrated: inv.is_prorated ?? false,
-        proratedDays: inv.prorated_days ?? undefined,
-        fullYearAmountCents: inv.full_year_amount_cents ?? undefined,
         communityManagerEmail: inv.community_manager_email ?? null,
         communityManagerName: inv.community_manager_name ?? null,
       }))
@@ -228,20 +216,13 @@ export function useAdminInvoices() {
             communityTier: inv.community?.membership_tier as 'gold' | 'silver' | undefined,
             id: inv.id,
             createdAt: inv.created_at,
-            // New proration fields
-            isProrated: inv.is_prorated ?? false,
-            proratedDays: inv.prorated_days ?? undefined,
-            fullYearAmountCents: inv.full_year_amount_cents ?? undefined,
             communityManagerEmail: inv.community_manager_email ?? null,
             communityManagerName: inv.community_manager_name ?? null,
           })).sort(
             (a, b) => {
-              const aDate = new Date(a.createdAt).getTime()
-              const bDate = new Date(b.createdAt).getTime()
-              if (aDate === bDate) {
-                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-              }
-              return bDate - aDate
+              const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+              const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+              return bTime - aTime
             }
           )
 

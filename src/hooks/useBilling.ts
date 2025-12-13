@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, ensureCommunityManagerInvoices } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { applyDiscountFromDatabase } from '../utils/helper';
-
-function formatYMD(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export function useBilling() {
   const { user, isCommunityManager, loading: authLoading } = useAuth();
@@ -26,13 +22,6 @@ export function useBilling() {
     }
 
     setIsLoading(true);
-
-    // Note: Invoices are already generated on login via AuthContext
-    // This is just a fallback in case they weren't generated
-    // We don't await it to avoid blocking the UI
-    ensureCommunityManagerInvoices(user.id).catch(err => {
-      console.error('Error ensuring manager invoices (non-blocking):', err);
-    });
 
     // Fetch communities managed by the user
     const { data: managerCommunities, error: cmError } = await supabase
@@ -73,7 +62,7 @@ export function useBilling() {
     // Fetch existing invoices including community info
     const { data: existingInvoices, error: invoiceError } = await supabase
       .from('invoices')
-      .select('*, community:community_id(name, membership_tier, code)')
+      .select('*')
       .in('community_id', communityIds);
 
     if (invoiceError) {
@@ -96,17 +85,13 @@ export function useBilling() {
       discountPercentage: inv.discount_percentage ?? 0,
 
       communityId: inv.community_id,
-      communityName: inv.community?.name ?? null,
-      communityTier: inv.community?.membership_tier ?? null,
-      communityCode: inv.community?.code ?? null,
+      communityName: inv.community_name ?? null,
+      communityTier: inv.community_tier ?? null,
+      communityCode: inv.community_code ?? null,
 
       createdAt: inv.created_at,
       userId: user.id,
 
-      // New proration fields
-      isProrated: inv.is_prorated ?? false,
-      proratedDays: inv.prorated_days ?? undefined,
-      fullYearAmountCents: inv.full_year_amount_cents ?? undefined,
       communityManagerEmail: inv.community_manager_email ?? null,
       communityManagerName: inv.community_manager_name ?? null,
     }));
@@ -133,69 +118,6 @@ export function useBilling() {
     loadInvoices();
   }, [authLoading, loadInvoices]);
 
-  const createInvoice = async (invoiceData: {
-    community_id: string;
-    issue_date: string;
-    period_start: string;
-    period_end: string;
-    amount_cents: number;
-    currency: string;
-    status: string;
-  }) => {
-    setIsLoading(true);
-    try {
-      // Get the current session to pass auth header
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.access_token) {
-        throw new Error('Unable to get session for invoice creation');
-      }
-
-      // Call the create-first-invoice edge function (handles both automatic and manual creation)
-      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-first-invoice`;
-
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(invoiceData),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ error: 'Failed to create invoice' }));
-        console.error('Failed to create invoice:', response.status, errorBody);
-        throw new Error(errorBody.error || 'Failed to create invoice');
-      }
-
-      const result = await response.json();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      // Handle case where invoice already exists
-      if (result.created === 0 && result.data) {
-        console.log(`ℹ Invoice already exists for community ${invoiceData.community_id}`);
-        return result.data;
-      }
-
-      const invoice = result.data;
-      console.log(`✅ Created invoice #${invoice.invoice_no} for community ${invoiceData.community_id}`);
-
-      // Refresh invoices list
-      await loadInvoices();
-
-      return invoice;
-    } catch (err) {
-      console.error('Unexpected error creating invoice:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return useMemo(
     () => ({
       enabled,
@@ -206,7 +128,6 @@ export function useBilling() {
       refresh: async () => {
         if (!authLoading) await loadInvoices();
       },
-      createInvoice,
     }),
     [enabled, startDate, renewalDate, invoices, isLoading, authLoading, loadInvoices]
   );

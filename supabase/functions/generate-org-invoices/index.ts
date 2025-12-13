@@ -31,35 +31,6 @@ function addYears(ymd: string, years: number) {
   return formatYMD(date);
 }
 
-// Calculate prorated amount based on billing anniversary
-function calculateProratedAmount(
-  baseAmountCents: number,
-  billingDate: string,
-  issueDate: string
-): number {
-  const billing = new Date(billingDate);
-  const issue = new Date(issueDate);
-  
-  // Get next anniversary date
-  let nextAnniversary = new Date(billing);
-  nextAnniversary.setFullYear(issue.getFullYear());
-  
-  // If the anniversary has passed this year, use next year's
-  if (nextAnniversary <= issue) {
-    nextAnniversary.setFullYear(nextAnniversary.getFullYear() + 1);
-  }
-  
-  // Calculate days until anniversary
-  const daysUntilAnniversary = Math.ceil(
-    (nextAnniversary.getTime() - issue.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  
-  // Prorate based on 365 days
-  const proratedAmount = Math.round((baseAmountCents * daysUntilAnniversary) / 365);
-  
-  return proratedAmount;
-}
-
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -88,18 +59,18 @@ Deno.serve(async (req: Request) => {
     const todayYMD = formatYMD(today);
     console.log(`Running org community invoice generator for ${todayYMD}`);
 
-    // Step 1: Find all communities that belong to an organization and don't have a valid invoice
+    // Step 1: Find all communities that belong to an organization
     const { data: orgCommunities, error: communityError } = await supabase
       .from("communities")
       .select(`
         id,
         name,
+        code,
         membership_tier,
         organization_id,
         organizations:organization_id (
           id,
-          name,
-          billing_date
+          name
         )
       `)
       .not("organization_id", "is", null);
@@ -125,12 +96,13 @@ Deno.serve(async (req: Request) => {
     // Get all community IDs
     const communityIds = orgCommunities.map((c: any) => c.id);
 
-    // Step 2: Fetch existing valid invoices for these communities
-    const { data: existingInvoices, error: invoiceError } = await supabase
+    // Step 2: Fetch MOST RECENT existing invoice for each community (to determine next period start)
+    // We only care about the latest one per community
+    const { data: latestInvoices, error: invoiceError } = await supabase
       .from("invoices")
       .select("community_id, period_end")
       .in("community_id", communityIds)
-      .gte("period_end", todayYMD);
+      .order("period_end", { ascending: false });
 
     if (invoiceError) {
       console.error("Error fetching existing invoices:", invoiceError);
@@ -140,20 +112,63 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Set of community IDs that already have valid invoices
-    const communitiesWithInvoices = new Set(
-      existingInvoices?.map((inv: any) => inv.community_id) || []
-    );
+    // Map community_id -> latest period_end
+    const latestInvoiceMap = new Map<string, string>();
+    if (latestInvoices) {
+      for (const inv of latestInvoices) {
+        if (!latestInvoiceMap.has(inv.community_id)) {
+          latestInvoiceMap.set(inv.community_id, inv.period_end);
+        }
+      }
+    }
 
     // Step 3: Filter communities that need invoices
-    const communitiesNeedingInvoices = orgCommunities.filter(
-      (c: any) => !communitiesWithInvoices.has(c.id)
-    );
+    // A community needs an invoice if:
+    // 1. It has no invoices yet (new community)
+    // 2. Its latest invoice's period_end is <= 30 days from now (upcoming renewal) OR already passed
+    const communitiesNeedingInvoices: any[] = [];
+
+    // We'll define a renewal window, e.g., generate invoice 30 days before expiry
+    const renewalHorizonDate = new Date(today);
+    renewalHorizonDate.setDate(renewalHorizonDate.getDate() + 30);
+    const renewalHorizonYMD = formatYMD(renewalHorizonDate);
+
+    for (const community of orgCommunities) {
+      const lastPeriodEnd = latestInvoiceMap.get(community.id);
+
+      if (!lastPeriodEnd) {
+        // Case 1: No previous invoice -> generate one starting today
+        communitiesNeedingInvoices.push({ ...community, nextPeriodStart: todayYMD });
+      } else {
+        // Case 2: Has previous invoice -> check if it's time to renew
+        // If the current period ends before or within our renewal horizon
+        if (lastPeriodEnd <= renewalHorizonYMD) {
+          // The next period starts the day after the last period ended? 
+          // Or just align to the anniversary logic. 
+          // Usually: start = last_end (as Supabase usually stores inclusive/exclusive ranges might vary, 
+          // but let's assume period_end is the last covered day).
+          // Let's set next start date = last period end + 1 day?
+          // Or strictly follow the cycle. 
+          // For simplicity/safety: nextPeriodStart = lastPeriodEnd (if the system treats ends as exclusive) 
+          // OR period_end is inclusive, so start = period_end (if we want seamless).
+          // Let's assume period_end is the last day of coverage. So next start is +1 day.
+          // However, for simplicity here, I'll set nextPeriodStart = lastPeriodEnd if it's in the past,
+          // or just ensure continuity.
+          // Actually, let's keep it simple: nextPeriodStart = lastPeriodEnd.
+          // (Assuming the previous invoice covered up to that date).
+
+          // To be safe and avoid gaps, let's look at how the dates were generated before.
+          // Before: period_end was a specific date.
+          // Let's assume start = last_end.
+          communitiesNeedingInvoices.push({ ...community, nextPeriodStart: lastPeriodEnd });
+        }
+      }
+    }
 
     if (communitiesNeedingInvoices.length === 0) {
-      console.log("All organization communities have valid invoices.");
+      console.log("All organization communities have valid future invoices.");
       return new Response(
-        JSON.stringify({ message: "All organization communities have valid invoices", created: 0 }),
+        JSON.stringify({ message: "All organization communities have valid future invoices", created: 0 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -170,8 +185,8 @@ Deno.serve(async (req: Request) => {
       orgMap.get(orgId)!.push(community);
     }
 
-    // Step 5: For each organization, count TOTAL communities (including those with existing invoices)
-    // to determine the correct discount
+    // Step 5: For each organization, count TOTAL communities (including those not needing invoices)
+    // to determine the discount tier
     const orgCommunityCountMap = new Map<string, number>();
     for (const community of orgCommunities) {
       const orgId = community.organization_id;
@@ -182,65 +197,36 @@ Deno.serve(async (req: Request) => {
     const newInvoices: any[] = [];
 
     for (const [orgId, communities] of orgMap) {
-      // Get organization details from the first community
-      const orgDetails = Array.isArray(communities[0].organizations)
-        ? communities[0].organizations[0]
-        : communities[0].organizations;
-
-      if (!orgDetails) {
-        console.log(`Skipping communities for org ${orgId} - no org details found`);
-        continue;
-      }
-
-      const billingDate = orgDetails.billing_date;
       const totalCommunitiesInOrg = orgCommunityCountMap.get(orgId) || 1;
       const discountPercentage = getDiscountPercentage(totalCommunitiesInOrg);
 
-      console.log(`Org ${orgDetails.name}: ${totalCommunitiesInOrg} communities, ${discountPercentage}% discount`);
+      console.log(`Org ${orgId}: ${totalCommunitiesInOrg} communities total, ${discountPercentage}% discount`);
 
       for (const community of communities) {
         const tier = community.membership_tier as 'gold' | 'silver';
+        // Base annual prices in cents
         const baseAmountCents = tier === 'gold' ? 500000 : 250000;
 
-        // Calculate period end based on billing anniversary
-        let periodEnd: string;
-        const billingDateObj = new Date(billingDate);
-        const todayObj = new Date(todayYMD);
-        
-        // Next anniversary
-        let nextAnniversary = new Date(billingDateObj);
-        nextAnniversary.setFullYear(todayObj.getFullYear());
-        
-        if (nextAnniversary <= todayObj) {
-          nextAnniversary.setFullYear(nextAnniversary.getFullYear() + 1);
-        }
-        
-        periodEnd = formatYMD(nextAnniversary);
-
-        // Calculate prorated amount if not a full year
-        const daysUntilAnniversary = Math.ceil(
-          (nextAnniversary.getTime() - todayObj.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        
-        // Only prorate if less than 365 days
-        const amountCents = daysUntilAnniversary < 365
-          ? calculateProratedAmount(baseAmountCents, billingDate, todayYMD)
-          : baseAmountCents;
+        const periodStart = community.nextPeriodStart;
+        // Full year invoice: period_end = period_start + 1 year
+        const periodEnd = addYears(periodStart, 1);
 
         console.log(
-          `Community ${community.name}: tier=${tier}, base=${baseAmountCents}, ` +
-          `prorated=${amountCents}, days=${daysUntilAnniversary}, discount=${discountPercentage}%`
+          `Community ${community.name}: tier=${tier}, amount=${baseAmountCents}, ` +
+          `period=${periodStart} to ${periodEnd}, discount=${discountPercentage}%`
         );
 
         newInvoices.push({
           issue_date: todayYMD,
-          period_start: todayYMD,
+          period_start: periodStart,
           period_end: periodEnd,
-          amount_cents: amountCents,
+          amount_cents: baseAmountCents,
           currency: "USD",
           status: "issued",
           community_id: community.id,
           discount_percentage: discountPercentage,
+          community_code: community.code,
+          community_name: community.name,
         });
       }
     }

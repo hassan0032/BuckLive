@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { useAdminOrganizations, AdminOrganization } from '../hooks/useAdminOrganizations';
 
 export const AdminOrganizationManagement: React.FC = () => {
-  const { 
-    organizations, 
-    loading, 
-    updateOrganization, 
+  const {
+    organizations,
+    loading,
+    updateOrganization,
     deleteOrganization,
     assignManager,
     removeManager,
@@ -19,7 +19,7 @@ export const AdminOrganizationManagement: React.FC = () => {
   const [showManagerForm, setShowManagerForm] = useState(false);
   const [editingOrg, setEditingOrg] = useState<AdminOrganization | null>(null);
   const [selectedOrgForManagers, setSelectedOrgForManagers] = useState<AdminOrganization | null>(null);
-  
+
   // Form for creating new org + manager
   const [createFormData, setCreateFormData] = useState({
     organizationName: '',
@@ -69,12 +69,12 @@ export const AdminOrganizationManagement: React.FC = () => {
     e.preventDefault();
     setActionLoading(true);
     setFormError(null);
-    
+
     try {
       const { error } = await createOrganizationWithManager(createFormData);
-      
+
       if (error) throw new Error(error);
-      
+
       setShowCreateForm(false);
       resetCreateForm();
     } catch (error) {
@@ -87,7 +87,7 @@ export const AdminOrganizationManagement: React.FC = () => {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrg) return;
-    
+
     setActionLoading(true);
     try {
       await updateOrganization(editingOrg.id, editFormData);
@@ -163,7 +163,6 @@ export const AdminOrganizationManagement: React.FC = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Communities</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billing Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Managers</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -186,9 +185,6 @@ export const AdminOrganizationManagement: React.FC = () => {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {org.community_count} communities
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(org.billing_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">
@@ -255,13 +251,13 @@ export const AdminOrganizationManagement: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">
               This will create a new organization and a new user account for the manager.
             </p>
-            
+
             {formError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                 {formError}
               </div>
             )}
-            
+
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div className="pb-4 border-b border-gray-200">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Organization Details</h4>
@@ -393,14 +389,7 @@ export const AdminOrganizationManagement: React.FC = () => {
                   rows={3}
                 />
               </div>
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  <strong>Billing Date:</strong> {new Date(editingOrg.billing_date).toLocaleDateString()}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Billing date is set automatically when the organization is created.
-                </p>
-              </div>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -432,7 +421,7 @@ export const AdminOrganizationManagement: React.FC = () => {
             <h3 className="text-lg font-semibold mb-4">
               Manage Managers for {selectedOrgForManagers.name}
             </h3>
-            
+
             <div className="space-y-4 mb-6">
               <h4 className="text-sm font-medium text-gray-700">Current Managers</h4>
               {selectedOrgForManagers.managers?.length === 0 ? (

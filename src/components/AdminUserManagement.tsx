@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
 import { adminResetUserPassword } from '../lib/supabase';
-import { PAYMENT_TIER, ROLE, Role, ROLE_DISPLAY_NAME } from '../types';
+import { ROLE, Role, ROLE_DISPLAY_NAME } from '../types';
 import { cn } from '../utils/helper';
 
 interface FormData {
@@ -14,6 +14,7 @@ interface FormData {
   community_id: string;
   role: Role;
   is_shared_account: boolean;
+  managed_community_ids: string[];
 }
 
 const initialFormData: FormData = {
@@ -24,6 +25,7 @@ const initialFormData: FormData = {
   community_id: '',
   role: ROLE.MEMBER,
   is_shared_account: false,
+  managed_community_ids: [],
 };
 
 export const AdminUserManagement: React.FC = () => {
@@ -64,8 +66,6 @@ export const AdminUserManagement: React.FC = () => {
     superAdmins: users.filter(u => u.role === ROLE.ORGANIZATION_MANAGER).length,
     communityManagers: users.filter(u => u.role === ROLE.COMMUNITY_MANAGER).length,
     members: users.filter(u => u.role === ROLE.MEMBER).length,
-    goldTier: users.filter(u => u.payment_tier === PAYMENT_TIER.GOLD).length,
-    silverTier: users.filter(u => u.payment_tier === PAYMENT_TIER.SILVER).length,
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,8 +80,9 @@ export const AdminUserManagement: React.FC = () => {
           first_name: formData.first_name,
           last_name: formData.last_name,
           role: formData.role,
-          community_id: formData.community_id,
+          community_id: formData.role === ROLE.MEMBER ? formData.community_id : null,
           is_shared_account: formData.is_shared_account,
+          managed_community_ids: formData.managed_community_ids,
         });
 
         if (error) throw new Error(error);
@@ -90,7 +91,7 @@ export const AdminUserManagement: React.FC = () => {
           throw new Error('Password must be at least 6 characters');
         }
 
-        if (!formData.community_id) {
+        if (formData.role === ROLE.MEMBER && !formData.community_id) {
           throw new Error('Please select a community');
         }
 
@@ -99,9 +100,10 @@ export const AdminUserManagement: React.FC = () => {
           password: formData.password,
           first_name: formData.first_name,
           last_name: formData.last_name,
-          community_id: formData.community_id,
+          community_id: formData.role === ROLE.MEMBER ? formData.community_id : null,
           role: formData.role,
           is_shared_account: formData.is_shared_account,
+          managed_community_ids: formData.managed_community_ids,
         });
 
         if (error) throw new Error(error);
@@ -117,6 +119,7 @@ export const AdminUserManagement: React.FC = () => {
         community_id: '',
         role: ROLE.MEMBER,
         is_shared_account: false,
+        managed_community_ids: [],
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -162,6 +165,7 @@ export const AdminUserManagement: React.FC = () => {
         community_id: user.community_id || '',
         role: user.role,
         is_shared_account: user.is_shared_account || false,
+        managed_community_ids: user.managed_community_ids || [],
       });
       setShowCreateForm(true);
     }
@@ -207,6 +211,7 @@ export const AdminUserManagement: React.FC = () => {
               community_id: '',
               role: ROLE.MEMBER,
               is_shared_account: false,
+              managed_community_ids: [],
             });
             setShowCreateForm(true);
           }}
@@ -217,7 +222,7 @@ export const AdminUserManagement: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-4">
           <p className="text-xs font-medium text-gray-600 uppercase">Total Users</p>
           <p className="text-2xl font-bold text-[#363f49] mt-1">{stats.totalUsers}</p>
@@ -233,14 +238,6 @@ export const AdminUserManagement: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-4">
           <p className="text-xs font-medium text-gray-600 uppercase">Members</p>
           <p className="text-2xl font-bold text-green-600 mt-1">{stats.members}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <p className="text-xs font-medium text-gray-600 uppercase">Gold Tier</p>
-          <p className="text-2xl font-bold text-yellow-600 mt-1">{stats.goldTier}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <p className="text-xs font-medium text-gray-600 uppercase">Silver Tier</p>
-          <p className="text-2xl font-bold text-gray-600 mt-1">{stats.silverTier}</p>
         </div>
       </div>
 
@@ -297,9 +294,6 @@ export const AdminUserManagement: React.FC = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Community
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tier
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Joined
@@ -360,23 +354,23 @@ export const AdminUserManagement: React.FC = () => {
                       {ROLE_DISPLAY_NAME[user.role]}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  {/* <td className="px-6 py-4">
                     <div className="text-sm text-gray-600">
-                      {user.profile?.community?.name || 'N/A'}
+                      {user.profile?.community?.name || '—'}
                     </div>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4">
-                    {user.payment_tier ? (
-                      <span
-                        className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700',
-                          { 'bg-yellow-100 text-yellow-700': user.payment_tier === PAYMENT_TIER.GOLD }
-                        )}
-                      >
-                        {user.payment_tier.toUpperCase()}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-gray-400">—</span>
-                    )}
+                    <div className="text-sm text-gray-900">
+                      {user.role === ROLE.COMMUNITY_MANAGER ? (
+                        <span className="text-xs text-gray-500" title={user.managed_community_ids?.map(id => communities.find(c => c.id === id)?.name).join(', ')}>
+                          {user.managed_community_ids?.length
+                            ? user.managed_community_ids.length > 1 ? `${user.managed_community_ids.length} Communities` : communities.find(c => c.id === user.managed_community_ids?.[0])?.name
+                            : 'No Communities'}
+                        </span>
+                      ) : (
+                        user.profile?.community?.name || 'N/A'
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center text-sm text-gray-600">
@@ -432,7 +426,7 @@ export const AdminUserManagement: React.FC = () => {
 
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">
                 {editingUser ? 'Edit User' : 'Add New User'}
@@ -502,26 +496,6 @@ export const AdminUserManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Community {!editingUser && <span className="text-red-500">*</span>}
-                  </label>
-                  <select
-                    disabled={!!editingUser}
-                    value={formData.community_id}
-                    onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    required
-                  >
-                    <option value="">Select a community</option>
-                    {communities.map((community) => (
-                      <option key={community.id} value={community.id}>
-                        {community.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Role {!editingUser && <span className="text-red-500">*</span>}
                   </label>
                   <select
@@ -541,6 +515,58 @@ export const AdminUserManagement: React.FC = () => {
                     </p>
                   )}
                 </div>
+
+                {formData.role === ROLE.MEMBER && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Community {!editingUser && <span className="text-red-500">*</span>}
+                    </label>
+                    <select
+                      disabled={!!editingUser}
+                      value={formData.community_id}
+                      onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                      required
+                    >
+                      <option value="">Select a community</option>
+                      {communities.map((community) => (
+                        <option key={community.id} value={community.id}>
+                          {community.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {formData.role === ROLE.COMMUNITY_MANAGER && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Managed Communities
+                    </label>
+                    <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto p-2 space-y-2">
+                      {communities.map(community => (
+                        <div key={community.id} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`managed-${community.id}`}
+                            checked={formData.managed_community_ids.includes(community.id)}
+                            onChange={(e) => {
+                              const newIds = e.target.checked
+                                ? [...formData.managed_community_ids, community.id]
+                                : formData.managed_community_ids.filter(id => id !== community.id);
+                              setFormData({ ...formData, managed_community_ids: newIds });
+                            }}
+                            className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
+                          />
+                          <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
+                            {community.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Select all communities this manager should control.</p>
+                  </div>
+                )}
 
                 <div className="flex items-center space-x-2">
                   <input
@@ -596,7 +622,7 @@ export const AdminUserManagement: React.FC = () => {
       {/* Password Reset Modal */}
       {showPasswordResetModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Reset Password</h2>
               <p className="text-sm text-gray-600 mb-4">

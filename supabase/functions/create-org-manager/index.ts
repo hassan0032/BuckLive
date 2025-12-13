@@ -127,14 +127,18 @@ Deno.serve(async (req: Request) => {
 
     if (profileInsertError) {
       console.error("Error creating profile:", profileInsertError);
-      // Don't fail - the trigger might have already created it
+      // If profile creation fails, we must cleanup the user to prevent inconsistent state
+      await adminClient.auth.admin.deleteUser(newUserId);
+      return new Response(
+        JSON.stringify({ error: "Failed to create user profile" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Step 3: Create the organization
-    const today = new Date().toISOString().split("T")[0];
     const { data: org, error: orgError } = await adminClient
       .from("organizations")
-      .insert([{ name: organizationName, billing_date: today }])
+      .insert([{ name: organizationName }])
       .select()
       .single();
 

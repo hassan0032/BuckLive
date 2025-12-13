@@ -57,7 +57,6 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
             {
               ...formData,
               created_by_manager_id: userId,
-              primary_manager: userId,
             },
           ])
           .select()
