@@ -20,6 +20,8 @@ export const UserProfile: React.FC = () => {
     first_name: '',
     last_name: '',
     email: '',
+    password: '',
+    password_confirmation: '',
   });
 
   useEffect(() => {
@@ -43,6 +45,8 @@ export const UserProfile: React.FC = () => {
       first_name: displayUser.profile?.first_name || '',
       last_name: displayUser.profile?.last_name || '',
       email: displayUser.email || '',
+      password: '',
+      password_confirmation: '',
     });
     setShowEditModal(true);
   };
@@ -61,6 +65,16 @@ export const UserProfile: React.FC = () => {
         throw new Error('You must be signed in to update your profile.');
       }
 
+      // Validate password fields if provided
+      if (form.password) {
+        if (form.password.length < 6) {
+          throw new Error('Password must be at least 6 characters long');
+        }
+        if (form.password !== form.password_confirmation) {
+          throw new Error('Passwords do not match');
+        }
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/change-user-information`, {
         method: 'POST',
         headers: {
@@ -72,6 +86,8 @@ export const UserProfile: React.FC = () => {
           firstName: form.first_name,
           lastName: form.last_name,
           email: form.email,
+          // Only include password when the user provided one
+          ...(form.password ? { password: form.password } : {}),
         }),
       });
 
@@ -84,6 +100,9 @@ export const UserProfile: React.FC = () => {
       if (form.email && form.email !== displayUser.email) {
         await supabase.auth.refreshSession();
         setSuccess('Email updated. Check your inbox to confirm your new email.');
+      } else if (form.password) {
+        // If password was changed, inform the user. Session handling may vary depending on backend.
+        setSuccess('Profile updated successfully. Password changed.');
       } else {
         setSuccess('Profile updated successfully.');
       }
@@ -326,6 +345,29 @@ export const UserProfile: React.FC = () => {
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                  <input
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    placeholder="New password"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Password must be at least 6 characters.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                  <input
+                    type="password"
+                    value={form.password_confirmation}
+                    onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    placeholder="Repeat new password"
                   />
                 </div>
 

@@ -143,7 +143,7 @@ Deno.serve(async (req: Request) => {
 async function handleCreateUser(
   request: CreateUserRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
   const {
@@ -483,7 +483,7 @@ async function handleCreateUser(
 async function handleDeleteUser(
   request: DeleteUserRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
   const { user_id } = request;
@@ -668,7 +668,7 @@ async function handleDeleteUser(
 async function handleResetPassword(
   request: ResetPasswordRequest,
   supabaseAdmin: ReturnType<typeof createClient>,
-  callerRole: string,
+  callerRole: Role,
   callerId: string
 ): Promise<Response> {
   const { user_id, new_password } = request;
