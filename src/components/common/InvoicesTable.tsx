@@ -1,5 +1,5 @@
 import html2pdf from 'html2pdf.js'
-import { Calendar, Check, Download, Edit2, Loader2, X } from 'lucide-react'
+import { Calendar, Check, Download, Edit2, Loader2, X, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { formatInvoiceStatus, INVOICE_STATUS, Invoice, InvoiceStatus, parseInvoiceStatus, User } from '../../types'
 import { formatInvoiceNumber, generateInvoicePdf } from '../../utils/helper'
@@ -14,6 +14,7 @@ interface InvoicesTableProps {
   currentUser?: User | null
   emptyMessage?: string
   isOrganizationManager?: boolean
+  deleteInvoice?: (id: string) => Promise<void>
 }
 
 function formatCurrency(cents: number, currency: string) {
@@ -28,10 +29,13 @@ export function InvoicesTable({
   updateInvoiceStatus,
   currentUser,
   emptyMessage = 'No invoices found.',
-  isOrganizationManager = false
+  isOrganizationManager = false,
+  deleteInvoice
 }: InvoicesTableProps) {
   // State for editing invoice status (Admin only)
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus>(INVOICE_STATUS.ISSUED)
   const [customStatusText, setCustomStatusText] = useState<string>('')
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
@@ -182,6 +186,25 @@ export function InvoicesTable({
     }
   }
 
+  const handleDeleteClick = (invoiceId: string) => {
+    setInvoiceToDelete(invoiceId)
+  }
+
+  const confirmDelete = async () => {
+    if (!invoiceToDelete || !deleteInvoice) return
+
+    setIsDeleting(true)
+    try {
+      await deleteInvoice(invoiceToDelete)
+      setInvoiceToDelete(null)
+    } catch (err) {
+      console.error('Failed to delete invoice:', err)
+      alert(err instanceof Error ? err.message : 'Failed to delete invoice')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const getStatusBadgeColor = (status: string) => {
     const parsed = parseInvoiceStatus(status)
     if (parsed.type === INVOICE_STATUS.PAID) {
@@ -205,14 +228,6 @@ export function InvoicesTable({
     return (
       <div className="p-6 bg-red-50 rounded-lg shadow-sm text-red-600">
         Error loading invoices: {error}
-      </div>
-    )
-  }
-
-  if (rows.length === 0) {
-    return (
-      <div className="p-6 bg-white rounded-lg shadow-sm text-gray-600">
-        {emptyMessage}
       </div>
     )
   }
@@ -250,6 +265,12 @@ export function InvoicesTable({
         <div className="text-right">Amount</div>
         <div className="text-right">Actions</div>
       </div>
+
+      {!rows.length && (
+        <div className="p-6 bg-white rounded-lg shadow-sm text-gray-600">
+          {emptyMessage}
+        </div>
+      )}
 
       {rows.map((row) => {
         const formattedInvoiceNo = formatInvoiceNumber(row.invoice_no, row.communityCode)
@@ -368,10 +389,53 @@ export function InvoicesTable({
               >
                 <Download className="w-4 h-4" /> PDF
               </button>
+              {isAdmin && deleteInvoice && (
+                <button
+                  onClick={() => handleDeleteClick(row.id)}
+                  className="text-red-600 hover:text-red-700 inline-block ml-2"
+                  title="Delete invoice"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         )
       })}
+      {/* Delete Confirmation Modal */}
+      {invoiceToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Invoice</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this invoice? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setInvoiceToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

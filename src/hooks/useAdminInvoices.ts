@@ -153,6 +153,31 @@ export function useAdminInvoices() {
     }
   }
 
+  const deleteInvoice = async (invoiceId: string) => {
+    if (!isAdmin) {
+      throw new Error('Only admins can delete invoices')
+    }
+
+    const { data: deletedData, error: deleteError } = await client
+      .from('invoices')
+      .delete()
+      .eq('id', invoiceId)
+      .select()
+
+    if (deleteError) {
+      console.error('Error deleting invoice:', deleteError)
+      throw deleteError
+    }
+
+    if (!deletedData || deletedData.length === 0) {
+      console.warn('Delete operation returned no data. Possible RLS restriction or ID mismatch.')
+      throw new Error('Deletion failed: API reported success but no record was removed.')
+    }
+
+    // Refresh the invoice list locally
+    setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId))
+  }
+
   return useMemo(
     () => ({
       invoices,
@@ -162,6 +187,7 @@ export function useAdminInvoices() {
       isLoading,
       error,
       updateInvoiceStatus,
+      deleteInvoice,
       refresh: async () => {
         if (!isAdmin) return
         setIsLoading(true)
