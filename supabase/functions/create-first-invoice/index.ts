@@ -12,12 +12,13 @@ const corsHeaders = {
 const NEW_YORK_TIMEZONE = 'America/New_York';
 
 function formatYMD(date: Date): string {
-  return date.toLocaleDateString('en-US', {
+  const parts = date.toLocaleDateString('en-US', {
     timeZone: NEW_YORK_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).split('/').reverse().join('-'); // Convert MM/DD/YYYY to YYYY-MM-DD
+  }).split('/');
+  return `${parts[2]}-${parts[0]}-${parts[1]}`; // Convert MM/DD/YYYY to YYYY-MM-DD
 }
 
 function getCurrentDateInNY(): Date {

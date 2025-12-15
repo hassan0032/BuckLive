@@ -1,5 +1,5 @@
 import html2pdf from 'html2pdf.js'
-import { Calendar, Check, Download, Edit2, Loader2, X } from 'lucide-react'
+import { Calendar, Check, Download, Edit2, Loader2, X, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { formatInvoiceStatus, INVOICE_STATUS, Invoice, InvoiceStatus, parseInvoiceStatus, User } from '../../types'
 import { formatInvoiceNumber, generateInvoicePdf } from '../../utils/helper'
@@ -14,6 +14,7 @@ interface InvoicesTableProps {
   currentUser?: User | null
   emptyMessage?: string
   isOrganizationManager?: boolean
+  deleteInvoice?: (id: string) => Promise<void>
 }
 
 function formatCurrency(cents: number, currency: string) {
@@ -28,10 +29,12 @@ export function InvoicesTable({
   updateInvoiceStatus,
   currentUser,
   emptyMessage = 'No invoices found.',
-  isOrganizationManager = false
+  isOrganizationManager = false,
+  deleteInvoice
 }: InvoicesTableProps) {
   // State for editing invoice status (Admin only)
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus>(INVOICE_STATUS.ISSUED)
   const [customStatusText, setCustomStatusText] = useState<string>('')
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
@@ -179,6 +182,22 @@ export function InvoicesTable({
       setStatusError(err instanceof Error ? err.message : 'Failed to update status')
     } finally {
       setUpdatingStatus(null)
+    }
+  }
+
+  const handleDeleteClick = (invoiceId: string) => {
+    setInvoiceToDelete(invoiceId)
+  }
+
+  const confirmDelete = async () => {
+    if (!invoiceToDelete || !deleteInvoice) return
+
+    try {
+      await deleteInvoice(invoiceToDelete)
+      setInvoiceToDelete(null)
+    } catch (err) {
+      console.error('Failed to delete invoice:', err)
+      alert(err instanceof Error ? err.message : 'Failed to delete invoice')
     }
   }
 
@@ -368,10 +387,44 @@ export function InvoicesTable({
               >
                 <Download className="w-4 h-4" /> PDF
               </button>
+              {isAdmin && deleteInvoice && (
+                <button
+                  onClick={() => handleDeleteClick(row.id)}
+                  className="text-red-600 hover:text-red-700 inline-block ml-2"
+                  title="Delete invoice"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         )
       })}
+      {/* Delete Confirmation Modal */}
+      {invoiceToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Invoice</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this invoice? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setInvoiceToDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

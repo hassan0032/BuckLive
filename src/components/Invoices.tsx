@@ -8,7 +8,7 @@ function Invoices() {
 
   const { user, isAdmin, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const { invoices, selectedCommunityId, isLoading, error, updateInvoiceStatus } = useAdminInvoices()
+  const { invoices, selectedCommunityId, isLoading, error, updateInvoiceStatus, deleteInvoice } = useAdminInvoices()
 
   const canView = !!user && isAdmin
 
@@ -42,6 +42,7 @@ function Invoices() {
         updateInvoiceStatus={updateInvoiceStatus}
         currentUser={user}
         emptyMessage={selectedCommunityId ? 'No invoices found matching the selected community.' : 'No invoices found.'}
+        deleteInvoice={deleteInvoice}
       />
     </div>
   )
