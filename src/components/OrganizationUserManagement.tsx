@@ -434,6 +434,25 @@ export const OrganizationUserManagement: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
+                          <div className="text-sm text-gray-600">
+                            {user.role === ROLE.COMMUNITY_MANAGER && user.managed_community_ids && user.managed_community_ids.length > 0 ? (
+                              <span>
+                                {communities.find(c => c.id === user.managed_community_ids![0])?.name || 'Unknown Community'}
+                                {user.managed_community_ids!.length > 1 && (
+                                  <span className="text-gray-400 ml-1" title={
+                                    // Optional: Show full list on hover
+                                    user.managed_community_ids!.slice(1).map(id => communities.find(c => c.id === id)?.name).join(', ')
+                                  }>
+                                    +{user.managed_community_ids!.length - 1} more
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              user.profile?.community?.name || 'N/A'
+                            )}
+                          </div>
+                        </td>
+                        {/* <td className="px-6 py-4">
                           <div className="text-sm text-gray-900">
                             {user.role === ROLE.COMMUNITY_MANAGER ? (
                               <span className="text-xs text-gray-500" title={user.managed_community_ids?.map(id => communities.find(c => c.id === id)?.name).join(', ')}>
@@ -445,7 +464,7 @@ export const OrganizationUserManagement: React.FC = () => {
                               user.profile?.community?.name || 'N/A'
                             )}
                           </div>
-                        </td>
+                        </td> */}
                         <td className="px-6 py-4">
                           <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
                             { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },

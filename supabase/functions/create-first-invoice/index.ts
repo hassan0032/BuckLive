@@ -71,9 +71,11 @@ Deno.serve(async (req: Request) => {
     // @ts-ignore
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     // @ts-ignore
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    // @ts-ignore
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
       throw new Error("Missing Supabase environment variables");
     }
 

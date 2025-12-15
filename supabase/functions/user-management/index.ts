@@ -135,7 +135,6 @@ Deno.serve(async (req: Request) => {
     }
 
   } catch (error: any) {
-
     console.error("Error in user-management edge function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
@@ -194,11 +193,12 @@ async function handleCreateUser(
   }
 
   let community: CommunityData | null = null;
+  let communitiesToManage: string[] = [];
 
-  if (requestedRole === ROLE.COMMUNITY_MANAGER || requestedRole === ROLE.MEMBER) {
+  if (requestedRole === ROLE.MEMBER) {
     if (!community_id) {
       return new Response(
-        JSON.stringify({ error: "Community ID is required" }),
+        JSON.stringify({ error: "Community ID is required for members" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -218,6 +218,16 @@ async function handleCreateUser(
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+  } else if (requestedRole === ROLE.COMMUNITY_MANAGER) {
+    if (!managed_community_ids || managed_community_ids.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "At least one managed community ID is required for community managers" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Ensure unique
+    communitiesToManage = [...new Set(managed_community_ids)];
   }
 
   const { data: userProfile, error: userProfileError } = await supabaseAdmin
@@ -277,11 +287,36 @@ async function handleCreateUser(
     }
 
     // Check if organization manager has permission to create users in this community
-    if (isOrgManager && community?.organization_id !== orgManager.organization_id) {
-      return new Response(
-        JSON.stringify({ error: "You can only create users for communities in your organization" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (isOrgManager) {
+      if (requestedRole === ROLE.MEMBER) {
+        if (community?.organization_id !== orgManager.organization_id) {
+          return new Response(
+            JSON.stringify({ error: "You can only create users for communities in your organization" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else if (requestedRole === ROLE.COMMUNITY_MANAGER) {
+        // Verify all managed communities belong to the organization
+        const { data: communitiesCheck, error: communitiesCheckError } = await supabaseAdmin
+          .from("communities")
+          .select("id, organization_id")
+          .in("id", communitiesToManage);
+
+        if (communitiesCheckError || !communitiesCheck || communitiesCheck.length !== communitiesToManage.length) {
+          return new Response(
+            JSON.stringify({ error: "One or more managed communities not found" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const allBelongToOrg = communitiesCheck.every((c: { organization_id: string }) => c.organization_id === orgManager.organization_id);
+        if (!allBelongToOrg) {
+          return new Response(
+            JSON.stringify({ error: "You can only assign community managers to communities in your organization" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
     }
   }
 
@@ -390,21 +425,7 @@ async function handleCreateUser(
 
     // If creating a community manager, add to community_managers table
     if (requestedRole === ROLE.COMMUNITY_MANAGER) {
-      if (!community_id || !community) {
-        return new Response(
-          JSON.stringify({ error: "Community not found" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const communitiesToManage = managed_community_ids && managed_community_ids.length > 0
-        ? managed_community_ids
-        : [community_id]; // Default to user's assigned community if no list provided
-
-      // Ensure unique and valid
-      const uniqueIds = [...new Set(communitiesToManage)];
-
-      const managerInserts = uniqueIds.map((cid: string) => ({
+      const managerInserts = communitiesToManage.map((cid: string) => ({
         user_id: authData.user!.id,
         community_id: cid,
         created_by: callerId,

@@ -6,12 +6,11 @@ import { InvoicesTable } from './common/InvoicesTable'
 import { Info } from 'lucide-react'
 
 function Invoices() {
-
-  const { user, isAdmin, loading: authLoading } = useAuth()
+  const { user, isAdmin, isCommunityManager, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { invoices, selectedCommunityId, isLoading, error, updateInvoiceStatus, deleteInvoice } = useAdminInvoices()
 
-  const canView = !!user && isAdmin
+  const canView = !!user && (isAdmin || isCommunityManager)
 
   if (authLoading) {
     return (

@@ -102,7 +102,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     password: string;
     first_name: string;
     last_name: string;
-    community_id: string | null;
+    community_id?: string | null;
     role?: Role;
     is_shared_account?: boolean;
     managed_community_ids?: string[];
@@ -128,7 +128,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
           password: userData.password,
           first_name: userData.first_name,
           last_name: userData.last_name,
-          community_id: userData.community_id,
+          community_id: userData.community_id || null,
           role: userData.role,
           is_shared_account: userData.is_shared_account || false,
           managed_community_ids: userData.managed_community_ids || [],
@@ -205,25 +205,58 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
 
       if (updateError) throw updateError;
 
-      if (updates.role) {
-        if (updates.role === ROLE.COMMUNITY_MANAGER && currentUser.role !== ROLE.COMMUNITY_MANAGER) {
-          const { error: managerError } = await supabase
-            .from('community_managers')
-            .upsert([
-              {
-                user_id: userId,
-                community_id: updates.community_id || currentUser.community_id || '',
-              },
-            ], { onConflict: 'user_id,community_id' });
+      // Handle managed communities
 
-          if (managerError) throw managerError;
-        } else if (updates.role !== ROLE.COMMUNITY_MANAGER && currentUser.role === ROLE.COMMUNITY_MANAGER) {
-          const { error: deleteManagerError } = await supabase
+      // 1. If transitioning AWAY from Community Manager, delete all manager records
+      if (currentUser.role === ROLE.COMMUNITY_MANAGER && effectiveRole !== ROLE.COMMUNITY_MANAGER) {
+        const { error: deleteManagerError } = await supabase
+          .from('community_managers')
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteManagerError) throw deleteManagerError;
+      }
+
+      // 2. If valid Community Manager (staying or becoming), handle assignments
+      if (effectiveRole === ROLE.COMMUNITY_MANAGER) {
+        if (updates.managed_community_ids !== undefined) {
+          // Replace all managed communities with new list
+
+          // First delete all existing (simplest way to sync)
+          const { error: deleteError } = await supabase
             .from('community_managers')
             .delete()
             .eq('user_id', userId);
 
-          if (deleteManagerError) throw deleteManagerError;
+          if (deleteError) throw deleteError;
+
+          // Then insert new ones
+          if (updates.managed_community_ids.length > 0) {
+            const { error: insertError } = await supabase
+              .from('community_managers')
+              .insert(updates.managed_community_ids.map(cid => ({
+                user_id: userId,
+                community_id: cid
+              })));
+
+            if (insertError) throw insertError;
+          }
+        } else if (currentUser.role !== ROLE.COMMUNITY_MANAGER) {
+          // Legacy/Fallback: Becoming CM but no managed_ids passed? 
+          // Try to use the single community_id if available (backward compatibility)
+          const fallbackCommunityId = updates.community_id || currentUser.community_id;
+          if (fallbackCommunityId) {
+            const { error: managerError } = await supabase
+              .from('community_managers')
+              .upsert([
+                {
+                  user_id: userId,
+                  community_id: fallbackCommunityId,
+                },
+              ], { onConflict: 'user_id,community_id' });
+
+            if (managerError) throw managerError;
+          }
         }
       }
 

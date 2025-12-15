@@ -254,7 +254,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
         </div>
       )}
 
-      {communities.length === 0 && !showCreateForm && (
+      {(communities.length === 0 && !showCreateForm && !communitiesLoading) && (
         <div className="text-center py-12 bg-white rounded-lg shadow-sm">
           <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-[#363f49] mb-2">No communities yet</h3>
