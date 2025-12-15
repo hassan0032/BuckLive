@@ -13,12 +13,13 @@ const corsHeaders = {
 const NEW_YORK_TIMEZONE = 'America/New_York';
 
 function formatYMD(date: Date): string {
-  return date.toLocaleDateString('en-US', {
+  const parts = date.toLocaleDateString('en-US', {
     timeZone: NEW_YORK_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).split('/').reverse().join('-'); // Convert MM/DD/YYYY to YYYY-MM-DD
+  }).split('/');
+  return `${parts[2]}-${parts[0]}-${parts[1]}`; // Convert MM/DD/YYYY to YYYY-MM-DD
 }
 
 function getCurrentDateInNY(): Date {
@@ -85,6 +86,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     // @ts-ignore
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase environment variables");
     }
@@ -119,7 +121,7 @@ Deno.serve(async (req: Request) => {
       // Get communities that already have invoices
       const { data: invoicedCommunities, error: invoicedError } = await supabase
         .from("invoices")
-        .select("community_id, count")
+        .select("community_id")
         .not("community_id", "is", null);
 
       if (invoicedError) {
@@ -141,12 +143,12 @@ Deno.serve(async (req: Request) => {
           const { id: communityId, name: communityName, code: communityCode, membership_tier: tier, next_invoice_date: nextInvoiceDate } = community;
           const baseAmount = tier === 'gold' ? 500000 : 250000;
 
-          // Only create invoice if next_invoice_date matches today (in New York time)
+          // Only create invoice if next_invoice_date is less than or equal to today (in New York time)
           if (!nextInvoiceDate) {
             continue;
           }
           const invoiceDateInNY = formatYMD(new Date(nextInvoiceDate));
-          if (invoiceDateInNY !== todayYMD) {
+          if (invoiceDateInNY > todayYMD) {
             continue;
           }
 
@@ -180,16 +182,36 @@ Deno.serve(async (req: Request) => {
               .eq("community_id", communityId);
 
             if (!managerError && managers && managers.length > 0) {
-              // Count how many communities these managers manage
-              const managerIds = managers.map((m: { user_id: string }) => m.user_id);
-              const { count, error: countError } = await supabase
+              // Get unique manager IDs
+              const managerIds = [...new Set(managers.map((m: { user_id: string }) => m.user_id))];
+
+              // Helper to get max count
+              let maxCount = 0;
+
+              // We need to fetch all management records for these managers to count per manager
+              const { data: allManagementRecords, error: recordsError } = await supabase
                 .from("community_managers")
-                .select("community_id", { count: "exact", head: true })
+                .select("user_id")
                 .in("user_id", managerIds);
 
-              if (!countError) {
-                discountPercentage = getDiscountPercentage(count || 0);
-                console.log(`Community managers have ${count} communities total, discount: ${discountPercentage}%`);
+              if (!recordsError && allManagementRecords) {
+                const countsByUser: Record<string, number> = {};
+
+                // Count communities per manager
+                for (const record of allManagementRecords) {
+                  const uid = record.user_id;
+                  countsByUser[uid] = (countsByUser[uid] || 0) + 1;
+                }
+
+                // Find the maximum count
+                for (const count of Object.values(countsByUser)) {
+                  if (count > maxCount) {
+                    maxCount = count;
+                  }
+                }
+
+                discountPercentage = getDiscountPercentage(maxCount);
+                console.log(`Community managers max portfolio size is ${maxCount}, discount: ${discountPercentage}%`);
               }
             }
           }
@@ -250,7 +272,8 @@ Deno.serve(async (req: Request) => {
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+
+  } catch (error: any) {
     console.error("🔥 Error in generate-yearly-invoices function:", error);
     return new Response(
       // @ts-ignore

@@ -50,7 +50,6 @@ type AdminLocationState = {
 export const AdminDashboard: React.FC = () => {
   const location = useLocation();
   const { content, addContent, updateContent, deleteContent } = useContent();
-  const { loading: communitiesLoading, communities, addCommunity, updateCommunity, deleteCommunity } = useCommunities();
   const [showForm, setShowForm] = useState(false);
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
@@ -72,7 +71,22 @@ export const AdminDashboard: React.FC = () => {
     }
     return 'content';
   });
-  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents'>('details');
+  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents' | 'managers'>('details');
+  const [communityManagers, setCommunityManagers] = useState<any[]>([]);
+  const [managerSearchQuery, setManagerSearchQuery] = useState('');
+  const [potentialManagers, setPotentialManagers] = useState<any[]>([]);
+  const [managersLoading, setManagersLoading] = useState(false);
+  const {
+    loading: communitiesLoading,
+    communities,
+    addCommunity,
+    updateCommunity,
+    deleteCommunity,
+    getCommunityManagers,
+    addManager,
+    removeManager,
+    searchPotentialManagers
+  } = useCommunities();
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
   const [deletingPdfId, setDeletingPdfId] = useState<string | null>(null);
 
@@ -251,6 +265,60 @@ export const AdminDashboard: React.FC = () => {
       setDeletingPdfId(null);
     }
   };
+
+  // Manager Tab Handlers
+  const handleFetchManagers = async (communityId: string) => {
+    setManagersLoading(true);
+    const { data, error } = await getCommunityManagers(communityId);
+    setManagersLoading(false);
+    if (data) setCommunityManagers(data);
+    else console.error(error);
+  };
+
+  const handleSearchManagers = async (query: string) => {
+    setManagerSearchQuery(query);
+    if (query.length < 3) {
+      setPotentialManagers([]);
+      return;
+    }
+    const { data } = await searchPotentialManagers(query);
+    if (data) setPotentialManagers(data);
+  };
+
+  const handleAddManager = async (user: any) => {
+    if (!editingCommunity) return;
+    const confirmAdd = confirm(`Make ${user.first_name} ${user.last_name} a manager for this community?`);
+    if (!confirmAdd) return;
+
+    const { error } = await addManager(editingCommunity, user.id);
+    if (error) {
+      alert(`Failed to add manager: ${error}`);
+    } else {
+      // Refresh list
+      handleFetchManagers(editingCommunity);
+      setManagerSearchQuery('');
+      setPotentialManagers([]);
+    }
+  };
+
+  const handleRemoveManager = async (userId: string) => {
+    if (!editingCommunity) return;
+    if (confirm('Remove this manager from the community?')) {
+      const { error } = await removeManager(editingCommunity, userId);
+      if (error) {
+        alert(`Failed to remove manager: ${error}`);
+      } else {
+        handleFetchManagers(editingCommunity);
+      }
+    }
+  };
+
+  // Effect to load managers when tab is switched
+  useEffect(() => {
+    if (editingCommunity && communityModalTab === 'managers') {
+      handleFetchManagers(editingCommunity);
+    }
+  }, [editingCommunity, communityModalTab]);
 
   const stats = {
     totalContent: content.length,
@@ -700,6 +768,16 @@ export const AdminDashboard: React.FC = () => {
                     >
                       PDF Library
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommunityModalTab('managers')}
+                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${communityModalTab === 'managers'
+                        ? 'border-brand-primary text-brand-primary'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                      Managers
+                    </button>
                   </nav>
                 </div>
               )}
@@ -912,10 +990,88 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {editingCommunity && communityModalTab === 'managers' && (
+                <div className="space-y-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Add Manager</h3>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                        placeholder="Search users by name or email..."
+                        value={managerSearchQuery}
+                        onChange={(e) => handleSearchManagers(e.target.value)}
+                      />
+                      {potentialManagers.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 bg-white shadow-lg border border-gray-200 mt-1 max-h-48 overflow-y-auto z-10 rounded-lg">
+                          {potentialManagers.map(user => (
+                            <div
+                              key={user.id}
+                              className="p-2 hover:bg-gray-50 cursor-pointer flex justify-between items-center"
+                              onClick={() => handleAddManager(user)}
+                            >
+                              <div className="flex items-center space-x-2">
+                                {user.avatar_url ? (
+                                  <img src={user.avatar_url} className="w-6 h-6 rounded-full" />
+                                ) : (
+                                  <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-500">
+                                    {user.first_name?.[0]}{user.last_name?.[0]}
+                                  </div>
+                                )}
+                                <span className="text-sm font-medium text-gray-700">{user.first_name} {user.last_name}</span>
+                                <span className="text-xs text-gray-500">({user.email})</span>
+                              </div>
+                              <span className="text-xs text-brand-primary font-semibold uppercase">Add</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Current Managers</h3>
+                    {managersLoading ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
+                      </div>
+                    ) : communityManagers.length === 0 ? (
+                      <p className="text-sm text-gray-500">No managers assigned.</p>
+                    ) : (
+                      <ul className="space-y-3">
+                        {communityManagers.map(manager => (
+                          <li key={manager.id} className="flex items-center justify-between bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                            <div className="flex items-center space-x-3">
+                              {manager.avatar_url ? (
+                                <img src={manager.avatar_url} className="w-8 h-8 rounded-full" />
+                              ) : (
+                                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium text-gray-500">
+                                  {manager.first_name?.[0]}{manager.last_name?.[0]}
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-sm font-medium text-[#363f49]">{manager.first_name} {manager.last_name}</p>
+                                <p className="text-xs text-gray-500">{manager.email}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveManager(manager.id)}
+                              className="text-red-600 hover:text-red-700 p-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
-    </div>
+    </div >
   );
 };

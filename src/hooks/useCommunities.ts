@@ -71,6 +71,90 @@ export const useCommunities = () => {
     }
   };
 
+  // Manager Management Functions
+  const getCommunityManagers = async (communityId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('community_managers')
+        .select(`
+          user_id,
+          user:user_profiles!user_id (
+            id,
+            email,
+            first_name,
+            last_name,
+            avatar_url
+          )
+        `)
+        .eq('community_id', communityId);
+
+      if (error) throw error;
+      // Flatten the structure
+      return {
+        data: data.map((item: any) => item.user),
+        error: null
+      };
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : 'Failed to fetch managers' };
+    }
+  };
+
+  const addManager = async (communityId: string, userId: string) => {
+    try {
+      // First ensure user has community_manager role
+      const { error: roleError } = await supabase
+        .from('user_profiles')
+        .update({ role: 'community_manager' })
+        .eq('id', userId)
+        // Only update if not already admin? Or just enforce community_manager role.
+        // Usually we want to keep admin as admin.
+        // This logic might be better handled in UI or tailored edge function?
+        // Safe check: Don't downgrade admins.
+        .neq('role', 'admin');
+
+      if (roleError) console.error("Role update warning (might be admin):", roleError);
+
+      const { error } = await supabase
+        .from('community_managers')
+        .insert([{ community_id: communityId, user_id: userId }]);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Failed to add manager' };
+    }
+  };
+
+  const removeManager = async (communityId: string, userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('community_managers')
+        .delete()
+        .eq('community_id', communityId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Failed to remove manager' };
+    }
+  };
+
+  const searchPotentialManagers = async (query: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, email, first_name, last_name, avatar_url')
+        .or(`email.ilike.%${query}%,first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
+        .limit(10);
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : 'Failed to search users' };
+    }
+  };
+
   const generateAccessCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
@@ -93,5 +177,9 @@ export const useCommunities = () => {
     deleteCommunity,
     generateAccessCode,
     refetch: fetchCommunities,
+    getCommunityManagers,
+    addManager,
+    removeManager,
+    searchPotentialManagers,
   };
 };

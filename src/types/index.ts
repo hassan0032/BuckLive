@@ -112,6 +112,7 @@ export interface User {
     avatar_url?: string;
     community?: Community;
   };
+  managed_community_ids?: string[];
 }
 
 export interface Community {

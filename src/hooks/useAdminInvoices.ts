@@ -10,7 +10,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const client = createClient(supabaseUrl, supabaseAnonKey)
 
 export function useAdminInvoices() {
-  const { isAdmin, loading: authLoading } = useAuth()
+  const { isAdmin, isCommunityManager, loading: authLoading } = useAuth()
   const { communities, loading: communitiesLoading } = useCommunities()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null)
@@ -23,7 +23,7 @@ export function useAdminInvoices() {
       return
     }
 
-    if (!isAdmin) {
+    if (!isAdmin && !isCommunityManager) {
       setIsLoading(false)
       return
     }
@@ -83,7 +83,7 @@ export function useAdminInvoices() {
     }
 
     loadInvoices()
-  }, [authLoading, communitiesLoading, isAdmin, selectedCommunityId])
+  }, [authLoading, communitiesLoading, isAdmin, isCommunityManager, selectedCommunityId])
 
   const updateInvoiceStatus = async (invoiceId: string, statusType: InvoiceStatus, customText?: string) => {
     if (!isAdmin) {
@@ -189,7 +189,7 @@ export function useAdminInvoices() {
       updateInvoiceStatus,
       deleteInvoice,
       refresh: async () => {
-        if (!isAdmin) return
+        if (!isAdmin && !isCommunityManager) return
         setIsLoading(true)
         setError(null)
 

@@ -59,6 +59,7 @@ export const AdminUserManagement: React.FC = () => {
   const [passwordResetUserId, setPasswordResetUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [communitySearchQuery, setCommunitySearchQuery] = useState('');
 
   const stats = {
     totalUsers: users.length,
@@ -74,6 +75,14 @@ export const AdminUserManagement: React.FC = () => {
     setFormError(null);
 
     try {
+      if (formData.role === ROLE.COMMUNITY_MANAGER) {
+        if (formData.managed_community_ids.length === 0) {
+          throw new Error('Please select at least one community');
+        }
+      } else if (formData.role !== ROLE.ADMIN && !formData.community_id) {
+        throw new Error('Please select a community');
+      }
+
       if (editingUser) {
         const { error } = await updateUser(editingUser, {
           email: formData.email,
@@ -82,7 +91,7 @@ export const AdminUserManagement: React.FC = () => {
           role: formData.role,
           community_id: formData.role === ROLE.MEMBER ? formData.community_id : null,
           is_shared_account: formData.is_shared_account,
-          managed_community_ids: formData.managed_community_ids,
+          managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
         });
 
         if (error) throw new Error(error);
@@ -103,7 +112,7 @@ export const AdminUserManagement: React.FC = () => {
           community_id: formData.role === ROLE.MEMBER ? formData.community_id : null,
           role: formData.role,
           is_shared_account: formData.is_shared_account,
-          managed_community_ids: formData.managed_community_ids,
+          managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
         });
 
         if (error) throw new Error(error);
@@ -354,12 +363,26 @@ export const AdminUserManagement: React.FC = () => {
                       {ROLE_DISPLAY_NAME[user.role]}
                     </span>
                   </td>
-                  {/* <td className="px-6 py-4">
-                    <div className="text-sm text-gray-600">
-                      {user.profile?.community?.name || '—'}
-                    </div>
-                  </td> */}
                   <td className="px-6 py-4">
+                    <div className="text-sm text-gray-600">
+                      {user.role === ROLE.COMMUNITY_MANAGER && user.managed_community_ids && user.managed_community_ids.length > 0 ? (
+                        <span>
+                          {communities.find(c => c.id === user.managed_community_ids![0])?.name || 'Unknown Community'}
+                          {user.managed_community_ids!.length > 1 && (
+                            <span className="text-gray-400 ml-1" title={
+                              // Optional: Show full list on hover
+                              user.managed_community_ids!.slice(1).map(id => communities.find(c => c.id === id)?.name).join(', ')
+                            }>
+                              +{user.managed_community_ids!.length - 1} more
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        user.profile?.community?.name || 'N/A'
+                      )}
+                    </div>
+                  </td>
+                  {/* <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
                       {user.role === ROLE.COMMUNITY_MANAGER ? (
                         <span className="text-xs text-gray-500" title={user.managed_community_ids?.map(id => communities.find(c => c.id === id)?.name).join(', ')}>
@@ -371,7 +394,7 @@ export const AdminUserManagement: React.FC = () => {
                         user.profile?.community?.name || 'N/A'
                       )}
                     </div>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4">
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar className="h-4 w-4 mr-2 text-gray-400" />
@@ -396,14 +419,21 @@ export const AdminUserManagement: React.FC = () => {
                       >
                         <Key className="h-4 w-4" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(user.id)}
-                        className="text-red-600 hover:text-red-700"
-                        title="Delete user"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {(() => {
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleDelete(user.id);
+                            }}
+                            className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        );
+                      })()}
                     </div>
                   </td>
                 </tr>
@@ -498,43 +528,72 @@ export const AdminUserManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Role {!editingUser && <span className="text-red-500">*</span>}
                   </label>
-                  <select
-                    disabled={!!editingUser}
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    required
-                  >
-                    <option value={ROLE.MEMBER}>Member</option>
-                    <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
-                    <option value={ROLE.ADMIN}>Admin</option>
-                  </select>
+                  {(() => {
+
+                    return (
+                      <>
+                        <select
+                          value={formData.role}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                          required
+                        >
+                          <option value={ROLE.MEMBER}>Member</option>
+                          <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
+                          <option value={ROLE.ADMIN}>Admin</option>
+                        </select>
+                      </>
+                    );
+                  })()}
+
                   {formData.role === ROLE.ADMIN && (
                     <p className="mt-1 text-xs text-amber-600">
                       Warning: Admin users have full system access
                     </p>
                   )}
                 </div>
-
                 {formData.role === ROLE.MEMBER && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Community {!editingUser && <span className="text-red-500">*</span>}
                     </label>
-                    <select
-                      disabled={!!editingUser}
-                      value={formData.community_id}
-                      onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                      required
-                    >
-                      <option value="">Select a community</option>
-                      {communities.map((community) => (
-                        <option key={community.id} value={community.id}>
-                          {community.name}
-                        </option>
-                      ))}
-                    </select>
+
+                    {/* Community Search Input */}
+                    <div className="relative mb-2">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search communities..."
+                        value={communitySearchQuery}
+                        onChange={(e) => setCommunitySearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
+                      />
+                    </div>
+
+                    <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto p-2 space-y-2">
+                      {communities
+                        .filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase()))
+                        .map(community => (
+                          <div key={community.id} className="flex items-center">
+                            <input
+                              type="radio"
+                              name="community_id"
+                              id={`community-${community.id}`}
+                              value={community.id}
+                              checked={formData.community_id === community.id}
+                              onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
+                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded-full mr-2"
+                              required={!editingUser}
+                            />
+                            <label htmlFor={`community-${community.id}`} className={`text-sm select-none cursor-pointer flex-1 text-gray-700`}>
+                              {community.name}
+                            </label>
+                          </div>
+                        ))}
+                      {communities.filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase())).length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-2">No communities found</p>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -543,57 +602,71 @@ export const AdminUserManagement: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Managed Communities
                     </label>
+
+                    {/* Community Search Input */}
+                    <div className="relative mb-2">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search communities..."
+                        value={communitySearchQuery}
+                        onChange={(e) => setCommunitySearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
+                      />
+                    </div>
+
                     <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto p-2 space-y-2">
-                      {communities.map(community => {
-                        const isOrgCommunity = !!community.organization_id;
-                        const isSelected = formData.managed_community_ids.includes(community.id);
+                      {communities
+                        .filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase()))
+                        .map(community => {
+                          const isOrgCommunity = !!community.organization_id;
+                          const isSelected = formData.managed_community_ids.includes(community.id);
 
-                        // Determine if disabled:
-                        // 1. If an org community is selected, deselect all others (unless this is the one selected)
-                        // 2. If standalone communities are selected, deselect org communities
+                          // Determine if disabled:
+                          // 1. If an org community is selected, deselect all others (unless this is the one selected)
+                          // 2. If standalone communities are selected, deselect org communities
 
-                        // Auto-switching logic: checking an org community deselects others.
+                          // Auto-switching logic: checking an org community deselects others.
 
-                        return (
-                          <div key={community.id} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id={`managed-${community.id}`}
-                              checked={isSelected}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  if (isOrgCommunity) {
-                                    // Exclusive selection for org communities
-                                    setFormData({ ...formData, managed_community_ids: [community.id] });
+                          return (
+                            <div key={community.id} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                id={`managed-${community.id}`}
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    if (isOrgCommunity) {
+                                      // Exclusive selection for org communities
+                                      setFormData({ ...formData, managed_community_ids: [community.id] });
+                                    } else {
+                                      // For standalone, remove any existing org communities first
+                                      const standaloneIds = formData.managed_community_ids.filter(id => {
+                                        const c = communities.find(c => c.id === id);
+                                        return !c?.organization_id;
+                                      });
+                                      setFormData({ ...formData, managed_community_ids: [...standaloneIds, community.id] });
+                                    }
                                   } else {
-                                    // For standalone, remove any existing org communities first
-                                    const standaloneIds = formData.managed_community_ids.filter(id => {
-                                      const c = communities.find(c => c.id === id);
-                                      return !c?.organization_id;
-                                    });
-                                    setFormData({ ...formData, managed_community_ids: [...standaloneIds, community.id] });
+                                    const newIds = formData.managed_community_ids.filter(id => id !== community.id);
+                                    setFormData({ ...formData, managed_community_ids: newIds });
                                   }
-                                } else {
-                                  const newIds = formData.managed_community_ids.filter(id => id !== community.id);
-                                  setFormData({ ...formData, managed_community_ids: newIds });
-                                }
-                              }}
-                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
-                            />
-                            <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
-                              {community.name}
-                              {isOrgCommunity && <span className="text-xs text-gray-500 ml-2">(Org: {community.organization?.name})</span>}
-                            </label>
-                          </div>
-                        );
-                      })}
+                                }}
+                                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
+                              />
+                              <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
+                                {community.name}
+                                {isOrgCommunity && <span className="text-xs text-gray-500 ml-2">(Org: {community.organization?.name})</span>}
+                              </label>
+                            </div>
+                          )
+                        })}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       Select communities. Note: Organization communities can only be managed singly.
                     </p>
                   </div>
                 )}
-
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
