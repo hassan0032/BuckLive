@@ -268,7 +268,7 @@ export const AdminOrganizationManagement: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g., Sequoia Living"
+                    placeholder="Enter organization name"
                     value={createFormData.organizationName}
                     onChange={e => setCreateFormData({ ...createFormData, organizationName: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
