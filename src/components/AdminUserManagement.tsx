@@ -535,8 +535,9 @@ export const AdminUserManagement: React.FC = () => {
                         <select
                           value={formData.role}
                           onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                           required
+                          disabled={formData.role === ROLE.ORGANIZATION_MANAGER}
                         >
                           <option value={ROLE.MEMBER}>Member</option>
                           <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>

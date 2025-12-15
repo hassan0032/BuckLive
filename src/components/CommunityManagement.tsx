@@ -150,7 +150,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
               : 'Create and manage your communities'}
           </p>
         </div>
-        {!isOrgCommunityManager && (
+        {(!communitiesLoading && !isOrgCommunityManager) && (
           <button
             onClick={() => {
               setEditingCommunity(null);

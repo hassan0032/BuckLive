@@ -332,26 +332,28 @@ export const OrganizationUserManagement: React.FC = () => {
           <h2 className="text-2xl font-semibold text-[#363f49]">User Management</h2>
           <p className="text-gray-600">Manage members and community managers across your organization</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingUser(null);
-            setFormData({
-              email: '',
-              password: '',
-              first_name: '',
-              last_name: '',
-              role: ROLE.MEMBER,
-              community_id: communities[0]?.id || '',
-              is_shared_account: false,
-              managed_community_ids: [],
-            });
-            setShowCreateForm(true);
-          }}
-          className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add User</span>
-        </button>
+        {communities.length > 0 && (
+          <button
+            onClick={() => {
+              setEditingUser(null);
+              setFormData({
+                email: '',
+                password: '',
+                first_name: '',
+                last_name: '',
+                role: ROLE.MEMBER,
+                community_id: communities[0]?.id || '',
+                is_shared_account: false,
+                managed_community_ids: [],
+              });
+              setShowCreateForm(true);
+            }}
+            className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add User</span>
+          </button>
+        )}
       </div>
 
       {(communitiesLoading || loading) ? (
