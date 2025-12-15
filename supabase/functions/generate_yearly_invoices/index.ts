@@ -1,27 +1,76 @@
-
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// @ts-ignore
 import { createClient } from "npm:@supabase/supabase-js@2";
+
 // --- CORS Headers ---
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
+
 // --- Helper Functions ---
-function formatYMD(date: Date) {
-  return date.toISOString().slice(0, 10);
+const NEW_YORK_TIMEZONE = 'America/New_York';
+
+function formatYMD(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    timeZone: NEW_YORK_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).split('/').reverse().join('-'); // Convert MM/DD/YYYY to YYYY-MM-DD
 }
-function addYears(ymd: string, years: number) {
-  const date = new Date(ymd);
+
+function getCurrentDateInNY(): Date {
+  const now = new Date();
+  const nyTime = new Date(now.toLocaleString('en-US', { timeZone: NEW_YORK_TIMEZONE }));
+  return new Date(nyTime.getFullYear(), nyTime.getMonth(), nyTime.getDate());
+}
+
+function addYears(ymd: string, years: number): string {
+  // Parse the date in New York time zone
+  const [year, month, day] = ymd.split('-').map(Number);
+  const date = new Date(year, month - 1, day); // month is 0-indexed
   date.setFullYear(date.getFullYear() + years);
   return formatYMD(date);
 }
+
+// Helper function to calculate discount percentage based on community count
+function getDiscountPercentage(communityCount: number): number {
+  if (communityCount >= 20) return 40;
+  if (communityCount >= 10) return 36;
+  if (communityCount >= 6) return 30;
+  switch (communityCount) {
+    case 5: return 20;
+    case 4: return 15;
+    case 3: return 10;
+    case 2: return 5;
+    default: return 0;
+  }
+}
+
+/**
+ * BUCK LIVE COMMUNITY MANAGER INVOICING (v2.0 - NO PRORATION)
+ *
+ * Rules:
+ * 1. No proration - each invoice covers exactly 1 year
+ * 2. Period is decided based on community creation date
+ * 3. First invoice of every community created after 24 hours of community creation
+ * 4. Each invoice covers a complete 1-year period from community creation date
+ * 5. period_start = community creation date + N years (where N is invoice number)
+ * 6. period_end = community creation date + (N+1) years
+ * 7. amount_cents = full annual amount (no proration)
+ * 8. Discount applied only in frontend and PDF for flexibility
+ */
+
 // --- Main Function ---
+// @ts-ignore
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
+
   // Only allow POST for manual trigger
   if (req.method !== "POST") {
     return new Response(
@@ -29,137 +78,182 @@ Deno.serve(async (req: Request) => {
       { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+
   try {
     // Environment variables
+    // @ts-ignore
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    // @ts-ignore
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase environment variables");
     }
+
     // Supabase Admin Client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const today = new Date();
+    const today = getCurrentDateInNY();
     const todayYMD = formatYMD(today);
-    console.log(`Running yearly invoice generator for ${todayYMD}`);
-    // --- Step 1: Find all invoices expiring today ---
-    const { data: expiringInvoices, error: fetchError } = await supabase
-      .from("invoices")
-      .select("*, community:community_id(name, membership_tier)")
-      .eq("period_end", todayYMD);
-    if (fetchError) {
-      console.error("Error fetching expiring invoices:", fetchError);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch invoices" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    if (!expiringInvoices || expiringInvoices.length === 0) {
-      console.log("No invoices expiring today.");
-      return new Response(
-        JSON.stringify({ message: "No invoices expiring today" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    console.log(`Found ${expiringInvoices.length} expiring invoices.`);
+    console.log(`Running yearly invoice generator for ${todayYMD} (New York time)`);
 
-    // Helper function to calculate discount percentage based on community count
-    const getDiscountPercentage = (communityCount: number): number => {
-      if (communityCount >= 20) return 40;
-      if (communityCount >= 10) return 36;
-      if (communityCount >= 6) return 30;
-      switch (communityCount) {
-        case 5: return 20;
-        case 4: return 15;
-        case 3: return 10;
-        case 2: return 5;
-        default: return 0;
-      }
+    const results = {
+      renewalInvoicesCreated: 0,
+      skippedNoBillingDate: 0,
+      errors: [] as string[],
     };
 
-    // --- Step 2: Create new invoices for the next year with tier-based pricing and discount ---
-    const newInvoices: any[] = [];
-    for (const inv of expiringInvoices) {
-      const tier = inv.community?.membership_tier as 'gold' | 'silver' | undefined;
-      const communityName = inv.community?.name;
-      const baseAmount = tier === 'gold' ? 500000 : 250000;
-      const communityId = inv.community_id;
+    // =========================================================================
+    // PART 1: Handle RENEWAL invoices (communities needing next annual invoice)
+    // =========================================================================
+    console.log("--- PART 1: Processing Renewal Invoices ---");
 
-      if (!communityId) {
-        console.log(`Skipping invoice without community_id`);
-        continue;
-      }
+    // Find active communities that have at least one invoice
+    const { data: renewalCommunities, error: renewalCommunitiesError } = await supabase
+      .from("communities")
+      .select("id, name, code, membership_tier, next_invoice_date, organization_id")
+      .eq("is_active", true);
 
-      // Fetch the community to get its primary_manager
-      const { data: community, error: communityError } = await supabase
-        .from("communities")
-        .select("primary_manager")
-        .eq("id", communityId)
-        .single();
+    if (renewalCommunitiesError) {
+      console.error("Error fetching communities for renewal:", renewalCommunitiesError);
+      results.errors.push(`Failed to fetch communities for renewal: ${renewalCommunitiesError.message}`);
+    } else if (renewalCommunities && renewalCommunities.length > 0) {
+      // Get communities that already have invoices
+      const { data: invoicedCommunities, error: invoicedError } = await supabase
+        .from("invoices")
+        .select("community_id, count")
+        .not("community_id", "is", null);
 
-      if (communityError) {
-        console.error(`Error fetching community ${communityId}:`, communityError);
-      }
+      if (invoicedError) {
+        console.error("Error fetching invoiced communities:", invoicedError);
+        results.errors.push(`Failed to fetch invoiced communities: ${invoicedError.message}`);
+      } else {
+        const invoiceCounts = new Map();
+        (invoicedCommunities || []).forEach((inv: { community_id: string }) => {
+          const current = invoiceCounts.get(inv.community_id) || 0;
+          invoiceCounts.set(inv.community_id, current + 1);
+        });
 
-      let discountPercentage = 0;
+        // Filter to communities with existing invoices
+        const communitiesWithInvoices = renewalCommunities.filter((c: { id: string }) => invoiceCounts.has(c.id));
 
-      // If community has a primary_manager, calculate discount based on their total communities
-      if (community?.primary_manager) {
-        // Count how many communities this primary_manager manages
-        const { count, error: countError } = await supabase
-          .from("communities")
-          .select("id", { count: "exact", head: true })
-          .eq("primary_manager", community.primary_manager);
+        console.log(`Found ${communitiesWithInvoices.length} communities with existing invoices.`);
 
-        if (countError) {
-          console.error(`Error counting communities for primary_manager:`, countError);
-        } else {
-          discountPercentage = getDiscountPercentage(count || 0);
-          console.log(`Primary manager ${community.primary_manager} has ${count} communities, discount: ${discountPercentage}%`);
+        for (const community of communitiesWithInvoices) {
+          const { id: communityId, name: communityName, code: communityCode, membership_tier: tier, next_invoice_date: nextInvoiceDate } = community;
+          const baseAmount = tier === 'gold' ? 500000 : 250000;
+
+          // Only create invoice if next_invoice_date matches today (in New York time)
+          if (!nextInvoiceDate) {
+            continue;
+          }
+          const invoiceDateInNY = formatYMD(new Date(nextInvoiceDate));
+          if (invoiceDateInNY !== todayYMD) {
+            continue;
+          }
+
+          console.log(`Processing renewal invoice for community: ${communityName} (next_invoice_date: ${nextInvoiceDate})`);
+
+          // Calculate period: use the next_invoice_date as both start and end of the billing period
+          // Since we removed proration, each invoice covers exactly 1 year from the next_invoice_date
+          const periodStart = formatYMD(new Date(nextInvoiceDate));
+          const periodEnd = addYears(periodStart, 1);
+
+          // For discount calculation, we need to determine if this is an organization community or standalone
+          // Since we removed primary_manager, we'll check if there's an organization_id
+          let discountPercentage = 0;
+
+          if (community.organization_id) {
+            // ORGANIZATION COMMUNITY - count all communities in the organization
+            const { count, error: countError } = await supabase
+              .from("communities")
+              .select("id", { count: "exact", head: true })
+              .eq("organization_id", community.organization_id);
+
+            if (!countError) {
+              discountPercentage = getDiscountPercentage(count || 0);
+              console.log(`Organization ${community.organization_id} has ${count} communities, discount: ${discountPercentage}%`);
+            }
+          } else {
+            // STANDALONE COMMUNITY - count communities managed by community managers of this community
+            const { data: managers, error: managerError } = await supabase
+              .from("community_managers")
+              .select("user_id")
+              .eq("community_id", communityId);
+
+            if (!managerError && managers && managers.length > 0) {
+              // Count how many communities these managers manage
+              const managerIds = managers.map((m: { user_id: string }) => m.user_id);
+              const { count, error: countError } = await supabase
+                .from("community_managers")
+                .select("community_id", { count: "exact", head: true })
+                .in("user_id", managerIds);
+
+              if (!countError) {
+                discountPercentage = getDiscountPercentage(count || 0);
+                console.log(`Community managers have ${count} communities total, discount: ${discountPercentage}%`);
+              }
+            }
+          }
+
+          const amountBeforeDiscount = baseAmount;
+
+          console.log(`Renewal: Community=${communityName}, tier=${tier}, periodStart=${periodStart}, periodEnd=${periodEnd}, amount_cents=${baseAmount}, discount=${discountPercentage}%`);
+
+          const { error: insertError } = await supabase.from("invoices").insert({
+            issue_date: todayYMD,
+            period_start: periodStart,
+            period_end: periodEnd,
+            amount_cents: amountBeforeDiscount,
+            currency: 'USD',
+            status: 'issued',
+            community_id: communityId,
+            discount_percentage: discountPercentage,
+            community_code: communityCode,
+            community_name: communityName,
+            community_tier: tier,
+            organization_id: community.organization_id,
+          });
+
+          // Update next_invoice_date for the next billing cycle (store as New York time)
+          if (!insertError) {
+            const nextBillingDate = addYears(periodStart, 1);
+            // Create a date object representing the next billing date at midnight in New York time
+            const [year, month, day] = nextBillingDate.split('-').map(Number);
+            const nextInvoiceDateTime = new Date(year, month - 1, day, 0, 0, 0);
+            await supabase
+              .from("communities")
+              .update({ next_invoice_date: nextInvoiceDateTime.toISOString() })
+              .eq("id", communityId);
+          }
+
+          if (insertError) {
+            console.error(`Error creating renewal invoice for community ${communityId}:`, insertError);
+            results.errors.push(`Failed to create renewal invoice for ${communityName}: ${insertError.message}`);
+          } else {
+            results.renewalInvoicesCreated++;
+          }
         }
       }
-
-      console.log(`Community=${communityName ?? 'unknown'}, tier=${tier ?? 'unknown'}, baseAmount=${baseAmount}, discount=${discountPercentage}%`);
-
-      newInvoices.push({
-        issue_date: todayYMD,
-        period_start: todayYMD,
-        period_end: addYears(todayYMD, 1),
-        amount_cents: baseAmount,
-        currency: 'USD',
-        status: 'issued',
-        community_id: communityId,
-        discount_percentage: discountPercentage,
-      });
     }
 
-    if (newInvoices.length === 0) {
-      console.log("No new invoices to create (all communities skipped or failed).");
-      return new Response(
-        JSON.stringify({ message: "No new invoices to create" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // =========================================================================
+    // Summary
+    // =========================================================================
+    console.log(`✅ Summary: Renewal=${results.renewalInvoicesCreated}, SkippedNoBillingDate=${results.skippedNoBillingDate}, Errors=${results.errors.length}`);
 
-    const { error: insertError } = await supabase.from("invoices").insert(newInvoices);
-    if (insertError) {
-      console.error("Error inserting new invoices:", insertError);
-      return new Response(
-        JSON.stringify({ error: "Failed to create new invoices" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`✅ Successfully created ${newInvoices.length} new invoices.`);
     return new Response(
       JSON.stringify({
-        message: "Yearly invoices generated successfully",
-        created: newInvoices.length,
+        message: "Invoice generation completed",
+        renewalInvoicesCreated: results.renewalInvoicesCreated,
+        skippedNoBillingDate: results.skippedNoBillingDate,
+        totalCreated: results.renewalInvoicesCreated,
+        errors: results.errors,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("🔥 Error in generate-yearly-invoices function:", error);
     return new Response(
+      // @ts-ignore
       JSON.stringify({ error: error.message || "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

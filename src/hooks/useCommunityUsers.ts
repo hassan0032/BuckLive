@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ROLE, User } from '../types';
+import { Role, ROLE, User } from '../types';
 
 export const useCommunityUsers = (communityId?: string) => {
   const [users, setUsers] = useState<User[]>([]);
@@ -29,7 +29,7 @@ export const useCommunityUsers = (communityId?: string) => {
       const formattedUsers: User[] = (data || []).map(profile => ({
         id: profile.id,
         email: profile.email,
-        role: profile.role,
+        role: profile.role as Role,
         created_at: profile.created_at,
         community_id: profile.community_id,
         registration_type: profile.registration_type,
@@ -69,7 +69,7 @@ export const useCommunityUsers = (communityId?: string) => {
     try {
       // Get the current session to pass auth header
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         return { data: null, error: 'Not authenticated' };
       }
@@ -148,7 +148,7 @@ export const useCommunityUsers = (communityId?: string) => {
     try {
       // Get the current session to pass auth header
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         return { error: 'Not authenticated' };
       }

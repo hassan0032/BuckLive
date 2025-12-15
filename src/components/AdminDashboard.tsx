@@ -7,6 +7,7 @@ import { useDocuments } from '../hooks/useDocuments';
 import { Community, CommunityDocument, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier } from '../types';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import { AdminUserManagement } from './AdminUserManagement';
+import { AdminOrganizationManagement } from './AdminOrganizationManagement';
 import { EnhancedContentForm } from './EnhancedContentForm';
 import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
@@ -42,7 +43,7 @@ const generateAccessCode = () => {
 };
 
 type AdminLocationState = {
-  forceTab?: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback';
+  forceTab?: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback' | 'organizations';
   ts?: number;
 } | null;
 
@@ -62,10 +63,10 @@ export const AdminDashboard: React.FC = () => {
     deleteDocument: deleteStoredPdf,
     refetch: refetchStoredPdfs,
   } = useDocuments(editingCommunity);
-  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback'>(() => {
+  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback' | 'organizations'>(() => {
     if (typeof window === 'undefined') return 'content';
     const stored = window.localStorage.getItem('adminActiveTab');
-    const allowedTabs = ['content', 'communities', 'users', 'analytics', 'invoices', 'notifications', 'feedback'] as const;
+    const allowedTabs = ['content', 'communities', 'users', 'analytics', 'invoices', 'notifications', 'feedback', 'organizations'] as const;
     if (stored && (allowedTabs as readonly string[]).includes(stored)) {
       return stored as (typeof allowedTabs)[number];
     }
@@ -320,6 +321,15 @@ export const AdminDashboard: React.FC = () => {
               }`}
           >
             User Management
+          </button>
+          <button
+            onClick={() => handleSetActiveTab('organizations')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'organizations'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            Organizations
           </button>
           <button
             onClick={() => handleSetActiveTab('analytics')}
@@ -621,6 +631,8 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {activeTab === 'users' && <AdminUserManagement />}
+
+      {activeTab === 'organizations' && <AdminOrganizationManagement />}
 
       {activeTab === 'analytics' && <AdminAnalyticsDashboard />}
 

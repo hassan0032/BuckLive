@@ -48,12 +48,21 @@ export interface Database {
           amount_cents: number
           currency: string
           status: string
+          discount_percentage: number
+          full_year_amount_cents: number | null
+          community_code: string | null
+          community_name: string | null
+          community_tier: string | null
           created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
-          user_id: string | null
+          user_id?: string | null
           community_id?: string | null
+          community_code?: string | null
+          community_name?: string | null
+          community_tier?: string | null
           invoice_no?: number
           issue_date?: string | null
           period_start: string
@@ -61,12 +70,18 @@ export interface Database {
           amount_cents: number
           currency: string
           status: string
+          discount_percentage?: number
+          full_year_amount_cents?: number | null
           created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
           user_id?: string | null
           community_id?: string | null
+          community_code?: string | null
+          community_name?: string | null
+          community_tier?: string | null
           invoice_no?: number
           issue_date?: string | null
           period_start?: string
@@ -74,7 +89,10 @@ export interface Database {
           amount_cents?: number
           currency?: string
           status?: string
+          discount_percentage?: number
+          full_year_amount_cents?: number | null
           created_at?: string | null
+          updated_at?: string | null
         }
       }
       communities: {
@@ -86,11 +104,10 @@ export interface Database {
           is_active: boolean
           is_sharable: boolean
           membership_tier: 'silver' | 'gold'
-          is_sharable: boolean
           sharable_token: string | null
+          organization_id: string | null
           created_at: string
           updated_at: string
-          sharable_token: string | null
         }
         Insert: {
           id?: string
@@ -100,11 +117,10 @@ export interface Database {
           is_active?: boolean
           is_sharable?: boolean
           membership_tier: 'silver' | 'gold'
-          is_sharable?: boolean
           sharable_token?: string | null
+          organization_id?: string | null
           created_at?: string
           updated_at?: string
-          sharable_token?: string | null
         }
         Update: {
           id?: string
@@ -114,11 +130,10 @@ export interface Database {
           is_active?: boolean
           is_sharable?: boolean
           membership_tier?: 'silver' | 'gold'
-          is_sharable?: boolean
           sharable_token?: string | null
+          organization_id?: string | null
           created_at?: string
           updated_at?: string
-          sharable_token?: string | null
         }
       }
       user_profiles: {
@@ -128,7 +143,7 @@ export interface Database {
           first_name: string
           last_name: string
           avatar_url: string
-          role: 'member' | 'admin' | 'community_manager'
+          role: 'member' | 'admin' | 'community_manager' | 'organization_manager'
           community_id: string | null
           registration_type: 'access_code' | 'self_registered'
           stripe_customer_id: string | null
@@ -147,7 +162,7 @@ export interface Database {
           first_name?: string
           last_name?: string
           avatar_url?: string
-          role?: 'member' | 'admin' | 'community_manager'
+          role?: 'member' | 'admin' | 'community_manager' | 'organization_manager'
           community_id?: string | null
           registration_type?: 'access_code' | 'self_registered'
           stripe_customer_id?: string | null
@@ -166,7 +181,7 @@ export interface Database {
           first_name?: string
           last_name?: string
           avatar_url?: string
-          role?: 'member' | 'admin' | 'community_manager'
+          role?: 'member' | 'admin' | 'community_manager' | 'organization_manager'
           community_id?: string | null
           registration_type?: 'access_code' | 'self_registered'
           stripe_customer_id?: string | null
@@ -198,6 +213,49 @@ export interface Database {
           user_id?: string
           community_id?: string
           assigned_at?: string
+        }
+      }
+      organizations: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      organization_managers: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          user_id?: string
+          created_at?: string
         }
       }
       content: {
@@ -412,7 +470,27 @@ export interface Database {
       }
     }
     Views: {
-      [_ in never]: never
+      users_with_details: {
+        Row: {
+          id: string;
+          email: string;
+          first_name: string | null;
+          last_name: string | null;
+          avatar_url: string | null;
+          role: Database['public']['Tables']['user_profiles']['Row']['role'];
+          community_id: string | null;
+          registration_type: string | null;
+          subscription_status: string | null;
+          payment_tier: string | null;
+          is_shared_account: boolean;
+          created_at: string;
+          updated_at: string;
+          community_name: string | null;
+          community_tier: string | null;
+          organization_id: string | null;
+          organization_name: string | null;
+        }
+      }
     }
     Functions: {
       validate_access_code: {
@@ -463,10 +541,16 @@ export interface Database {
         Args: Record<string, never>
         Returns: string | null
       }
+      get_next_billing_date: {
+        Args: {
+          p_billing_date: string
+          p_from_date?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
     }
   }
 }
-

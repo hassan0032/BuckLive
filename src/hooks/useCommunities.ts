@@ -11,7 +11,7 @@ export const useCommunities = () => {
     try {
       const { data, error } = await supabase
         .from('communities')
-        .select('*')
+        .select('*, organization:organizations(name)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

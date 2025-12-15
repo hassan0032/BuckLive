@@ -2,8 +2,16 @@ export const ROLE = {
   MEMBER: 'member',
   ADMIN: 'admin',
   COMMUNITY_MANAGER: 'community_manager',
+  ORGANIZATION_MANAGER: 'organization_manager',
 } as const;
 export type Role = typeof ROLE[keyof typeof ROLE];
+export const ROLE_DISPLAY_NAME = {
+  [ROLE.MEMBER]: 'Member',
+  [ROLE.ADMIN]: 'Admin',
+  [ROLE.COMMUNITY_MANAGER]: 'Community Manager',
+  [ROLE.ORGANIZATION_MANAGER]: 'Organization Manager',
+} as const;
+export type RoleDisplayName = typeof ROLE_DISPLAY_NAME[keyof typeof ROLE_DISPLAY_NAME];
 
 export const REGISTRATION_TYPE = {
   ACCESS_CODE: 'access_code',
@@ -93,10 +101,10 @@ export interface User {
   stripe_customer_id?: string;
   subscription_id?: string;
   subscription_status?: SubscriptionStatus;
-  payment_tier?: PaymentTier;
   subscription_started_at?: string;
   subscription_ends_at?: string;
   is_shared_account?: boolean;
+  managed_community_ids?: string[];
   needsPayment?: boolean;
   profile?: {
     first_name?: string;
@@ -120,6 +128,16 @@ export interface Community {
   is_sharable?: boolean;
   sharable_token?: string | null;
   code: string;
+  organization_id?: string | null;
+  organization?: Organization
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CommunityManager {
@@ -200,7 +218,7 @@ export interface AuthState {
 }
 
 // Unified notification type
-export type NotificationType = 'admin' | 'community_manager';
+export type NotificationType = typeof ROLE.ADMIN | typeof ROLE.COMMUNITY_MANAGER;
 
 export interface Notification {
   id: string;
@@ -245,4 +263,24 @@ export interface CommunityDocument {
   size: number;
   createdAt?: string;
   createdBy?: string | null;
+}
+
+export interface Invoice {
+  id: string;
+  communityId: string | null;
+  communityName: string | null;
+  communityCode: string | null;
+  communityTier: PaymentTier;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  invoice_no: number;
+  issueDate: string;
+  periodStart: string;
+  periodEnd: string;
+  amountCents: number;
+  currency: string;
+  status: string;
+  discountPercentage: number;
+  calculatedAmountCents?: number;
+  createdAt: string;
 }

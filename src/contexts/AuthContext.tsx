@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as AppUser, REGISTRATION_TYPE, ROLE } from '../types';
-import { ensureCommunityManagerInvoices } from '../lib/supabase';
 
 interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   isAdmin: boolean;
   isCommunityManager: boolean;
+  isOrganizationManager: boolean;
   isMember: boolean;
   isSharedAccount: boolean;
 }
@@ -17,9 +17,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOrgManager, setIsOrgManager] = useState(false);
   const currentUserIdRef = useRef<string | null>(null);
   const isFetchingRef = useRef(false);
   const invoiceGeneratedForUserRef = useRef<string | null>(null);
+
+  // Check if user is in organization_managers table
+  const checkOrgManager = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('organization_managers')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error checking org manager status:', error);
+      return false;
+    }
+    return !!data;
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -70,7 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             stripe_customer_id: profile?.stripe_customer_id,
             subscription_id: profile?.subscription_id,
             subscription_status: profile?.subscription_status,
-            payment_tier: profile?.payment_tier,
             subscription_started_at: profile?.subscription_started_at,
             subscription_ends_at: profile?.subscription_ends_at,
             is_shared_account: profile?.is_shared_account || false,
@@ -86,20 +101,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('🔑 Final role set to:', appUser.role);
           currentUserIdRef.current = session.user.id;
           setUser(appUser);
-          
-          // Generate invoices immediately for community managers on login
-          if (appUser.role === "community_manager" && invoiceGeneratedForUserRef.current !== appUser.id) {
-            invoiceGeneratedForUserRef.current = appUser.id;
-            console.log("⚡ Generating invoices immediately on login for community manager:", appUser.id);
-            // Don't await - let it run in background so login isn't blocked
-            ensureCommunityManagerInvoices(appUser.id).catch(err => {
-              console.error("❌ Error generating invoices on login:", err);
-              // Reset ref on error so it can retry
-              invoiceGeneratedForUserRef.current = null;
-            });
-          }
+
+          // Check if user is an organization manager (by table membership, not role)
+          const orgManagerStatus = await checkOrgManager(session.user.id);
+          setIsOrgManager(orgManagerStatus);
+          console.log('🏢 Organization manager status:', orgManagerStatus);
         } else {
           setUser(null);
+          setIsOrgManager(false);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
@@ -162,7 +171,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 stripe_customer_id: profile?.stripe_customer_id,
                 subscription_id: profile?.subscription_id,
                 subscription_status: profile?.subscription_status,
-                payment_tier: profile?.payment_tier,
                 subscription_started_at: profile?.subscription_started_at,
                 subscription_ends_at: profile?.subscription_ends_at,
                 is_shared_account: profile?.is_shared_account || false,
@@ -178,23 +186,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log('🔑 Final role in auth state change:', appUser.role);
               currentUserIdRef.current = session.user.id;
               setUser(appUser);
-              
-              // Generate invoices immediately for community managers on login
-              if (appUser.role === "community_manager" && invoiceGeneratedForUserRef.current !== appUser.id) {
-                invoiceGeneratedForUserRef.current = appUser.id;
-                console.log("⚡ Generating invoices immediately on auth state change for community manager:", appUser.id);
-                // Don't await - let it run in background so login isn't blocked
-                ensureCommunityManagerInvoices(appUser.id).catch(err => {
-                  console.error("❌ Error generating invoices on login:", err);
-                  // Reset ref on error so it can retry
-                  invoiceGeneratedForUserRef.current = null;
-                });
-              }
 
+              // Check if user is an organization manager (by table membership, not role)
+              const orgManagerStatus = await checkOrgManager(session.user.id);
+              setIsOrgManager(orgManagerStatus);
+              console.log('🏢 Organization manager status:', orgManagerStatus);
             } else {
               if (mounted) {
                 currentUserIdRef.current = null;
                 setUser(null);
+                setIsOrgManager(false);
                 invoiceGeneratedForUserRef.current = null; // Reset when user logs out
               }
             }
@@ -219,9 +220,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextType = {
     user,
     loading,
-    isAdmin: user?.role === 'admin',
-    isCommunityManager: user?.role === 'community_manager',
-    isMember: user?.role === 'member',
+    isAdmin: user?.role === ROLE.ADMIN,
+    isCommunityManager: user?.role === ROLE.COMMUNITY_MANAGER,
+    isOrganizationManager: user?.role === ROLE.ORGANIZATION_MANAGER || isOrgManager,
+    isMember: user?.role === ROLE.MEMBER,
     isSharedAccount: user?.is_shared_account || false,
   };
 

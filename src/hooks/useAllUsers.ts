@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Role, User } from '../types';
+import { ROLE, Role, User } from '../types';
 
 interface UseAllUsersFilters {
+  organizationId?: string;
   communityId?: string;
-  role?: 'member' | 'admin' | 'community_manager';
+  role?: Role;
   searchTerm?: string;
 }
 
@@ -21,7 +22,8 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
         .from('user_profiles')
         .select(`
           *,
-          community:communities!user_profiles_community_id_fkey(*)
+          community:communities!user_profiles_community_id_fkey(*),
+          organization:organization_managers!organization_managers_user_id_fkey(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -44,10 +46,27 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
 
       if (fetchError) throw fetchError;
 
+      // Fetch managed communities for these users
+      const communityManagerIds = data?.filter(u => u.role === ROLE.COMMUNITY_MANAGER).map(u => u.id) || [];
+      const { data: managersData } = await supabase
+        .from('community_managers')
+        .select('user_id, community_id')
+        .in('user_id', communityManagerIds);
+
+      const managersMap = new Map<string, string[]>();
+      if (managersData) {
+        managersData.forEach((item: any) => {
+          if (!managersMap.has(item.user_id)) {
+            managersMap.set(item.user_id, []);
+          }
+          managersMap.get(item.user_id)?.push(item.community_id);
+        });
+      }
+
       const formattedUsers: User[] = (data || []).map(profile => ({
         id: profile.id,
         email: profile.email,
-        role: profile.role,
+        role: profile.role as Role,
         created_at: profile.created_at,
         community_id: profile.community_id,
         registration_type: profile.registration_type,
@@ -58,11 +77,13 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
         subscription_started_at: profile.subscription_started_at,
         subscription_ends_at: profile.subscription_ends_at,
         is_shared_account: profile.is_shared_account || false,
+        managed_community_ids: managersMap.get(profile.id) || [],
         profile: {
           first_name: profile.first_name || '',
           last_name: profile.last_name || '',
           avatar_url: profile.avatar_url || '',
           community: profile.community || undefined,
+          organization: profile.organization?.[0] || undefined,
         },
       }));
 
@@ -81,9 +102,10 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     password: string;
     first_name: string;
     last_name: string;
-    community_id: string;
+    community_id: string | null;
     role?: Role;
     is_shared_account?: boolean;
+    managed_community_ids?: string[];
   }) => {
     try {
       // Get the current session to pass auth header
@@ -109,6 +131,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
           community_id: userData.community_id,
           role: userData.role,
           is_shared_account: userData.is_shared_account || false,
+          managed_community_ids: userData.managed_community_ids || [],
         }),
       });
 
@@ -133,9 +156,10 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     email?: string;
     first_name?: string;
     last_name?: string;
-    role?: 'member' | 'admin' | 'community_manager';
-    community_id?: string;
+    role?: Role;
+    community_id?: string | null;
     is_shared_account?: boolean;
+    managed_community_ids?: string[];
   }) => {
     try {
       const currentUser = users.find(u => u.id === userId);
@@ -144,6 +168,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
       }
 
       const profileUpdates: Record<string, unknown> = {};
+      const effectiveRole = updates.role !== undefined ? updates.role : currentUser.role;
 
       if (updates.first_name !== undefined) {
         profileUpdates.first_name = updates.first_name;
@@ -154,12 +179,21 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
       if (updates.email !== undefined) {
         profileUpdates.email = updates.email;
       }
-      if (updates.role !== undefined) {
-        profileUpdates.role = updates.role;
+      profileUpdates.role = effectiveRole;
+
+      // Handle community_id constraint: Only Members can have a community_id in profile
+      if (effectiveRole === ROLE.MEMBER) {
+        if (updates.community_id !== undefined) {
+          profileUpdates.community_id = updates.community_id;
+        }
+      } else {
+        // For non-members, community_id must be null
+        // We set it to null if it's currently set, or if we are updating role to non-member
+        if (currentUser.community_id || updates.community_id) {
+          profileUpdates.community_id = null;
+        }
       }
-      if (updates.community_id !== undefined) {
-        profileUpdates.community_id = updates.community_id;
-      }
+
       if (updates.is_shared_account !== undefined) {
         profileUpdates.is_shared_account = updates.is_shared_account;
       }
@@ -172,7 +206,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
       if (updateError) throw updateError;
 
       if (updates.role) {
-        if (updates.role === 'community_manager' && currentUser.role !== 'community_manager') {
+        if (updates.role === ROLE.COMMUNITY_MANAGER && currentUser.role !== ROLE.COMMUNITY_MANAGER) {
           const { error: managerError } = await supabase
             .from('community_managers')
             .upsert([
@@ -183,7 +217,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
             ], { onConflict: 'user_id,community_id' });
 
           if (managerError) throw managerError;
-        } else if (updates.role !== 'community_manager' && currentUser.role === 'community_manager') {
+        } else if (updates.role !== ROLE.COMMUNITY_MANAGER && currentUser.role === ROLE.COMMUNITY_MANAGER) {
           const { error: deleteManagerError } = await supabase
             .from('community_managers')
             .delete()

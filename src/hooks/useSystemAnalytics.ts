@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ContentView } from '../types';
+import { ContentView, PAYMENT_TIER, ROLE } from '../types';
 
 interface CommunityPerformance {
   community_id: string;
@@ -46,7 +46,8 @@ interface SystemAnalyticsData {
   communityPerformance: CommunityPerformance[];
   usersByRole: {
     admin: number;
-    community_manager: number;
+    organizationManager: number;
+    communityManager: number;
     member: number;
   };
   usersByTier: {
@@ -66,7 +67,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
     userActivity: [],
     recentViews: [],
     communityPerformance: [],
-    usersByRole: { admin: 0, community_manager: 0, member: 0 },
+    usersByRole: { admin: 0, organizationManager: 0, communityManager: 0, member: 0 },
     usersByTier: { silver: 0, gold: 0, none: 0 },
   });
   const [loading, setLoading] = useState(true);
@@ -93,14 +94,15 @@ export const useSystemAnalytics = (communityFilter?: string) => {
       const totalUsers = users?.length || 0;
 
       const usersByRole = {
-        admin: users?.filter(u => u.role === 'admin').length || 0,
-        community_manager: users?.filter(u => u.role === 'community_manager').length || 0,
-        member: users?.filter(u => u.role === 'member').length || 0,
+        admin: users?.filter(u => u.role === ROLE.ADMIN).length || 0,
+        organizationManager: users?.filter(u => u.role === ROLE.ORGANIZATION_MANAGER).length || 0,
+        communityManager: users?.filter(u => u.role === ROLE.COMMUNITY_MANAGER).length || 0,
+        member: users?.filter(u => u.role === ROLE.MEMBER).length || 0,
       };
 
       const usersByTier = {
-        silver: users?.filter(u => u.payment_tier === 'silver').length || 0,
-        gold: users?.filter(u => u.payment_tier === 'gold').length || 0,
+        silver: users?.filter(u => u.payment_tier === PAYMENT_TIER.SILVER).length || 0,
+        gold: users?.filter(u => u.payment_tier === PAYMENT_TIER.GOLD).length || 0,
         none: users?.filter(u => !u.payment_tier).length || 0,
       };
 

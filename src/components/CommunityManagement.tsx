@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useCommunities } from '../hooks/useCommunities';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useAdminEmailNotification } from '../hooks/useAdminEmailNotification';
-import { useBilling } from '../hooks/useBilling';
 import { supabase } from '../lib/supabase';
 import { Community } from '../types';
 
@@ -16,9 +15,12 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
   const { loading: communitiesLoading, communities, refetch, deleteCommunity } = useManagedCommunities(userId);
   const { generateAccessCode } = useCommunities();
   const { sendAdminCommunityEmail } = useAdminEmailNotification();
-  const { createInvoice } = useBilling();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
+  
+  // Check if user is assigned to any org community - if so, they cannot create new communities
+  const isOrgCommunityManager = communities.some((c: any) => c.organization_id);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -74,30 +76,11 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
 
         if (assignError) throw assignError;
 
-        // Create initial invoice for the newly created community
-        const today = new Date();
-        const formatYMD = (d: Date) => d.toISOString().slice(0, 10);
-        const addYears = (ymd: string, years: number) => {
-          const date = new Date(ymd);
-          date.setFullYear(date.getFullYear() + years);
-          return formatYMD(date);
-        };
-
-        const issueDate = formatYMD(today);
-        const amount = communityData.membership_tier === 'gold' ? 500000 : 250000;
-
-        await createInvoice({
-          community_id: communityData.id,
-          issue_date: issueDate,
-          period_start: issueDate,
-          period_end: addYears(issueDate, 1),
-          amount_cents: amount,
-          currency: 'USD',
-          status: 'issued',
-        });
-
         // Notify admin via email that a new community has been created
         await sendAdminCommunityEmail(communityData.id, communityData.name, userId);
+
+        // Show success message - invoice will be generated overnight by nightly job
+        setSuccessMessage('Community created successfully. Initial invoice will be generated overnight.');
       }
 
       await refetch();
@@ -111,8 +94,13 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
         membership_tier: 'silver',
         is_active: true,
       });
+      // Clear success message after 5 seconds
+      if (successMessage) {
+        setTimeout(() => setSuccessMessage(null), 5000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save community');
+      setSuccessMessage(null);
     } finally {
       setLoading(false);
     }
@@ -156,26 +144,38 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-semibold text-[#363f49]">My Communities</h2>
-          <p className="text-gray-600">Create and manage your communities</p>
+          <p className="text-gray-600">
+            {isOrgCommunityManager 
+              ? 'Manage your assigned communities' 
+              : 'Create and manage your communities'}
+          </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingCommunity(null);
-            setFormData({
-              name: '',
-              description: '',
-              access_code: generateAccessCode(),
-              membership_tier: 'silver',
-              is_active: true,
-            });
-            setShowCreateForm(true);
-          }}
-          className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Create Community</span>
-        </button>
+        {!isOrgCommunityManager && (
+          <button
+            onClick={() => {
+              setEditingCommunity(null);
+              setFormData({
+                name: '',
+                description: '',
+                access_code: generateAccessCode(),
+                membership_tier: 'silver',
+                is_active: true,
+              });
+              setShowCreateForm(true);
+            }}
+            className="flex items-center space-x-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Create Community</span>
+          </button>
+        )}
       </div>
+
+      {successMessage && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+          {successMessage}
+        </div>
+      )}
 
       {communitiesLoading ? (
         <div className="flex items-center justify-center py-12">

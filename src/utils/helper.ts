@@ -30,9 +30,14 @@ type PricingInput = {
   communityId?: string | null
   issueDate?: string | null
   periodStart?: string | null
+  periodEnd?: string | null
   communityTier?: 'gold' | 'silver' | undefined
   amountCents?: number
   createdAt?: string | null
+  currency?: string
+  status?: string
+  communityName?: string | null
+  communityCode?: string | null
 }
 
 /**
@@ -45,12 +50,12 @@ export function applyDiscountFromDatabase<T extends PricingInput & { discountPer
   return invoices.map((invoice) => {
     const discountPercentage = invoice.discountPercentage ?? 0;
     const originalAmountCents = invoice.amountCents ?? 0;
-    
+
     // Calculate discounted amount: original * (1 - discountPercentage / 100)
     const discountedAmountCents = Math.round(
       originalAmountCents * (1 - discountPercentage / 100)
     );
-    
+
     return {
       ...invoice,
       calculatedAmountCents: discountedAmountCents,
@@ -112,6 +117,7 @@ export function generateInvoicePdf({
   const discountPercent = typeof providedDiscountPercent === 'number'
     ? providedDiscountPercent
     : origCents > 0 ? Number(((discountCents / origCents) * 100).toFixed(2)) : 0
+
 
   const originalAmountDisplay = formatCentsToCurrency(origCents)
   const discountedAmountDisplay = formatCentsToCurrency(discountedCents)
@@ -420,12 +426,12 @@ export function generateInvoicePdf({
       </table>
 
       <div class="totals-section">
-          ${discountPercent > 0 ? `
-            <div class="total-row">
-              <p class="total-label">Discount (${discountPercent}%):</p>
-              <p class="total-value">-${discountAmountDisplay}</p>
-            </div>
-          ` : ''}
+        ${discountPercent > 0 ? `
+          <div class="total-row">
+            <p class="total-label">Discount (${discountPercent}%):</p>
+            <p class="total-value">-${discountAmountDisplay}</p>
+          </div>
+        ` : ''}
         <div class="total-row">
           <p class="total-label">Subtotal:</p>
           <p class="total-value">${discountedAmountDisplay}</p>

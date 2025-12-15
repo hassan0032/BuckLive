@@ -6,6 +6,7 @@ import CommunityManagerNotifications from './components/CommunityManagerNotifica
 import { ContentDetail } from './components/ContentDetail';
 import { ContentLibrary } from './components/ContentLibrary';
 import { Layout } from './components/Layout';
+import { OrganizationManagerDashboard } from './components/OrganizationManagerDashboard';
 import { PaymentSelection } from './components/PaymentSelection';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { PublicContentDetail } from './components/PublicContentDetail';
@@ -16,7 +17,7 @@ import { useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 
 function App() {
-  const { user, loading, isAdmin, isCommunityManager, isSharedAccount } = useAuth();
+  const { user, loading, isAdmin, isCommunityManager, isOrganizationManager, isSharedAccount } = useAuth();
 
   // Check if we're on the reset password page
   const isResetPasswordPage = window.location.pathname === '/reset-password' || window.location.hash.includes('type=recovery');
@@ -90,6 +91,7 @@ function App() {
                   <Route path="/profile" element={isSharedAccount ? <Navigate to="/library" replace /> : <UserProfile />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />
+                  <Route path="/organization-manager" element={isOrganizationManager ? <OrganizationManagerDashboard /> : <Navigate to="/library" replace />} />
                   <Route path="/community-manager" element={isCommunityManager ? <CommunityManagerDashboard /> : <Navigate to="/library" replace />} />
                   <Route
                     path="/notifications"
