@@ -544,27 +544,53 @@ export const AdminUserManagement: React.FC = () => {
                       Managed Communities
                     </label>
                     <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto p-2 space-y-2">
-                      {communities.map(community => (
-                        <div key={community.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`managed-${community.id}`}
-                            checked={formData.managed_community_ids.includes(community.id)}
-                            onChange={(e) => {
-                              const newIds = e.target.checked
-                                ? [...formData.managed_community_ids, community.id]
-                                : formData.managed_community_ids.filter(id => id !== community.id);
-                              setFormData({ ...formData, managed_community_ids: newIds });
-                            }}
-                            className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
-                          />
-                          <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
-                            {community.name}
-                          </label>
-                        </div>
-                      ))}
+                      {communities.map(community => {
+                        const isOrgCommunity = !!community.organization_id;
+                        const isSelected = formData.managed_community_ids.includes(community.id);
+
+                        // Determine if disabled:
+                        // 1. If an org community is selected, deselect all others (unless this is the one selected)
+                        // 2. If standalone communities are selected, deselect org communities
+
+                        // Auto-switching logic: checking an org community deselects others.
+
+                        return (
+                          <div key={community.id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`managed-${community.id}`}
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  if (isOrgCommunity) {
+                                    // Exclusive selection for org communities
+                                    setFormData({ ...formData, managed_community_ids: [community.id] });
+                                  } else {
+                                    // For standalone, remove any existing org communities first
+                                    const standaloneIds = formData.managed_community_ids.filter(id => {
+                                      const c = communities.find(c => c.id === id);
+                                      return !c?.organization_id;
+                                    });
+                                    setFormData({ ...formData, managed_community_ids: [...standaloneIds, community.id] });
+                                  }
+                                } else {
+                                  const newIds = formData.managed_community_ids.filter(id => id !== community.id);
+                                  setFormData({ ...formData, managed_community_ids: newIds });
+                                }
+                              }}
+                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
+                            />
+                            <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
+                              {community.name}
+                              {isOrgCommunity && <span className="text-xs text-gray-500 ml-2">(Org: {community.organization?.name})</span>}
+                            </label>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Select all communities this manager should control.</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Select communities. Note: Organization communities can only be managed singly.
+                    </p>
                   </div>
                 )}
 

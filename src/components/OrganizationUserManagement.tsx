@@ -192,7 +192,7 @@ export const OrganizationUserManagement: React.FC = () => {
           throw new Error('Please select a community');
         }
         if (formData.role === ROLE.COMMUNITY_MANAGER && formData.managed_community_ids.length === 0) {
-          throw new Error('Please select at least one community');
+          throw new Error('Please select a community');
         }
 
         const effectiveCommunityId = formData.role === ROLE.MEMBER ? formData.community_id : null;
@@ -319,6 +319,10 @@ export const OrganizationUserManagement: React.FC = () => {
     });
     setShowCreateForm(true);
   };
+
+  const assignedCommunityIds = users
+    .filter(u => u.role === ROLE.COMMUNITY_MANAGER && u.id !== editingUser)
+    .flatMap(u => u.managed_community_ids || []);
 
   return (
     <div className="space-y-6">
@@ -605,31 +609,33 @@ export const OrganizationUserManagement: React.FC = () => {
 
                     {formData.role === ROLE.COMMUNITY_MANAGER && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Managed Communities
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Community *
                         </label>
-                        <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto p-2 space-y-2">
-                          {communities.map(community => (
-                            <div key={community.id} className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id={`managed-${community.id}`}
-                                checked={formData.managed_community_ids.includes(community.id)}
-                                onChange={(e) => {
-                                  const newIds = e.target.checked
-                                    ? [...formData.managed_community_ids, community.id]
-                                    : formData.managed_community_ids.filter(id => id !== community.id);
-                                  setFormData({ ...formData, managed_community_ids: newIds });
-                                }}
-                                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
-                              />
-                              <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
+                        <select
+                          required
+                          value={formData.managed_community_ids[0] || ''}
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            setFormData({
+                              ...formData,
+                              managed_community_ids: selectedId ? [selectedId] : []
+                            });
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                        >
+                          <option value="">Select a community</option>
+                          {communities
+                            .filter(c => !assignedCommunityIds.includes(c.id))
+                            .map((community) => (
+                              <option key={community.id} value={community.id}>
                                 {community.name}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Select all communities this manager should control.</p>
+                              </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Organization Community Managers can only manage one community.
+                        </p>
                       </div>
                     )}
 

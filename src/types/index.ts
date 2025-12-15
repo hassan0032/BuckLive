@@ -129,6 +129,7 @@ export interface Community {
   sharable_token?: string | null;
   code: string;
   organization_id?: string | null;
+  organization?: Organization
 }
 
 export interface Organization {
