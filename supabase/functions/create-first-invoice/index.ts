@@ -178,14 +178,37 @@ Deno.serve(async (req: Request) => {
           .eq("community_id", communityId);
 
         if (!managerError && managers && managers.length > 0) {
-          // Count how many communities these managers manage
-          const managerIds = managers.map((m: { user_id: string }) => m.user_id);
-          const { count, error: countError } = await supabaseClient
+          // Get unique manager IDs
+          const managerIds = [...new Set(managers.map((m: { user_id: string }) => m.user_id))];
+
+          // Helper to get max count
+          let maxCount = 0;
+
+          // We need to fetch all management records for these managers to count per manager
+          const { data: allManagementRecords, error: recordsError } = await supabaseClient
             .from("community_managers")
-            .select("community_id", { count: "exact", head: true })
+            .select("user_id")
             .in("user_id", managerIds);
 
-          discountPercentage = countError ? 0 : getDiscountPercentage(count || 0);
+          if (!recordsError && allManagementRecords) {
+            const countsByUser: Record<string, number> = {};
+
+            // Count communities per manager
+            for (const record of allManagementRecords) {
+              const uid = record.user_id;
+              countsByUser[uid] = (countsByUser[uid] || 0) + 1;
+            }
+
+            // Find the maximum count
+            for (const count of Object.values(countsByUser)) {
+              if (count > maxCount) {
+                maxCount = count;
+              }
+            }
+
+            discountPercentage = getDiscountPercentage(maxCount);
+            console.log(`Community managers max portfolio size is ${maxCount}, discount: ${discountPercentage}%`);
+          }
         }
       }
 
