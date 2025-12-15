@@ -228,14 +228,6 @@ export function InvoicesTable({
     )
   }
 
-  if (rows.length === 0) {
-    return (
-      <div className="p-6 bg-white rounded-lg shadow-sm text-gray-600">
-        {emptyMessage}
-      </div>
-    )
-  }
-
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* Admin Filter Controls */}
@@ -269,6 +261,12 @@ export function InvoicesTable({
         <div className="text-right">Amount</div>
         <div className="text-right">Actions</div>
       </div>
+
+      {!rows.length && (
+        <div className="p-6 bg-white rounded-lg shadow-sm text-gray-600">
+          {emptyMessage}
+        </div>
+      )}
 
       {rows.map((row) => {
         const formattedInvoiceNo = formatInvoiceNumber(row.invoice_no, row.communityCode)
