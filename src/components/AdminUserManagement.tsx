@@ -365,7 +365,7 @@ export const AdminUserManagement: React.FC = () => {
                       <div className="ml-3">
                         <div className="flex items-center space-x-2">
                           <p className="text-sm font-medium text-[#363f49]">
-                            {user.profile?.first_name} {user.profile?.last_name}
+                            {user.profile?.first_name} {user.profile?.last_name} {user.id === currentUser?.id && '(You)'}
                           </p>
                           {user.is_shared_account && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
