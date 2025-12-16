@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ContentVersion } from '../types';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { Clock, RotateCcw, X, Loader } from 'lucide-react';
 
 interface VersionHistoryProps {
@@ -18,6 +19,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
   const [loading, setLoading] = useState(true);
   const [selectedVersion, setSelectedVersion] = useState<ContentVersion | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [versionToRestore, setVersionToRestore] = useState<ContentVersion | null>(null);
 
   useEffect(() => {
     fetchVersions();
@@ -41,13 +43,14 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
     }
   };
 
-  const handleRestore = (version: ContentVersion) => {
-    if (
-      window.confirm(
-        `Are you sure you want to restore to version ${version.version_number}? This will overwrite the current content.`
-      )
-    ) {
-      onRestore(version);
+  const handleRestoreClick = (version: ContentVersion) => {
+    setVersionToRestore(version);
+  };
+
+  const confirmRestore = () => {
+    if (versionToRestore) {
+      onRestore(versionToRestore);
+      setVersionToRestore(null);
     }
   };
 
@@ -135,7 +138,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                   )}
                   <div className="pt-4 border-t">
                     <button
-                      onClick={() => handleRestore(selectedVersion)}
+                      onClick={() => handleRestoreClick(selectedVersion)}
                       className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors flex items-center uppercase font-bold text-sm"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
@@ -184,7 +187,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                           Preview
                         </button>
                         <button
-                          onClick={() => handleRestore(version)}
+                          onClick={() => handleRestoreClick(version)}
                           className="px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center uppercase font-bold"
                         >
                           <RotateCcw className="h-3.5 w-3.5 mr-1" />
@@ -199,6 +202,16 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
           </div>
         )}
       </div>
-    </div>
+
+
+      <DeleteConfirmationModal
+        isOpen={!!versionToRestore}
+        onClose={() => setVersionToRestore(null)}
+        onConfirm={confirmRestore}
+        title="Restore Version"
+        message={`Are you sure you want to restore to version ${versionToRestore?.version_number}? This will overwrite the current content.`}
+        deleteLabel="Restore"
+      />
+    </div >
   );
 };

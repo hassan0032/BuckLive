@@ -1,5 +1,6 @@
 import { Building2, Edit, Loader2, Trash2, Users } from 'lucide-react';
 import React, { useState } from 'react';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { AdminOrganization, useAdminOrganizations } from '../hooks/useAdminOrganizations';
 
 export const AdminOrganizationManagement: React.FC = () => {
@@ -30,6 +31,9 @@ export const AdminOrganizationManagement: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [orgToDelete, setOrgToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletingOrg, setDeletingOrg] = useState(false);
+
   const resetCreateForm = () => {
     setCreateFormData({
       name: '',
@@ -47,9 +51,21 @@ export const AdminOrganizationManagement: React.FC = () => {
     setShowEditForm(true);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete organization "${name}"? This will remove all manager assignments. Communities will remain but become standalone.`)) {
-      await deleteOrganization(id);
+  const handleDeleteClick = (id: string, name: string) => {
+    setOrgToDelete({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!orgToDelete) return;
+
+    setDeletingOrg(true);
+    try {
+      await deleteOrganization(orgToDelete.id);
+      setOrgToDelete(null);
+    } catch (error) {
+      alert('Failed to delete organization');
+    } finally {
+      setDeletingOrg(false);
     }
   };
 
@@ -168,7 +184,7 @@ export const AdminOrganizationManagement: React.FC = () => {
                         title="Delete organization"
                         disabled
                         className="text-red-600 hover:text-red-700 inline-block disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => handleDelete(org.id, org.name)}
+                        onClick={() => handleDeleteClick(org.id, org.name)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -304,6 +320,14 @@ export const AdminOrganizationManagement: React.FC = () => {
           </div>
         </div>
       )}
+      <DeleteConfirmationModal
+        isOpen={!!orgToDelete}
+        onClose={() => setOrgToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Organization"
+        message={`Are you sure you want to delete organization "${orgToDelete?.name}"? This will remove all manager assignments. Communities will remain but become standalone.`}
+        isDeleting={deletingOrg}
+      />
     </div>
   );
 };

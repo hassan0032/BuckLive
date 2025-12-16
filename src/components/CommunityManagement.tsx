@@ -1,5 +1,6 @@
 import { Edit, Key, Loader2, Plus, Shield, Trash2, Users } from 'lucide-react';
 import React, { useState } from 'react';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { useCommunities } from '../hooks/useCommunities';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useAdminEmailNotification } from '../hooks/useAdminEmailNotification';
@@ -30,6 +31,9 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [communityToDelete, setCommunityToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletingCommunity, setDeletingCommunity] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,22 +122,26 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
     setShowCreateForm(true);
   };
 
-  const handleDelete = async (communityId: string, communityName: string) => {
+  const handleDeleteClick = (community: Community) => {
     return;
-    const confirmed = window.confirm(`Are you sure you want to delete "${communityName}"?`)
-    if (!confirmed) return
+    setCommunityToDelete({ id: community.id, name: community.name });
+  };
+
+  const confirmDelete = async () => {
+    if (!communityToDelete) return;
 
     try {
-      setLoading(true)
-      await deleteCommunity(communityId)
-      await refetch()
+      setDeletingCommunity(true);
+      await deleteCommunity(communityToDelete.id);
+      await refetch();
+      setCommunityToDelete(null);
     } catch (err) {
-      console.error(err)
-      setError('Failed to delete community')
+      console.error(err);
+      setError('Failed to delete community');
     } finally {
-      setLoading(false)
+      setDeletingCommunity(false);
     }
-  }
+  };
 
   const handleGenerateNewCode = () => {
     setFormData({ ...formData, access_code: generateAccessCode() });
@@ -198,7 +206,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
                 </button>
                 <button
                   disabled
-                  onClick={() => handleDelete(community.id, community.name)}
+                  onClick={() => handleDeleteClick(community)}
                   className="ml-2 p-2 text-red-700 hover:bg-brand-beige-light rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -376,6 +384,15 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
           </div>
         </div>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={!!communityToDelete}
+        onClose={() => setCommunityToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Community"
+        message={`Are you sure you want to delete "${communityToDelete?.name}"?`}
+        isDeleting={deletingCommunity}
+      />
     </div>
   );
 };

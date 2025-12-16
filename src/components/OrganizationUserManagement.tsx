@@ -1,10 +1,11 @@
 import { Calendar, Edit, Key, Loader2, Plus, Search, Shield, Trash2, User2, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { CommunitySelector } from './common/CommunitySelector';
 import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
 import { adminResetUserPassword, supabase } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME, User } from '../types';
 import { cn } from '../utils/helper';
+import { CommunitySelector } from './common/CommunitySelector';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 
 export const OrganizationUserManagement: React.FC = () => {
   const { communities, loading: communitiesLoading } = useOrganizationCommunities();
@@ -33,6 +34,8 @@ export const OrganizationUserManagement: React.FC = () => {
   const [passwordResetUserId, setPasswordResetUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   // Fetch all users from organization communities
   const fetchUsers = async () => {
@@ -270,11 +273,14 @@ export const OrganizationUserManagement: React.FC = () => {
     }
   };
 
-  const handleDelete = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteClick = (userId: string) => {
+    setUserToDelete(userId);
+  };
 
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+
+    setDeletingUser(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -290,7 +296,7 @@ export const OrganizationUserManagement: React.FC = () => {
         },
         body: JSON.stringify({
           action: 'delete',
-          user_id: userId,
+          user_id: userToDelete,
         }),
       });
 
@@ -301,8 +307,11 @@ export const OrganizationUserManagement: React.FC = () => {
       }
 
       await fetchUsers();
+      setUserToDelete(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete user');
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -507,7 +516,7 @@ export const OrganizationUserManagement: React.FC = () => {
                             <Key className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDeleteClick(user.id)}
                             className="text-red-600 hover:text-red-800"
                             title="Delete user"
                           >
@@ -710,6 +719,15 @@ export const OrganizationUserManagement: React.FC = () => {
             )}
           </>
         ))}
+
+      <DeleteConfirmationModal
+        isOpen={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        isDeleting={deletingUser}
+      />
     </div >
   );
 };

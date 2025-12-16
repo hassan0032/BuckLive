@@ -545,7 +545,7 @@ async function handleDeleteUser(
 
   const { data: userProfile, error: userProfileError } = await supabaseAdmin
     .from("user_profiles")
-    .select("role")
+    .select("id, role")
     .eq("id", callerId)
     .single();
 
@@ -589,7 +589,7 @@ async function handleDeleteUser(
       );
     }
 
-    const managesMemberCommunity = managedCommunities?.some(cm => cm.community_id === targetUser.community_id);
+    const managesMemberCommunity = managedCommunities?.some((cm: { community_id: string }) => cm.community_id === targetUser.community_id);
 
     if (!managesMemberCommunity) {
       return new Response(
@@ -615,6 +615,7 @@ async function handleDeleteUser(
       .single();
 
     if (orgManagerError || !orgManager) {
+      console.error("Error verifying organization manager permissions:", orgManagerError);
       return new Response(
         JSON.stringify({ error: "You are not an organization manager" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -635,7 +636,7 @@ async function handleDeleteUser(
         );
       }
 
-      const managesMemberCommunity = memberCommunities?.some(cm => cm.id === targetUser.community_id);
+      const managesMemberCommunity = memberCommunities?.some((cm: { id: string }) => cm.id === targetUser.community_id);
       if (!managesMemberCommunity) {
         return new Response(
           JSON.stringify({ error: "You do not manage the user's community" }),
@@ -658,7 +659,7 @@ async function handleDeleteUser(
         );
       }
 
-      const managesOrgCommunity = targetUserManagedCommunities?.some(cm => cm.community.organization_id === orgManager.organization_id);
+      const managesOrgCommunity = targetUserManagedCommunities?.some((cm: { community: { organization_id: string } }) => cm.community.organization_id === orgManager.organization_id);
       if (!managesOrgCommunity) {
         return new Response(
           JSON.stringify({ error: "You do not manage the user's community" }),
@@ -830,7 +831,7 @@ async function handleResetPassword(
         );
       }
 
-      const managesMemberCommunity = orgCommunities?.some(cm => cm.id === targetUser.community_id);
+      const managesMemberCommunity = orgCommunities?.some((cm: { id: string }) => cm.id === targetUser.community_id);
       if (!managesMemberCommunity) {
         return new Response(
           JSON.stringify({ error: "You do not manage the user's community" }),
@@ -853,7 +854,7 @@ async function handleResetPassword(
         );
       }
 
-      const managesOrgCommunity = targetUserManagedCommunities?.some(cm => cm.community.organization_id === orgManager.organization_id);
+      const managesOrgCommunity = targetUserManagedCommunities?.some((cm: { community: { organization_id: string } }) => cm.community.organization_id === orgManager.organization_id);
       if (!managesOrgCommunity) {
         return new Response(
           JSON.stringify({ error: "You do not manage the user's community" }),

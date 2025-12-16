@@ -1,12 +1,13 @@
 import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { CommunitySelector } from './common/CommunitySelector';
+import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
-import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 import { adminResetUserPassword } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME } from '../types';
 import { cn } from '../utils/helper';
+import { CommunitySelector } from './common/CommunitySelector';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 
 interface FormData {
   email: string;
@@ -66,6 +67,8 @@ export const AdminUserManagement: React.FC = () => {
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
 
   const [organizationSearchQuery, setOrganizationSearchQuery] = useState('');
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const stats = {
     totalUsers: users.length,
@@ -194,17 +197,27 @@ export const AdminUserManagement: React.FC = () => {
     }
   };
 
-  const handleDelete = async (userId: string) => {
+  const handleDeleteClick = (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
-
     const userName = `${user.profile?.first_name} ${user.profile?.last_name}`.trim() || user.email;
+    setUserToDelete({ id: userId, name: userName });
+  };
 
-    if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone and will remove all associated data.`)) {
-      const { error } = await deleteUser(userId);
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      const { error } = await deleteUser(userToDelete.id);
       if (error) {
-        alert(`Failed to delete user: ${error}`);
+        throw new Error(error);
       }
+      setUserToDelete(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete user');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -428,7 +441,7 @@ export const AdminUserManagement: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              handleDelete(user.id);
+                              handleDeleteClick(user.id);
                             }}
                             className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
                             title="Delete user"
@@ -456,6 +469,15 @@ export const AdminUserManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message={`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone.`}
+        isDeleting={deleteLoading}
+      />
 
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
