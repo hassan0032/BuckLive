@@ -295,9 +295,10 @@ export const AdminUserManagement: React.FC = () => {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Roles</option>
-              <option value={ROLE.ADMIN}>Admin</option>
-              <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
               <option value={ROLE.MEMBER}>Member</option>
+              <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
+              <option value={ROLE.ORGANIZATION_MANAGER}>Organization Manager</option>
+              <option value={ROLE.ADMIN}>Admin</option>
             </select>
           </div>
         </div>
