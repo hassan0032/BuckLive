@@ -1,5 +1,6 @@
 import { Calendar, Edit, Key, Loader2, Plus, Search, Shield, Trash2, User2, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { CommunitySelector } from './common/CommunitySelector';
 import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
 import { adminResetUserPassword, supabase } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME, User } from '../types';
@@ -320,9 +321,7 @@ export const OrganizationUserManagement: React.FC = () => {
     setShowCreateForm(true);
   };
 
-  const assignedCommunityIds = users
-    .filter(u => u.role === ROLE.COMMUNITY_MANAGER && u.id !== editingUser)
-    .flatMap(u => u.managed_community_ids || []);
+
 
   return (
     <div className="space-y-6">
@@ -608,56 +607,28 @@ export const OrganizationUserManagement: React.FC = () => {
                     </div>
 
                     {formData.role === ROLE.MEMBER && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Community <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          required
-                          value={formData.community_id}
-                          onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                        >
-                          <option value="">Select a community</option>
-                          {communities.map((community) => (
-                            <option key={community.id} value={community.id}>
-                              {community.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <CommunitySelector
+                        communities={communities}
+                        mode="single"
+                        selectedId={formData.community_id}
+                        onSelect={(id) => setFormData({ ...formData, community_id: id as string })}
+                        label="Community"
+                        required={true}
+                      />
                     )}
 
                     {formData.role === ROLE.COMMUNITY_MANAGER && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Community <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          required
-                          value={formData.managed_community_ids[0] || ''}
-                          onChange={(e) => {
-                            const selectedId = e.target.value;
-                            setFormData({
-                              ...formData,
-                              managed_community_ids: selectedId ? [selectedId] : []
-                            });
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                        >
-                          <option value="">Select a community</option>
-                          {communities
-                            .filter(c => !assignedCommunityIds.includes(c.id))
-                            .map((community) => (
-                              <option key={community.id} value={community.id}>
-                                {community.name}
-                              </option>
-                            ))}
-                        </select>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Organization Community Managers can only manage one community.
-                        </p>
-                      </div>
+                      <CommunitySelector
+                        communities={communities}
+                        mode="multi"
+                        selectedIds={formData.managed_community_ids}
+                        onSelect={(ids) => setFormData({
+                          ...formData,
+                          managed_community_ids: ids as string[]
+                        })}
+                        label="Managed Communities"
+                        required={true}
+                      />
                     )}
 
                     <div className="flex items-center">

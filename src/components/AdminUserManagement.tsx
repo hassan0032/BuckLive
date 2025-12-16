@@ -1,5 +1,6 @@
 import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { CommunitySelector } from './common/CommunitySelector';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
 import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
@@ -63,7 +64,7 @@ export const AdminUserManagement: React.FC = () => {
   const [passwordResetUserId, setPasswordResetUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
-  const [communitySearchQuery, setCommunitySearchQuery] = useState('');
+
   const [organizationSearchQuery, setOrganizationSearchQuery] = useState('');
 
   const stats = {
@@ -603,123 +604,24 @@ export const AdminUserManagement: React.FC = () => {
                 )}
 
                 {formData.role === ROLE.MEMBER && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Community {!editingUser && <span className="text-red-500">*</span>}
-                    </label>
-
-                    {/* Community Search Input */}
-                    <div className="relative mb-2">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search communities..."
-                        value={communitySearchQuery}
-                        onChange={(e) => setCommunitySearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
-                      />
-                    </div>
-
-                    <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto p-2 space-y-2">
-                      {communities
-                        .filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase()))
-                        .map(community => (
-                          <div key={community.id} className="flex items-center">
-                            <input
-                              type="radio"
-                              name="community_id"
-                              id={`community-${community.id}`}
-                              value={community.id}
-                              checked={formData.community_id === community.id}
-                              onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
-                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded-full mr-2"
-                              required={!editingUser}
-                            />
-                            <label htmlFor={`community-${community.id}`} className={`text-sm select-none cursor-pointer flex-1 text-gray-700`}>
-                              {community.name}
-                            </label>
-                          </div>
-                        ))
-                      }
-                      {communities.filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase())).length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-2">No communities found</p>
-                      )}
-                    </div>
-                  </div>
+                  <CommunitySelector
+                    communities={communities}
+                    mode="single"
+                    selectedId={formData.community_id}
+                    onSelect={(id) => setFormData({ ...formData, community_id: id as string })}
+                    label="Community"
+                    required={!editingUser}
+                  />
                 )}
 
                 {formData.role === ROLE.COMMUNITY_MANAGER && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Managed Communities
-                    </label>
-
-                    {/* Community Search Input */}
-                    <div className="relative mb-2">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search communities..."
-                        value={communitySearchQuery}
-                        onChange={(e) => setCommunitySearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
-                      />
-                    </div>
-
-                    <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto p-2 space-y-2">
-                      {communities
-                        .filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase()))
-                        .map(community => {
-                          const isOrgCommunity = !!community.organization_id;
-                          const isSelected = formData.managed_community_ids.includes(community.id);
-
-                          // Determine if disabled:
-                          // 1. If an org community is selected, deselect all others (unless this is the one selected)
-                          // 2. If standalone communities are selected, deselect org communities
-
-                          // Auto-switching logic: checking an org community deselects others.
-
-                          return (
-                            <div key={community.id} className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id={`managed-${community.id}`}
-                                checked={isSelected}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    if (isOrgCommunity) {
-                                      // Exclusive selection for org communities
-                                      setFormData({ ...formData, managed_community_ids: [community.id] });
-                                    } else {
-                                      // For standalone, remove any existing org communities first
-                                      const standaloneIds = formData.managed_community_ids.filter(id => {
-                                        const c = communities.find(c => c.id === id);
-                                        return !c?.organization_id;
-                                      });
-                                      setFormData({ ...formData, managed_community_ids: [...standaloneIds, community.id] });
-                                    }
-                                  } else {
-                                    const newIds = formData.managed_community_ids.filter(id => id !== community.id);
-                                    setFormData({ ...formData, managed_community_ids: newIds });
-                                  }
-                                }}
-                                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
-                              />
-                              <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
-                                {community.name}
-                                {isOrgCommunity && <span className="text-xs text-gray-500 ml-2">(Org: {community.organization?.name})</span>}
-                              </label>
-                            </div>
-                          )
-                        })}
-                      {communities.filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase())).length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-1">No communities found</p>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Select communities. Note: Organization communities can only be managed singly.
-                    </p>
-                  </div>
+                  <CommunitySelector
+                    communities={communities}
+                    mode="multi"
+                    selectedIds={formData.managed_community_ids}
+                    onSelect={(ids) => setFormData({ ...formData, managed_community_ids: ids as string[] })}
+                    label="Managed Communities"
+                  />
                 )}
                 <div className="flex items-center space-x-2">
                   <input
