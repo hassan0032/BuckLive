@@ -1,5 +1,6 @@
 import { Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useState } from 'react';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useCommunityUsers } from '../hooks/useCommunityUsers';
 import { adminResetUserPassword } from '../lib/supabase';
@@ -30,6 +31,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
   const [passwordResetUserId, setPasswordResetUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   const filteredUsers = users.filter(
     (user) =>
@@ -130,7 +133,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
     }
   };
 
-  const handleDelete = async (userId: string) => {
+  const handleDeleteClick = (userId: string) => {
     // Prevent deleting own account
     if (currentUser?.id === userId) {
       alert('You cannot delete your own account.');
@@ -141,12 +144,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
     if (!user) return;
 
     const userName = `${user.profile?.first_name} ${user.profile?.last_name}`.trim() || user.email;
+    setUserToDelete({ id: userId, name: userName });
+  };
 
-    if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone and will remove all associated data.`)) {
-      const { error } = await deleteUser(userId);
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+
+    setDeletingUser(true);
+    try {
+      const { error } = await deleteUser(userToDelete.id);
       if (error) {
-        alert(`Failed to delete user: ${error}`);
+        throw new Error(error);
       }
+      setUserToDelete(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete user');
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -212,9 +226,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tier
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Joined
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -276,20 +287,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {user.payment_tier ? (
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${user.payment_tier === 'gold'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-700'
-                            }`}
-                        >
-                          {user.payment_tier.toUpperCase()}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
                       <div className="flex items-center text-sm text-gray-600">
                         <Calendar className="h-4 w-4 mr-2 text-gray-400" />
                         {new Date(user.created_at).toLocaleDateString()}
@@ -313,7 +310,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                         </button>
                         {!isCurrentUser && (
                           <button
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDeleteClick(user.id)}
                             className="text-red-600 hover:text-red-700"
                             title="Delete user"
                           >
@@ -357,7 +354,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name *
+                      First Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -369,7 +366,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name *
+                      Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -382,7 +379,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
                   <input
                     type="email"
                     value={formData.email}
@@ -396,7 +393,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                 {!editingUser && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password * (min. 6 characters)
+                      Password <span className="text-red-500">*</span> (min. 6 characters)
                     </label>
                     <input
                       type="password"
@@ -473,7 +470,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password * (min. 6 characters)
+                    New Password <span className="text-red-500">*</span> (min. 6 characters)
                   </label>
                   <input
                     type="password"
@@ -511,6 +508,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
           </div>
         </div>
       )}
+      <DeleteConfirmationModal
+        isOpen={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message={`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone.`}
+        isDeleting={deletingUser}
+      />
     </div>
   );
 };
