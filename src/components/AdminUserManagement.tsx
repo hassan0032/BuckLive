@@ -6,8 +6,8 @@ import { useCommunities } from '../hooks/useCommunities';
 import { adminResetUserPassword } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME } from '../types';
 import { cn } from '../utils/helper';
-import { CommunitySelector } from './common/CommunitySelector';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
+import { EntitySelector } from './common/EntitySelector';
 
 interface FormData {
   email: string;
@@ -65,8 +65,6 @@ export const AdminUserManagement: React.FC = () => {
   const [passwordResetUserId, setPasswordResetUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
-
-  const [organizationSearchQuery, setOrganizationSearchQuery] = useState('');
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -579,72 +577,45 @@ export const AdminUserManagement: React.FC = () => {
                   )}
                 </div>
 
-                {formData.role === ROLE.ORGANIZATION_MANAGER && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Organization {!editingUser && <span className="text-red-500">*</span>}
-                    </label>
-
-                    {/* Organization Search Input */}
-                    <div className="relative mb-2">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search organizations..."
-                        value={organizationSearchQuery}
-                        onChange={(e) => setOrganizationSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
-                      />
-                    </div>
-
-                    <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto p-2 space-y-2">
-                      {organizations
-                        .filter(c => c.name.toLowerCase().includes(organizationSearchQuery.toLowerCase()))
-                        .map(organization => (
-                          <div key={organization.id} className="flex items-center">
-                            <input
-                              type="radio"
-                              name="organization_id"
-                              id={`organization-${organization.id}`}
-                              value={organization.id}
-                              checked={formData.organization_id === organization.id}
-                              onChange={(e) => setFormData({ ...formData, organization_id: e.target.value })}
-                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded-full mr-2"
-                              required={!editingUser}
-                            />
-                            <label htmlFor={`organization-${organization.id}`} className={`text-sm select-none cursor-pointer flex-1 text-gray-700`}>
-                              {organization.name}
-                            </label>
-                          </div>
-                        ))
-                      }
-                      {organizations.filter(c => c.name.toLowerCase().includes(organizationSearchQuery.toLowerCase())).length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-1">No organizations found</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {formData.role === ROLE.MEMBER && (
-                  <CommunitySelector
-                    communities={communities}
+                  <EntitySelector
                     mode="single"
+                    required={!editingUser}
+                    label="Community"
+                    entityName="community"
+                    entityNamePlural="communities"
+                    entities={communities}
                     selectedId={formData.community_id}
                     onSelect={(id) => setFormData({ ...formData, community_id: id as string })}
-                    label="Community"
-                    required={!editingUser}
                   />
                 )}
 
                 {formData.role === ROLE.COMMUNITY_MANAGER && (
-                  <CommunitySelector
-                    communities={communities}
+                  <EntitySelector
                     mode="multi"
+                    required
+                    label="Managed Communities"
+                    entityName="community"
+                    entityNamePlural="communities"
+                    entities={communities}
                     selectedIds={formData.managed_community_ids}
                     onSelect={(ids) => setFormData({ ...formData, managed_community_ids: ids as string[] })}
-                    label="Managed Communities"
                   />
                 )}
+
+                {formData.role === ROLE.ORGANIZATION_MANAGER && (
+                  <EntitySelector
+                    mode="single"
+                    required={!editingUser}
+                    label="Organization"
+                    entityName="organization"
+                    entityNamePlural="organizations"
+                    entities={organizations}
+                    selectedId={formData.organization_id}
+                    onSelect={(id) => setFormData({ ...formData, organization_id: id as string })}
+                  />
+                )}
+
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"

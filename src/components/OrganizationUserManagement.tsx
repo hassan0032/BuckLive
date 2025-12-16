@@ -4,8 +4,8 @@ import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities'
 import { adminResetUserPassword, supabase } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME, User } from '../types';
 import { cn } from '../utils/helper';
-import { CommunitySelector } from './common/CommunitySelector';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
+import { EntitySelector } from './common/EntitySelector';
 
 export const OrganizationUserManagement: React.FC = () => {
   const { communities, loading: communitiesLoading } = useOrganizationCommunities();
@@ -616,27 +616,50 @@ export const OrganizationUserManagement: React.FC = () => {
                     </div>
 
                     {formData.role === ROLE.MEMBER && (
-                      <CommunitySelector
-                        communities={communities}
+                      // <CommunitySelector
+                      //   communities={communities}
+                      //   mode="single"
+                      //   selectedId={formData.community_id}
+                      //   onSelect={(id) => setFormData({ ...formData, community_id: id as string })}
+                      //   label="Community"
+                      //   required={true}
+                      // />
+                      <EntitySelector
                         mode="single"
+                        required
+                        label="Community"
+                        entityName="community"
+                        entityNamePlural="communities"
+                        entities={communities}
                         selectedId={formData.community_id}
                         onSelect={(id) => setFormData({ ...formData, community_id: id as string })}
-                        label="Community"
-                        required={true}
                       />
                     )}
 
                     {formData.role === ROLE.COMMUNITY_MANAGER && (
-                      <CommunitySelector
-                        communities={communities}
+                      // <CommunitySelector
+                      //   communities={communities}
+                      //   mode="multi"
+                      //   selectedIds={formData.managed_community_ids}
+                      //   onSelect={(ids) => setFormData({
+                      //     ...formData,
+                      //     managed_community_ids: ids as string[]
+                      //   })}
+                      //   label="Managed Communities"
+                      //   required={true}
+                      // />
+                      <EntitySelector
                         mode="multi"
+                        required
+                        label="Managed Communities"
+                        entityName="community"
+                        entityNamePlural="communities"
+                        entities={communities}
                         selectedIds={formData.managed_community_ids}
                         onSelect={(ids) => setFormData({
                           ...formData,
                           managed_community_ids: ids as string[]
                         })}
-                        label="Managed Communities"
-                        required={true}
                       />
                     )}
 
