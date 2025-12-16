@@ -22,10 +22,11 @@ interface CreateUserRequest {
   password: string;
   first_name: string;
   last_name: string;
-  community_id?: string;
+  community_id?: string; // Optional community ID if role is member
   role?: Role;
   is_shared_account?: boolean;
   managed_community_ids?: string[]; // Optional list of communities to manage if role is community_manager
+  organization_id?: string; // Optional organization ID if role is organization_manager
 }
 
 interface DeleteUserRequest {
@@ -157,7 +158,8 @@ async function handleCreateUser(
     community_id,
     role: requestedRole,
     is_shared_account,
-    managed_community_ids
+    managed_community_ids,
+    organization_id,
   } = request;
 
   // Validate required fields
@@ -228,6 +230,27 @@ async function handleCreateUser(
 
     // Ensure unique
     communitiesToManage = [...new Set(managed_community_ids)];
+  } else if (requestedRole === ROLE.ORGANIZATION_MANAGER) {
+    if (!organization_id) {
+      return new Response(
+        JSON.stringify({ error: "Organization ID is required for organization managers" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify organization exists
+    const { data: orgData, error: orgError } = await supabaseAdmin
+      .from("organizations")
+      .select("id")
+      .eq("id", organization_id)
+      .single();
+
+    if (orgError || !orgData) {
+      return new Response(
+        JSON.stringify({ error: "Organization not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
   }
 
   const { data: userProfile, error: userProfileError } = await supabaseAdmin
@@ -445,6 +468,26 @@ async function handleCreateUser(
         );
       } else {
         console.log(`✅ Assigned user ${authData.user.id} as community manager for community ${community_id}`);
+      }
+    } else if (requestedRole === ROLE.ORGANIZATION_MANAGER) {
+      // Assign organization manager
+      const { error: orgManagerError } = await supabaseAdmin
+        .from("organization_managers")
+        .insert({
+          user_id: authData.user!.id,
+          organization_id: organization_id,
+        });
+
+      if (orgManagerError) {
+        console.error("❌ Organization manager assignment error:", orgManagerError);
+        // Try to clean up
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        return new Response(
+          JSON.stringify({ error: "Failed to assign organization manager" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        console.log(`✅ Assigned user ${authData.user.id} as organization manager for organization ${organization_id}`);
       }
     }
 

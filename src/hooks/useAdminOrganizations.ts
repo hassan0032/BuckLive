@@ -94,43 +94,6 @@ export const useAdminOrganizations = () => {
     }
   };
 
-  // Create organization with a new manager user
-  const createOrganizationWithManager = async (data: {
-    organizationName: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    password: string;
-  }) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-org-manager`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(data),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create organization manager');
-      }
-
-      await fetchOrganizations();
-      return { data: result.data, error: null };
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : 'Failed to create organization with manager' };
-    }
-  };
-
   const updateOrganization = async (id: string, updates: Partial<Organization>) => {
     try {
       const { data, error } = await supabase
@@ -221,9 +184,6 @@ export const useAdminOrganizations = () => {
     addOrganization,
     updateOrganization,
     deleteOrganization,
-    assignManager,
-    removeManager,
-    createOrganizationWithManager,
     refetch: fetchOrganizations
   };
 };

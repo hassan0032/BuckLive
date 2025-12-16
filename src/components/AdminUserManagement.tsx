@@ -2,6 +2,7 @@ import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, Use
 import React, { useEffect, useState } from 'react';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
+import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 import { adminResetUserPassword } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME } from '../types';
 import { cn } from '../utils/helper';
@@ -15,6 +16,7 @@ interface FormData {
   role: Role;
   is_shared_account: boolean;
   managed_community_ids: string[];
+  organization_id: string;
 }
 
 const initialFormData: FormData = {
@@ -26,6 +28,7 @@ const initialFormData: FormData = {
   role: ROLE.MEMBER,
   is_shared_account: false,
   managed_community_ids: [],
+  organization_id: '',
 };
 
 export const AdminUserManagement: React.FC = () => {
@@ -49,6 +52,7 @@ export const AdminUserManagement: React.FC = () => {
   });
 
   const { communities } = useCommunities();
+  const { organizations } = useAdminOrganizations();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -60,6 +64,7 @@ export const AdminUserManagement: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
+  const [organizationSearchQuery, setOrganizationSearchQuery] = useState('');
 
   const stats = {
     totalUsers: users.length,
@@ -79,6 +84,10 @@ export const AdminUserManagement: React.FC = () => {
         if (formData.managed_community_ids.length === 0) {
           throw new Error('Please select at least one community');
         }
+      } else if (formData.role === ROLE.ORGANIZATION_MANAGER) {
+        if (!formData.organization_id) {
+          throw new Error('Please select an organization');
+        }
       } else if (formData.role !== ROLE.ADMIN && !formData.community_id) {
         throw new Error('Please select a community');
       }
@@ -92,6 +101,7 @@ export const AdminUserManagement: React.FC = () => {
           community_id: formData.role === ROLE.MEMBER ? formData.community_id : null,
           is_shared_account: formData.is_shared_account,
           managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
+          organization_id: formData.role === ROLE.ORGANIZATION_MANAGER ? formData.organization_id : undefined,
         });
 
         if (error) throw new Error(error);
@@ -113,6 +123,7 @@ export const AdminUserManagement: React.FC = () => {
           role: formData.role,
           is_shared_account: formData.is_shared_account,
           managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
+          organization_id: formData.role === ROLE.ORGANIZATION_MANAGER ? formData.organization_id : undefined,
         });
 
         if (error) throw new Error(error);
@@ -129,6 +140,7 @@ export const AdminUserManagement: React.FC = () => {
         role: ROLE.MEMBER,
         is_shared_account: false,
         managed_community_ids: [],
+        organization_id: '',
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -175,6 +187,7 @@ export const AdminUserManagement: React.FC = () => {
         role: user.role,
         is_shared_account: user.is_shared_account || false,
         managed_community_ids: user.managed_community_ids || [],
+        organization_id: user.profile?.organization?.id || '',
       });
       setShowCreateForm(true);
     }
@@ -221,6 +234,7 @@ export const AdminUserManagement: React.FC = () => {
               role: ROLE.MEMBER,
               is_shared_account: false,
               managed_community_ids: [],
+              organization_id: '',
             });
             setShowCreateForm(true);
           }}
@@ -382,19 +396,6 @@ export const AdminUserManagement: React.FC = () => {
                       )}
                     </div>
                   </td>
-                  {/* <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {user.role === ROLE.COMMUNITY_MANAGER ? (
-                        <span className="text-xs text-gray-500" title={user.managed_community_ids?.map(id => communities.find(c => c.id === id)?.name).join(', ')}>
-                          {user.managed_community_ids?.length
-                            ? user.managed_community_ids.length > 1 ? `${user.managed_community_ids.length} Communities` : communities.find(c => c.id === user.managed_community_ids?.[0])?.name
-                            : 'No Communities'}
-                        </span>
-                      ) : (
-                        user.profile?.community?.name || 'N/A'
-                      )}
-                    </div>
-                  </td> */}
                   <td className="px-6 py-4">
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar className="h-4 w-4 mr-2 text-gray-400" />
@@ -537,10 +538,10 @@ export const AdminUserManagement: React.FC = () => {
                           onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                           required
-                          disabled={formData.role === ROLE.ORGANIZATION_MANAGER}
                         >
                           <option value={ROLE.MEMBER}>Member</option>
                           <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
+                          <option value={ROLE.ORGANIZATION_MANAGER}>Organization Manager</option>
                           <option value={ROLE.ADMIN}>Admin</option>
                         </select>
                       </>
@@ -553,6 +554,53 @@ export const AdminUserManagement: React.FC = () => {
                     </p>
                   )}
                 </div>
+
+                {formData.role === ROLE.ORGANIZATION_MANAGER && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Organization {!editingUser && <span className="text-red-500">*</span>}
+                    </label>
+
+                    {/* Organization Search Input */}
+                    <div className="relative mb-2">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search organizations..."
+                        value={organizationSearchQuery}
+                        onChange={(e) => setOrganizationSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
+                      />
+                    </div>
+
+                    <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto p-2 space-y-2">
+                      {organizations
+                        .filter(c => c.name.toLowerCase().includes(organizationSearchQuery.toLowerCase()))
+                        .map(organization => (
+                          <div key={organization.id} className="flex items-center">
+                            <input
+                              type="radio"
+                              name="organization_id"
+                              id={`organization-${organization.id}`}
+                              value={organization.id}
+                              checked={formData.organization_id === organization.id}
+                              onChange={(e) => setFormData({ ...formData, organization_id: e.target.value })}
+                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded-full mr-2"
+                              required={!editingUser}
+                            />
+                            <label htmlFor={`organization-${organization.id}`} className={`text-sm select-none cursor-pointer flex-1 text-gray-700`}>
+                              {organization.name}
+                            </label>
+                          </div>
+                        ))
+                      }
+                      {organizations.filter(c => c.name.toLowerCase().includes(organizationSearchQuery.toLowerCase())).length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-1">No organizations found</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {formData.role === ROLE.MEMBER && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -590,7 +638,8 @@ export const AdminUserManagement: React.FC = () => {
                               {community.name}
                             </label>
                           </div>
-                        ))}
+                        ))
+                      }
                       {communities.filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase())).length === 0 && (
                         <p className="text-sm text-gray-500 text-center py-2">No communities found</p>
                       )}
@@ -662,6 +711,9 @@ export const AdminUserManagement: React.FC = () => {
                             </div>
                           )
                         })}
+                      {communities.filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase())).length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-1">No communities found</p>
+                      )}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       Select communities. Note: Organization communities can only be managed singly.
@@ -683,15 +735,6 @@ export const AdminUserManagement: React.FC = () => {
                     (Multiple users can use this account)
                   </span>
                 </div>
-
-                {/* {editingUser && formData.is_shared_account && (
-                  <div className="flex items-center space-x-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                    <Users className="h-4 w-4 text-purple-600" />
-                    <span className="text-sm text-purple-700">
-                      This is a shared account. The shared account setting cannot be changed after creation.
-                    </span>
-                  </div>
-                )} */}
 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
@@ -732,7 +775,7 @@ export const AdminUserManagement: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password * (min. 6 characters)
+                    New Password <span className="text-red-500">*</span> (min. 6 characters)
                   </label>
                   <input
                     value={newPassword}
