@@ -32,7 +32,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const navItems = [
-    { id: 'library', label: 'Library', icon: Library, path: '/library' },
+    ...(isOrganizationManager ? [] : [{ id: 'library', label: 'Library', icon: Library, path: '/library' }]),
     ...(isSharedAccount ? [] : [{ id: 'profile', label: 'Profile', icon: User, path: '/profile' }]),
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }] : []),
     ...(isOrganizationManager ? [{ id: 'organization-manager', label: 'Organization', icon: Building2, path: '/organization-manager' }] : []),
