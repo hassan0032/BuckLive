@@ -1,7 +1,8 @@
-import { Building2, Edit, Loader2, Trash2, Users } from 'lucide-react';
+import { Building2, Edit, Loader2, Trash2, Users, Eye } from 'lucide-react';
 import React, { useState } from 'react';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { AdminOrganization, useAdminOrganizations } from '../hooks/useAdminOrganizations';
+import { Community } from '../types';
 
 export const AdminOrganizationManagement: React.FC = () => {
   const {
@@ -15,6 +16,11 @@ export const AdminOrganizationManagement: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingOrg, setEditingOrg] = useState<AdminOrganization | null>(null);
+
+  // Communities Modal State
+  const [showCommunitiesModal, setShowCommunitiesModal] = useState(false);
+  const [selectedOrgCommunities, setSelectedOrgCommunities] = useState<Community[]>([]);
+  const [selectedOrgName, setSelectedOrgName] = useState('');
 
   // Form for creating new org + manager
   const [createFormData, setCreateFormData] = useState({
@@ -104,6 +110,12 @@ export const AdminOrganizationManagement: React.FC = () => {
     }
   };
 
+  const handleViewCommunities = (orgName: string, communities: Community[]) => {
+    setSelectedOrgName(orgName);
+    setSelectedOrgCommunities(communities);
+    setShowCommunitiesModal(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-lg shadow-sm">
@@ -187,6 +199,13 @@ export const AdminOrganizationManagement: React.FC = () => {
                         onClick={() => handleDeleteClick(org.id, org.name)}
                       >
                         <Trash2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        title="View organization communities"
+                        className="text-black-600 hover:text-black-700 inline-block cursor-pointer"
+                        onClick={() => handleViewCommunities(org.name, org.communities || [])}
+                      >
+                        <Eye className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
@@ -317,6 +336,98 @@ export const AdminOrganizationManagement: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Communities List Modal */}
+      {showCommunitiesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold">
+                Communities in {selectedOrgName}
+              </h3>
+              <button
+                onClick={() => setShowCommunitiesModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="sr-only">Close</span>
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {selectedOrgCommunities.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 italic">No communities found in this organization.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Access Code</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tier</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billing Code</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {selectedOrgCommunities.map((community) => (
+                      <tr key={community.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                          {community.name}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 font-mono">
+                          <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                            {community.access_code}
+                          </code>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.membership_tier === 'gold'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-100 text-gray-700'
+                              }`}
+                          >
+                            {community.membership_tier.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${community.is_active
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                              }`}
+                          >
+                            {community.is_active ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {community.code}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {new Date(community.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowCommunitiesModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
@@ -34,6 +35,7 @@ const initialFormData: FormData = {
 };
 
 export const AdminUserManagement: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [communityFilter, setCommunityFilter] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
@@ -416,39 +418,36 @@ export const AdminUserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(user.id)}
-                        className="text-brand-primary hover:text-brand-d-blue"
-                        title="Edit user"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openPasswordResetModal(user.id)}
-                        className="text-blue-600 hover:text-blue-700"
-                        title="Reset password"
-                      >
-                        <Key className="h-4 w-4" />
-                      </button>
-                      {(() => {
-
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleDeleteClick(user.id);
-                            }}
-                            className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Delete user"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        );
-                      })()}
-                    </div>
+                    {user.id !== currentUser?.id && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(user.id)}
+                          className="text-brand-primary hover:text-brand-d-blue"
+                          title="Edit user"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openPasswordResetModal(user.id)}
+                          className="text-blue-600 hover:text-blue-700"
+                          title="Reset password"
+                        >
+                          <Key className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleDeleteClick(user.id);
+                          }}
+                          className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Delete user"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -616,21 +615,23 @@ export const AdminUserManagement: React.FC = () => {
                   />
                 )}
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_shared_account"
-                    checked={formData.is_shared_account}
-                    onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
-                    className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                  />
-                  <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
-                    Shared Account
-                  </label>
-                  <span className="text-xs text-gray-500">
-                    (Multiple users can use this account)
-                  </span>
-                </div>
+                {formData.role === ROLE.MEMBER && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_shared_account"
+                      checked={formData.is_shared_account}
+                      onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                      className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                    />
+                    <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
+                      Shared Account
+                    </label>
+                    <span className="text-xs text-gray-500">
+                      (Multiple users can use this account)
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
@@ -652,62 +653,64 @@ export const AdminUserManagement: React.FC = () => {
                     {formLoading ? 'Saving...' : editingUser ? 'Update' : 'Create'} User
                   </button>
                 </div>
-              </form>
-            </div>
-          </div>
-        </div>
+              </form >
+            </div >
+          </div >
+        </div >
       )}
 
       {/* Password Reset Modal */}
-      {showPasswordResetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Reset Password</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Enter a new password for this user. This will immediately update their login credentials.
-              </p>
+      {
+        showPasswordResetModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold mb-4">Reset Password</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enter a new password for this user. This will immediately update their login credentials.
+                </p>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password <span className="text-red-500">*</span> (min. 6 characters)
-                  </label>
-                  <input
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                    required
-                    minLength={6}
-                    placeholder="Enter new password"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Password <span className="text-red-500">*</span> (min. 6 characters)
+                    </label>
+                    <input
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                      required
+                      minLength={6}
+                      placeholder="Enter new password"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordResetModal(false);
-                    setPasswordResetUserId(null);
-                    setNewPassword('');
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handlePasswordReset}
-                  disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
-                  className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm disabled:opacity-50"
-                >
-                  {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
-                </button>
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordResetModal(false);
+                      setPasswordResetUserId(null);
+                      setNewPassword('');
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePasswordReset}
+                    disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
+                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm disabled:opacity-50"
+                  >
+                    {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };

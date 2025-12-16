@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Organization } from '../types';
+import { Organization, Community } from '../types';
 
 export interface AdminOrganization extends Organization {
   member_count?: number;
   community_count?: number;
+  communities?: Community[];
   managers?: {
     user_id: string;
     email: string;
@@ -32,13 +33,14 @@ export const useAdminOrganizations = () => {
 
       // For each org, fetch counts and managers
       const enrichedOrgs = await Promise.all(orgs.map(async (org) => {
-        // Get community count
-        const { count: communityCount, error: countError } = await supabase
+        // Get communities
+        const { data: communities, error: communitiesError } = await supabase
           .from('communities')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', org.id);
+          .select('*')
+          .eq('organization_id', org.id)
+          .order('name');
 
-        if (countError) console.error('Error fetching community count:', countError);
+        if (communitiesError) console.error('Error fetching communities:', communitiesError);
 
         // Get managers
         const { data: managers, error: managersError } = await supabase
@@ -64,7 +66,8 @@ export const useAdminOrganizations = () => {
 
         return {
           ...org,
-          community_count: communityCount || 0,
+          community_count: communities?.length || 0,
+          communities: communities || [],
           managers: formattedManagers,
         };
       }));
