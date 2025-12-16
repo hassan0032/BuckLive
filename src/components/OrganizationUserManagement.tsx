@@ -660,17 +660,19 @@ export const OrganizationUserManagement: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.is_shared_account}
-                        onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
-                        className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                      />
-                      <label className="ml-2 text-sm text-gray-700">
-                        This is a shared account (multiple users can access)
-                      </label>
-                    </div>
+                    {formData.role === ROLE.MEMBER && (
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_shared_account}
+                          onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                          className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                        />
+                        <label className="ml-2 text-sm text-gray-700">
+                          This is a shared account (multiple users can access)
+                        </label>
+                      </div>
+                    )}
 
                     <div className="flex justify-end space-x-3 pt-4">
                       <button

@@ -1,5 +1,6 @@
 import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
 import { adminResetUserPassword } from '../lib/supabase';
@@ -29,6 +30,7 @@ const initialFormData: FormData = {
 };
 
 export const AdminUserManagement: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [communityFilter, setCommunityFilter] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
@@ -382,19 +384,6 @@ export const AdminUserManagement: React.FC = () => {
                       )}
                     </div>
                   </td>
-                  {/* <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {user.role === ROLE.COMMUNITY_MANAGER ? (
-                        <span className="text-xs text-gray-500" title={user.managed_community_ids?.map(id => communities.find(c => c.id === id)?.name).join(', ')}>
-                          {user.managed_community_ids?.length
-                            ? user.managed_community_ids.length > 1 ? `${user.managed_community_ids.length} Communities` : communities.find(c => c.id === user.managed_community_ids?.[0])?.name
-                            : 'No Communities'}
-                        </span>
-                      ) : (
-                        user.profile?.community?.name || 'N/A'
-                      )}
-                    </div>
-                  </td> */}
                   <td className="px-6 py-4">
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar className="h-4 w-4 mr-2 text-gray-400" />
@@ -402,39 +391,41 @@ export const AdminUserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(user.id)}
-                        className="text-brand-primary hover:text-brand-d-blue"
-                        title="Edit user"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openPasswordResetModal(user.id)}
-                        className="text-blue-600 hover:text-blue-700"
-                        title="Reset password"
-                      >
-                        <Key className="h-4 w-4" />
-                      </button>
-                      {(() => {
+                    {user.id !== currentUser?.id && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(user.id)}
+                          className="text-brand-primary hover:text-brand-d-blue"
+                          title="Edit user"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openPasswordResetModal(user.id)}
+                          className="text-blue-600 hover:text-blue-700"
+                          title="Reset password"
+                        >
+                          <Key className="h-4 w-4" />
+                        </button>
+                        {(() => {
 
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleDelete(user.id);
-                            }}
-                            className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Delete user"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        );
-                      })()}
-                    </div>
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleDelete(user.id);
+                              }}
+                              className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Delete user"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -668,21 +659,23 @@ export const AdminUserManagement: React.FC = () => {
                     </p>
                   </div>
                 )}
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_shared_account"
-                    checked={formData.is_shared_account}
-                    onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
-                    className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                  />
-                  <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
-                    Shared Account
-                  </label>
-                  <span className="text-xs text-gray-500">
-                    (Multiple users can use this account)
-                  </span>
-                </div>
+                {formData.role === ROLE.MEMBER && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_shared_account"
+                      checked={formData.is_shared_account}
+                      onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                      className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                    />
+                    <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
+                      Shared Account
+                    </label>
+                    <span className="text-xs text-gray-500">
+                      (Multiple users can use this account)
+                    </span>
+                  </div>
+                )}
 
                 {/* {editingUser && formData.is_shared_account && (
                   <div className="flex items-center space-x-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
