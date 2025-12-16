@@ -425,14 +425,16 @@ async function handleCreateUser(
     }
 
     // Update user profile
-    const { error: profileError } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .update({
         role: requestedRole || ROLE.MEMBER,
         registration_type: "access_code",
         is_shared_account: is_shared_account || false,
       })
-      .eq("id", authData.user.id);
+      .select("id, role")
+      .eq("id", authData.user.id)
+      .single();
 
     if (profileError) {
       console.error("❌ Profile update error:", profileError);
@@ -474,7 +476,7 @@ async function handleCreateUser(
       const { error: orgManagerError } = await supabaseAdmin
         .from("organization_managers")
         .insert({
-          user_id: authData.user!.id,
+          user_id: profile.id,
           organization_id: organization_id,
         });
 
@@ -499,8 +501,9 @@ async function handleCreateUser(
           user: {
             id: authData.user.id,
             email: authData.user.email,
-            role: requestedRole || ROLE.MEMBER,
+            role: profile.role,
             community_id: community_id,
+            organization_id: organization_id,
           }
         },
         error: null
