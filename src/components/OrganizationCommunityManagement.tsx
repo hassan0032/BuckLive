@@ -1,23 +1,21 @@
-import { Key, Loader2, Plus, Shield, Users } from 'lucide-react';
+import { Edit, Key, Loader2, Plus, Shield, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useCommunities } from '../hooks/useCommunities';
 import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
 import { Community, PaymentTier } from '../types';
-
-
 
 export const OrganizationCommunityManagement: React.FC = () => {
   const {
     communities,
     loading,
     addCommunity,
+    updateCommunity,
     refetch
   } = useOrganizationCommunities();
   const { generateAccessCode } = useCommunities();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
-
-
+  const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,7 +24,6 @@ export const OrganizationCommunityManagement: React.FC = () => {
     membership_tier: 'silver' as PaymentTier,
     is_active: true,
   });
-
 
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +36,19 @@ export const OrganizationCommunityManagement: React.FC = () => {
       membership_tier: 'silver',
       is_active: true,
     });
+    setEditingCommunity(null);
+  };
+
+  const handleEdit = (community: Community) => {
+    setEditingCommunity(community);
+    setFormData({
+      name: community.name,
+      description: community.description,
+      access_code: community.access_code,
+      membership_tier: community.membership_tier,
+      is_active: community.is_active,
+    });
+    setShowCreateForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,19 +57,23 @@ export const OrganizationCommunityManagement: React.FC = () => {
     setError(null);
 
     try {
-      const result = await addCommunity(formData as any);
-      if (result.error) throw new Error(result.error);
+      if (editingCommunity) {
+        const result = await updateCommunity(editingCommunity.id, formData);
+        if (result.error) throw new Error(result.error);
+      } else {
+        const result = await addCommunity(formData as any);
+        if (result.error) throw new Error(result.error);
+      }
+
       setShowCreateForm(false);
       resetForm();
       await refetch();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create community');
+      setError(err instanceof Error ? err.message : 'Failed to save community');
     } finally {
       setActionLoading(false);
     }
   };
-
-
 
   const handleGenerateNewCode = () => {
     setFormData({ ...formData, access_code: generateAccessCode() });
@@ -101,6 +115,13 @@ export const OrganizationCommunityManagement: React.FC = () => {
                   <h3 className="text-lg font-semibold text-[#363f49] mb-1">{community.name}</h3>
                   <p className="text-sm text-gray-600 line-clamp-2">{community.description}</p>
                 </div>
+                <button
+                  onClick={() => handleEdit(community)}
+                  className="ml-2 p-2 text-brand-primary hover:bg-brand-beige-light rounded-lg transition-colors"
+                  title="Edit Community"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
               </div>
 
               <div className="space-y-3">
@@ -160,12 +181,14 @@ export const OrganizationCommunityManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Create Community Modal */}
+      {/* Create/Edit Community Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Create New Community</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                {editingCommunity ? 'Edit Community' : 'Create New Community'}
+              </h2>
 
               {error && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -228,9 +251,10 @@ export const OrganizationCommunityManagement: React.FC = () => {
                     Membership Tier <span className="text-red-500">*</span>
                   </label>
                   <select
+                    disabled={!!editingCommunity}
                     value={formData.membership_tier}
                     onChange={(e) => setFormData({ ...formData, membership_tier: e.target.value as PaymentTier })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="silver">Silver - Basic Access</option>
                     <option value="gold">Gold - Premium Access</option>
@@ -263,7 +287,7 @@ export const OrganizationCommunityManagement: React.FC = () => {
                     disabled={actionLoading}
                     className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm disabled:opacity-50"
                   >
-                    {actionLoading ? 'Creating...' : 'Create Community'}
+                    {actionLoading ? 'Saving...' : editingCommunity ? 'Update Community' : 'Create Community'}
                   </button>
                 </div>
               </form>
