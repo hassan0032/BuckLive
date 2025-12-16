@@ -42,8 +42,10 @@ const generateAccessCode = () => {
   return result;
 };
 
+const allowedTabs = ['content', 'communities', 'users', 'organizations', 'analytics', 'invoices', 'notifications', 'feedback'] as const;
+
 type AdminLocationState = {
-  forceTab?: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback' | 'organizations';
+  forceTab?: (typeof allowedTabs)[number];
   ts?: number;
 } | null;
 
@@ -62,10 +64,9 @@ export const AdminDashboard: React.FC = () => {
     deleteDocument: deleteStoredPdf,
     refetch: refetchStoredPdfs,
   } = useDocuments(editingCommunity);
-  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback' | 'organizations'>(() => {
+  const [activeTab, setActiveTab] = useState<typeof allowedTabs[number]>(() => {
     if (typeof window === 'undefined') return 'content';
     const stored = window.localStorage.getItem('adminActiveTab');
-    const allowedTabs = ['content', 'communities', 'users', 'analytics', 'invoices', 'notifications', 'feedback', 'organizations'] as const;
     if (stored && (allowedTabs as readonly string[]).includes(stored)) {
       return stored as (typeof allowedTabs)[number];
     }
@@ -94,16 +95,15 @@ export const AdminDashboard: React.FC = () => {
   // can always force the "notifications" tab even when already on /admin, without
   // changing the URL.
   useEffect(() => {
-    const allowedTabs = ['content', 'communities', 'users', 'analytics', 'invoices', 'notifications', 'feedback'] as const;
     const state = (location.state as AdminLocationState) || null;
     const tabParam = state?.forceTab;
 
-    if (tabParam && (allowedTabs as readonly string[]).includes(tabParam)) {
-      handleSetActiveTab(tabParam as (typeof allowedTabs)[number]);
+    if (tabParam && allowedTabs.includes(tabParam)) {
+      handleSetActiveTab(tabParam);
     }
   }, [location.state]);
 
-  const handleSetActiveTab = (tab: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback') => {
+  const handleSetActiveTab = (tab: (typeof allowedTabs)[number]) => {
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       try {
@@ -817,7 +817,7 @@ export const AdminDashboard: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Access Code *
+                      Access Code <span className="text-red-500">*</span>
                     </label>
                     <div className="flex space-x-2">
                       <input

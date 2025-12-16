@@ -544,7 +544,7 @@ export const OrganizationUserManagement: React.FC = () => {
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">First Name <span className="text-red-500">*</span></label>
                         <input
                           type="text"
                           required
@@ -554,7 +554,7 @@ export const OrganizationUserManagement: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Last Name <span className="text-red-500">*</span></label>
                         <input
                           type="text"
                           required
@@ -566,7 +566,7 @@ export const OrganizationUserManagement: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
                       <input
                         type="email"
                         required
@@ -578,7 +578,7 @@ export const OrganizationUserManagement: React.FC = () => {
 
                     {!editingUser && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Password <span className="text-red-500">*</span></label>
                         <input
                           type="password"
                           required={!editingUser}
@@ -592,7 +592,7 @@ export const OrganizationUserManagement: React.FC = () => {
                     )}
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Role <span className="text-red-500">*</span></label>
                       <select
                         value={formData.role}
                         onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
@@ -610,7 +610,7 @@ export const OrganizationUserManagement: React.FC = () => {
                     {formData.role === ROLE.MEMBER && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Community *
+                          Community <span className="text-red-500">*</span>
                         </label>
                         <select
                           required
@@ -631,7 +631,7 @@ export const OrganizationUserManagement: React.FC = () => {
                     {formData.role === ROLE.COMMUNITY_MANAGER && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Community *
+                          Community <span className="text-red-500">*</span>
                         </label>
                         <select
                           required

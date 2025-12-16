@@ -176,7 +176,7 @@ export const OrganizationCommunityManagement: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Community Name *
+                    Community Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -189,7 +189,7 @@ export const OrganizationCommunityManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
+                    Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={formData.description}
@@ -202,7 +202,7 @@ export const OrganizationCommunityManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Access Code *
+                    Access Code <span className="text-red-500">*</span>
                   </label>
                   <div className="flex space-x-2">
                     <input
@@ -225,7 +225,7 @@ export const OrganizationCommunityManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Membership Tier *
+                    Membership Tier <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.membership_tier}

@@ -206,16 +206,16 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
     if (!formData.title || !formData.description || !formData.category || !formData.author) {
       return false;
     }
-    
+
     // Type-specific validation
     if (formData.type === 'video' && !formData.vimeo_video_id && !formData.url) {
       return false;
     }
-    
+
     if (formData.type === 'pdf' && !formData.storage_pdf_path && !formData.url) {
       return false;
     }
-    
+
     return true;
   };
 
@@ -256,32 +256,29 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
             <nav className="flex px-6">
               <button
                 onClick={() => setActiveTab('general')}
-                className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${
-                  activeTab === 'general'
+                className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${activeTab === 'general'
                     ? 'border-brand-primary text-brand-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 General
               </button>
               <button
                 onClick={() => setActiveTab('media')}
-                className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${
-                  activeTab === 'media'
+                className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${activeTab === 'media'
                     ? 'border-brand-primary text-brand-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 Media
               </button>
               {formData.type === 'blog' && (
                 <button
                   onClick={() => setActiveTab('content')}
-                  className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${
-                    activeTab === 'content'
+                  className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${activeTab === 'content'
                       ? 'border-brand-primary text-brand-primary'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                    }`}
                 >
                   Content Editor
                 </button>
@@ -295,7 +292,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Title *
+                      Title <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -308,7 +305,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Content Type *
+                      Content Type <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={formData.type}
@@ -326,7 +323,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
+                    Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={formData.description}
@@ -340,7 +337,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category *
+                      Category <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -353,7 +350,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Author *
+                      Author <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -415,7 +412,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vimeo URL *
+                          Vimeo URL <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="url"

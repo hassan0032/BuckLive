@@ -18,7 +18,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
-  
+
   // Check if user is assigned to any org community - if so, they cannot create new communities
   const isOrgCommunityManager = communities.some((c: any) => c.organization_id);
   const [formData, setFormData] = useState({
@@ -145,8 +145,8 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
         <div>
           <h2 className="text-2xl font-semibold text-[#363f49]">My Communities</h2>
           <p className="text-gray-600">
-            {isOrgCommunityManager 
-              ? 'Manage your assigned communities' 
+            {isOrgCommunityManager
+              ? 'Manage your assigned communities'
               : 'Create and manage your communities'}
           </p>
         </div>
@@ -279,7 +279,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Community Name *
+                    Community Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -292,7 +292,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
+                    Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={formData.description}
@@ -305,7 +305,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Access Code *
+                    Access Code <span className="text-red-500">*</span>
                   </label>
                   <div className="flex space-x-2">
                     <input
@@ -328,7 +328,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Membership Tier *
+                    Membership Tier <span className="text-red-500">*</span>
                   </label>
                   <select
                     disabled={!!editingCommunity}

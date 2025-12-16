@@ -357,7 +357,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name *
+                      First Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -369,7 +369,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name *
+                      Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -382,7 +382,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
                   <input
                     type="email"
                     value={formData.email}
@@ -396,7 +396,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                 {!editingUser && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password * (min. 6 characters)
+                      Password <span className="text-red-500">*</span> (min. 6 characters)
                     </label>
                     <input
                       type="password"
@@ -473,7 +473,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password * (min. 6 characters)
+                    New Password <span className="text-red-500">*</span> (min. 6 characters)
                   </label>
                   <input
                     type="password"
