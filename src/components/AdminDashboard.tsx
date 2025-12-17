@@ -15,6 +15,8 @@ import { EnhancedContentForm } from './EnhancedContentForm';
 import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
 import { PDFUploader } from './PDFUploader';
+import { EntitySelector } from './common/EntitySelector';
+import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 
 interface CommunityFormData {
   name: string;
@@ -23,6 +25,7 @@ interface CommunityFormData {
   is_active: boolean;
   code: string,
   membership_tier: PaymentTier;
+  organization_id?: string;
 }
 
 const createEmptyCommunityForm = (): CommunityFormData => ({
@@ -32,6 +35,7 @@ const createEmptyCommunityForm = (): CommunityFormData => ({
   is_active: true,
   code: '',
   membership_tier: PAYMENT_TIER.SILVER,
+  organization_id: '',
 });
 
 const generateAccessCode = () => {
@@ -57,6 +61,7 @@ export const AdminDashboard: React.FC = () => {
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
+  const { organizations } = useAdminOrganizations();
   const {
     documents: storedPdfs,
     loading: pdfsLoading,
@@ -177,10 +182,16 @@ export const AdminDashboard: React.FC = () => {
       }
     }
 
+    // Prepare payload with sanitized organization_id
+    const payload = {
+      ...communityFormData,
+      organization_id: communityFormData.organization_id || null,
+    };
+
     if (editingCommunity) {
-      await updateCommunity(editingCommunity, communityFormData);
+      await updateCommunity(editingCommunity, payload);
     } else {
-      await addCommunity(communityFormData);
+      await addCommunity(payload);
     }
 
     closeCommunityModal();
@@ -200,6 +211,7 @@ export const AdminDashboard: React.FC = () => {
       is_active: community.is_active,
       code: community.code,
       membership_tier: community.membership_tier,
+      organization_id: community.organization_id || '',
     });
     setCommunityModalTab('details');
     setShowCommunityForm(true);
@@ -864,6 +876,21 @@ export const AdminDashboard: React.FC = () => {
                       <option value={PAYMENT_TIER.SILVER}>{PAYMENT_TIER.SILVER.toUpperCase()}</option>
                       <option value={PAYMENT_TIER.GOLD}>{PAYMENT_TIER.GOLD.toUpperCase()}</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Organization (Optional)
+                    </label>
+                    <EntitySelector
+                      mode="single"
+                      label="Organization"
+                      entityName="organization"
+                      entityNamePlural="organizations"
+                      entities={organizations}
+                      selectedId={communityFormData.organization_id}
+                      onSelect={(id) => setCommunityFormData({ ...communityFormData, organization_id: id as string })}
+                    />
                   </div>
 
                   <div className="flex items-center">
