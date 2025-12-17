@@ -1,5 +1,6 @@
 import { Calendar, Edit, Eye, EyeOff, Key, Loader2, Plus, Search, Shield, Trash2, User2, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
 import { adminResetUserPassword, supabase } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME, User } from '../types';
@@ -8,6 +9,7 @@ import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { EntitySelector } from './common/EntitySelector';
 
 export const OrganizationUserManagement: React.FC = () => {
+  const { user } = useAuth();
   const { communities, loading: communitiesLoading } = useOrganizationCommunities();
 
   const [users, setUsers] = useState<User[]>([]);
@@ -57,9 +59,9 @@ export const OrganizationUserManagement: React.FC = () => {
       }
 
       const { data, error: fetchError } = await supabase
-        .from('users_with_details')
+        .from('user_profiles')
         .select('*')
-        .eq('organization_id', organizationId)
+        .neq('id', user?.id)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
