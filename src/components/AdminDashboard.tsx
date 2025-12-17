@@ -602,6 +602,9 @@ export const AdminDashboard: React.FC = () => {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Organization
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Billing Code
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -643,6 +646,9 @@ export const AdminDashboard: React.FC = () => {
                         >
                           {community.is_active ? 'ACTIVE' : 'INACTIVE'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {community.organization?.name || '--'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {community.code}
