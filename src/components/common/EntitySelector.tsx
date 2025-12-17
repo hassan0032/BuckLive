@@ -39,11 +39,7 @@ export function EntitySelector<T extends { id: string; name: string }>({
   );
 
   const handleSingleSelect = (entityId: string) => {
-    if (selectedId === entityId) {
-      onSelect('');
-    } else {
-      onSelect(entityId);
-    }
+    onSelect(entityId);
   };
 
   const handleMultiSelect = (entityId: string, checked: boolean) => {
@@ -81,14 +77,14 @@ export function EntitySelector<T extends { id: string; name: string }>({
             <div key={entity.id} className="flex items-center">
               {mode === 'single' ? (
                 <input
-                  type="checkbox"
+                  type="radio"
                   name={`${entityName}_select_${label.replace(/\s+/g, '_')}`}
                   id={`${entityName}-${entity.id}`}
                   value={entity.id}
                   checked={selectedId === entity.id}
                   onChange={() => handleSingleSelect(entity.id)}
-                  className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
-                  required={required && !selectedId}
+                  className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded-full mr-2"
+                  required={required}
                   disabled={disabled}
                 />
               ) : (
