@@ -1,4 +1,4 @@
-import { Calendar, Edit, Key, Loader2, Plus, Search, Shield, Trash2, User2, Users, Users2 } from 'lucide-react';
+import { Calendar, Edit, Eye, EyeOff, Key, Loader2, Plus, Search, Shield, Trash2, User2, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useOrganizationCommunities } from '../hooks/useOrganizationCommunities';
 import { adminResetUserPassword, supabase } from '../lib/supabase';
@@ -36,6 +36,7 @@ export const OrganizationUserManagement: React.FC = () => {
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Fetch all users from organization communities
   const fetchUsers = async () => {
@@ -587,15 +588,28 @@ export const OrganizationUserManagement: React.FC = () => {
                     {!editingUser && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Password <span className="text-red-500">*</span></label>
-                        <input
-                          type="password"
-                          required={!editingUser}
-                          minLength={6}
-                          value={formData.password}
-                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                          placeholder="Minimum 6 characters"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            required={!editingUser}
+                            minLength={6}
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary pr-10"
+                            placeholder="Minimum 6 characters"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-5 w-5" aria-hidden="true" />
+                            ) : (
+                              <Eye className="h-5 w-5" aria-hidden="true" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -603,7 +617,14 @@ export const OrganizationUserManagement: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Role <span className="text-red-500">*</span></label>
                       <select
                         value={formData.role}
-                        onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                        onChange={(e) => {
+                          const newRole = e.target.value as Role;
+                          setFormData({
+                            ...formData,
+                            role: newRole,
+                            is_shared_account: newRole === ROLE.MEMBER ? formData.is_shared_account : false,
+                          });
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
                         disabled={!!editingUser}
                       >
