@@ -885,12 +885,9 @@ export const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Organization (Optional)
-                    </label>
                     <EntitySelector
                       mode="single"
-                      label="Organization"
+                      label="Organization (Optional)"
                       entityName="organization"
                       entityNamePlural="organizations"
                       entities={organizations}
