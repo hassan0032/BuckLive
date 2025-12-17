@@ -29,23 +29,6 @@ CREATE POLICY "Admins can view all tier logs"
         )
     );
 
--- Policy for Organization Managers: Can view logs for communities in their organizations
--- Note: Checking community_id inside the JSONB details
-CREATE POLICY "Org Managers can view logs for their communities"
-    ON public.logs
-    FOR SELECT
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 
-            FROM public.communities c
-            JOIN public.organization_managers om ON c.organization_id = om.organization_id
-            WHERE om.user_id = auth.uid()
-            -- Cast JSONB string to UUID for comparison
-            AND c.id = (details->>'community_id')::uuid
-        )
-    );
-
 -- Function to log the tier change
 CREATE OR REPLACE FUNCTION public.log_community_tier_change()
 RETURNS TRIGGER AS $$
