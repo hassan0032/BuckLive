@@ -851,7 +851,6 @@ export const AdminDashboard: React.FC = () => {
                       Membership Tier
                     </label>
                     <select
-                      disabled={!!editingCommunity}
                       value={communityFormData.membership_tier}
                       onChange={(e) =>
                         setCommunityFormData({

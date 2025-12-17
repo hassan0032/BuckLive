@@ -251,7 +251,6 @@ export const OrganizationCommunityManagement: React.FC = () => {
                     Membership Tier <span className="text-red-500">*</span>
                   </label>
                   <select
-                    disabled={!!editingCommunity}
                     value={formData.membership_tier}
                     onChange={(e) => setFormData({ ...formData, membership_tier: e.target.value as PaymentTier })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
