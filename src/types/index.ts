@@ -111,8 +111,8 @@ export interface User {
     last_name?: string;
     avatar_url?: string;
     community?: Community;
+    organization?: { id: string; name: string }
   };
-  managed_community_ids?: string[];
 }
 
 export interface Community {

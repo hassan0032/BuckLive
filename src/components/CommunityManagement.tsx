@@ -1,5 +1,6 @@
 import { Edit, Key, Loader2, Plus, Shield, Trash2, Users } from 'lucide-react';
 import React, { useState } from 'react';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { useCommunities } from '../hooks/useCommunities';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
 import { useAdminEmailNotification } from '../hooks/useAdminEmailNotification';
@@ -18,7 +19,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
-  
+
   // Check if user is assigned to any org community - if so, they cannot create new communities
   const isOrgCommunityManager = communities.some((c: any) => c.organization_id);
   const [formData, setFormData] = useState({
@@ -30,6 +31,9 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [communityToDelete, setCommunityToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletingCommunity, setDeletingCommunity] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,22 +122,26 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
     setShowCreateForm(true);
   };
 
-  const handleDelete = async (communityId: string, communityName: string) => {
+  const handleDeleteClick = (community: Community) => {
     return;
-    const confirmed = window.confirm(`Are you sure you want to delete "${communityName}"?`)
-    if (!confirmed) return
+    setCommunityToDelete({ id: community.id, name: community.name });
+  };
+
+  const confirmDelete = async () => {
+    if (!communityToDelete) return;
 
     try {
-      setLoading(true)
-      await deleteCommunity(communityId)
-      await refetch()
+      setDeletingCommunity(true);
+      await deleteCommunity(communityToDelete.id);
+      await refetch();
+      setCommunityToDelete(null);
     } catch (err) {
-      console.error(err)
-      setError('Failed to delete community')
+      console.error(err);
+      setError('Failed to delete community');
     } finally {
-      setLoading(false)
+      setDeletingCommunity(false);
     }
-  }
+  };
 
   const handleGenerateNewCode = () => {
     setFormData({ ...formData, access_code: generateAccessCode() });
@@ -145,8 +153,8 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
         <div>
           <h2 className="text-2xl font-semibold text-[#363f49]">My Communities</h2>
           <p className="text-gray-600">
-            {isOrgCommunityManager 
-              ? 'Manage your assigned communities' 
+            {isOrgCommunityManager
+              ? 'Manage your assigned communities'
               : 'Create and manage your communities'}
           </p>
         </div>
@@ -198,7 +206,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
                 </button>
                 <button
                   disabled
-                  onClick={() => handleDelete(community.id, community.name)}
+                  onClick={() => handleDeleteClick(community)}
                   className="ml-2 p-2 text-red-700 hover:bg-brand-beige-light rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -279,7 +287,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Community Name *
+                    Community Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -292,7 +300,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
+                    Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={formData.description}
@@ -305,7 +313,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Access Code *
+                    Access Code <span className="text-red-500">*</span>
                   </label>
                   <div className="flex space-x-2">
                     <input
@@ -328,7 +336,7 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Membership Tier *
+                    Membership Tier <span className="text-red-500">*</span>
                   </label>
                   <select
                     disabled={!!editingCommunity}
@@ -376,6 +384,15 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
           </div>
         </div>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={!!communityToDelete}
+        onClose={() => setCommunityToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Community"
+        message={`Are you sure you want to delete "${communityToDelete?.name}"?`}
+        isDeleting={deletingCommunity}
+      />
     </div>
   );
 };

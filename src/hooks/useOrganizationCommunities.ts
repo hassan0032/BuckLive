@@ -92,6 +92,21 @@ export const useOrganizationCommunities = () => {
     }
   };
 
+  const updateCommunity = async (id: string, updates: Partial<Community>) => {
+    try {
+      const { error } = await supabase
+        .from('communities')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      await fetchCommunities();
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Failed to update community' };
+    }
+  };
+
   useEffect(() => {
     fetchCommunities();
   }, [user, isOrganizationManager]);
@@ -101,6 +116,7 @@ export const useOrganizationCommunities = () => {
     loading,
     error,
     addCommunity,
+    updateCommunity,
     refetch: fetchCommunities
   };
 };

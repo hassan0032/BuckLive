@@ -4,16 +4,19 @@ import { useLocation } from 'react-router-dom';
 import { useCommunities } from '../hooks/useCommunities';
 import { useContent } from '../hooks/useContent';
 import { useDocuments } from '../hooks/useDocuments';
+import { supabase } from '../lib/supabase';
 import { Community, CommunityDocument, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier } from '../types';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
-import { AdminUserManagement } from './AdminUserManagement';
+import AdminNotifications from './AdminNotifications';
 import { AdminOrganizationManagement } from './AdminOrganizationManagement';
+import { AdminUserManagement } from './AdminUserManagement';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { EnhancedContentForm } from './EnhancedContentForm';
 import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
-import AdminNotifications from './AdminNotifications';
 import { PDFUploader } from './PDFUploader';
-import { supabase } from '../lib/supabase';
+import { EntitySelector } from './common/EntitySelector';
+import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 
 interface CommunityFormData {
   name: string;
@@ -21,7 +24,8 @@ interface CommunityFormData {
   access_code: string;
   is_active: boolean;
   code: string,
-  membership_tier: 'silver' | 'gold';
+  membership_tier: PaymentTier;
+  organization_id?: string;
 }
 
 const createEmptyCommunityForm = (): CommunityFormData => ({
@@ -30,7 +34,8 @@ const createEmptyCommunityForm = (): CommunityFormData => ({
   access_code: '',
   is_active: true,
   code: '',
-  membership_tier: PAYMENT_TIER.SILVER as PaymentTier,
+  membership_tier: PAYMENT_TIER.SILVER,
+  organization_id: '',
 });
 
 const generateAccessCode = () => {
@@ -42,8 +47,10 @@ const generateAccessCode = () => {
   return result;
 };
 
+const allowedTabs = ['content', 'communities', 'users', 'organizations', 'analytics', 'invoices', 'notifications', 'feedback'] as const;
+
 type AdminLocationState = {
-  forceTab?: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback' | 'organizations';
+  forceTab?: (typeof allowedTabs)[number];
   ts?: number;
 } | null;
 
@@ -54,6 +61,7 @@ export const AdminDashboard: React.FC = () => {
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
+  const { organizations } = useAdminOrganizations();
   const {
     documents: storedPdfs,
     loading: pdfsLoading,
@@ -62,48 +70,45 @@ export const AdminDashboard: React.FC = () => {
     deleteDocument: deleteStoredPdf,
     refetch: refetchStoredPdfs,
   } = useDocuments(editingCommunity);
-  const [activeTab, setActiveTab] = useState<'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback' | 'organizations'>(() => {
+  const [activeTab, setActiveTab] = useState<typeof allowedTabs[number]>(() => {
     if (typeof window === 'undefined') return 'content';
     const stored = window.localStorage.getItem('adminActiveTab');
-    const allowedTabs = ['content', 'communities', 'users', 'analytics', 'invoices', 'notifications', 'feedback', 'organizations'] as const;
     if (stored && (allowedTabs as readonly string[]).includes(stored)) {
       return stored as (typeof allowedTabs)[number];
     }
     return 'content';
   });
-  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents' | 'managers'>('details');
-  const [communityManagers, setCommunityManagers] = useState<any[]>([]);
-  const [managerSearchQuery, setManagerSearchQuery] = useState('');
-  const [potentialManagers, setPotentialManagers] = useState<any[]>([]);
-  const [managersLoading, setManagersLoading] = useState(false);
+  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents'>('details');
   const {
     loading: communitiesLoading,
     communities,
     addCommunity,
     updateCommunity,
     deleteCommunity,
-    getCommunityManagers,
-    addManager,
-    removeManager,
-    searchPotentialManagers
   } = useCommunities();
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
   const [deletingPdfId, setDeletingPdfId] = useState<string | null>(null);
+
+  // Modal States
+  const [contentToDelete, setContentToDelete] = useState<string | null>(null);
+  const [communityToDelete, setCommunityToDelete] = useState<string | null>(null);
+  const [pdfToDelete, setPdfToDelete] = useState<CommunityDocument | null>(null);
+
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Sync active tab with navigation state so external navigation (e.g. header bell)
   // can always force the "notifications" tab even when already on /admin, without
   // changing the URL.
   useEffect(() => {
-    const allowedTabs = ['content', 'communities', 'users', 'analytics', 'invoices', 'notifications', 'feedback'] as const;
     const state = (location.state as AdminLocationState) || null;
     const tabParam = state?.forceTab;
 
-    if (tabParam && (allowedTabs as readonly string[]).includes(tabParam)) {
-      handleSetActiveTab(tabParam as (typeof allowedTabs)[number]);
+    if (tabParam && allowedTabs.includes(tabParam)) {
+      handleSetActiveTab(tabParam);
     }
   }, [location.state]);
 
-  const handleSetActiveTab = (tab: 'content' | 'communities' | 'users' | 'analytics' | 'invoices' | 'notifications' | 'feedback') => {
+  const handleSetActiveTab = (tab: (typeof allowedTabs)[number]) => {
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       try {
@@ -177,10 +182,16 @@ export const AdminDashboard: React.FC = () => {
       }
     }
 
+    // Prepare payload with sanitized organization_id
+    const payload = {
+      ...communityFormData,
+      organization_id: communityFormData.organization_id || null,
+    };
+
     if (editingCommunity) {
-      await updateCommunity(editingCommunity, communityFormData);
+      await updateCommunity(editingCommunity, payload);
     } else {
-      await addCommunity(communityFormData);
+      await addCommunity(payload);
     }
 
     closeCommunityModal();
@@ -200,22 +211,35 @@ export const AdminDashboard: React.FC = () => {
       is_active: community.is_active,
       code: community.code,
       membership_tier: community.membership_tier,
+      organization_id: community.organization_id || '',
     });
     setCommunityModalTab('details');
     setShowCommunityForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this content?')) {
-      await deleteContent(id);
-    }
+  const handleDelete = (id: string) => {
+    setContentToDelete(id);
   };
 
-  const handleDeleteCommunity = async (id: string) => {
+  const confirmDeleteContent = async () => {
+    if (!contentToDelete) return;
+    setIsProcessing(true);
+    await deleteContent(contentToDelete);
+    setIsProcessing(false);
+    setContentToDelete(null);
+  };
+
+  const handleDeleteCommunity = (id: string) => {
     return;
-    if (confirm('Are you sure you want to delete this community? This will affect all associated users.')) {
-      await deleteCommunity(id);
-    }
+    setCommunityToDelete(id);
+  };
+
+  const confirmDeleteCommunity = async () => {
+    if (!communityToDelete) return;
+    setIsProcessing(true);
+    await deleteCommunity(communityToDelete);
+    setIsProcessing(false);
+    setCommunityToDelete(null);
   };
 
   const handleGenerateAccessCode = () => {
@@ -245,80 +269,32 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeletePdf = async (doc: CommunityDocument) => {
+  const handleDeletePdf = (doc: CommunityDocument) => {
     if (deletingPdfId === doc.id) return;
-    const confirmDelete = confirm('Delete this PDF from storage?');
-    if (!confirmDelete) return;
+    setPdfToDelete(doc);
+  };
 
+  const confirmDeletePdf = async () => {
+    if (!pdfToDelete) return;
+
+    setIsProcessing(true);
     try {
-      setDeletingPdfId(doc.id);
-      const { error } = await deleteStoredPdf(doc);
+      setDeletingPdfId(pdfToDelete.id); // For local loading state in hook if needed
+      const { error } = await deleteStoredPdf(pdfToDelete);
       if (error) {
         alert(error);
-        return;
+      } else {
+        await refetchStoredPdfs();
       }
-      await refetchStoredPdfs();
     } catch (error) {
       console.error('Failed to delete PDF:', error);
       alert('Failed to delete PDF. Please try again.');
     } finally {
+      setIsProcessing(false);
+      setPdfToDelete(null);
       setDeletingPdfId(null);
     }
   };
-
-  // Manager Tab Handlers
-  const handleFetchManagers = async (communityId: string) => {
-    setManagersLoading(true);
-    const { data, error } = await getCommunityManagers(communityId);
-    setManagersLoading(false);
-    if (data) setCommunityManagers(data);
-    else console.error(error);
-  };
-
-  const handleSearchManagers = async (query: string) => {
-    setManagerSearchQuery(query);
-    if (query.length < 3) {
-      setPotentialManagers([]);
-      return;
-    }
-    const { data } = await searchPotentialManagers(query);
-    if (data) setPotentialManagers(data);
-  };
-
-  const handleAddManager = async (user: any) => {
-    if (!editingCommunity) return;
-    const confirmAdd = confirm(`Make ${user.first_name} ${user.last_name} a manager for this community?`);
-    if (!confirmAdd) return;
-
-    const { error } = await addManager(editingCommunity, user.id);
-    if (error) {
-      alert(`Failed to add manager: ${error}`);
-    } else {
-      // Refresh list
-      handleFetchManagers(editingCommunity);
-      setManagerSearchQuery('');
-      setPotentialManagers([]);
-    }
-  };
-
-  const handleRemoveManager = async (userId: string) => {
-    if (!editingCommunity) return;
-    if (confirm('Remove this manager from the community?')) {
-      const { error } = await removeManager(editingCommunity, userId);
-      if (error) {
-        alert(`Failed to remove manager: ${error}`);
-      } else {
-        handleFetchManagers(editingCommunity);
-      }
-    }
-  };
-
-  // Effect to load managers when tab is switched
-  useEffect(() => {
-    if (editingCommunity && communityModalTab === 'managers') {
-      handleFetchManagers(editingCommunity);
-    }
-  }, [editingCommunity, communityModalTab]);
 
   const stats = {
     totalContent: content.length,
@@ -721,6 +697,34 @@ export const AdminDashboard: React.FC = () => {
         />
       )}
 
+      {/* Modals */}
+      <DeleteConfirmationModal
+        isOpen={!!contentToDelete}
+        onClose={() => setContentToDelete(null)}
+        onConfirm={confirmDeleteContent}
+        title="Delete Content"
+        message="Are you sure you want to delete this content?"
+        isDeleting={isProcessing}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={!!communityToDelete}
+        onClose={() => setCommunityToDelete(null)}
+        onConfirm={confirmDeleteCommunity}
+        title="Delete Community"
+        message="Are you sure you want to delete this community? This will affect all associated users."
+        isDeleting={isProcessing}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={!!pdfToDelete}
+        onClose={() => setPdfToDelete(null)}
+        onConfirm={confirmDeletePdf}
+        title="Delete PDF"
+        message="Delete this PDF from storage?"
+        isDeleting={isProcessing}
+      />
+
       {showCommunityForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -768,16 +772,6 @@ export const AdminDashboard: React.FC = () => {
                     >
                       PDF Library
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setCommunityModalTab('managers')}
-                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${communityModalTab === 'managers'
-                        ? 'border-brand-primary text-brand-primary'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                        }`}
-                    >
-                      Managers
-                    </button>
                   </nav>
                 </div>
               )}
@@ -817,7 +811,7 @@ export const AdminDashboard: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Access Code *
+                      Access Code <span className="text-red-500">*</span>
                     </label>
                     <div className="flex space-x-2">
                       <input
@@ -869,7 +863,6 @@ export const AdminDashboard: React.FC = () => {
                       Membership Tier
                     </label>
                     <select
-                      disabled={!!editingCommunity}
                       value={communityFormData.membership_tier}
                       onChange={(e) =>
                         setCommunityFormData({
@@ -883,6 +876,21 @@ export const AdminDashboard: React.FC = () => {
                       <option value={PAYMENT_TIER.SILVER}>{PAYMENT_TIER.SILVER.toUpperCase()}</option>
                       <option value={PAYMENT_TIER.GOLD}>{PAYMENT_TIER.GOLD.toUpperCase()}</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Organization (Optional)
+                    </label>
+                    <EntitySelector
+                      mode="single"
+                      label="Organization"
+                      entityName="organization"
+                      entityNamePlural="organizations"
+                      entities={organizations}
+                      selectedId={communityFormData.organization_id}
+                      onSelect={(id) => setCommunityFormData({ ...communityFormData, organization_id: id as string })}
+                    />
                   </div>
 
                   <div className="flex items-center">
@@ -990,88 +998,10 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               )}
-
-              {editingCommunity && communityModalTab === 'managers' && (
-                <div className="space-y-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Add Manager</h3>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                        placeholder="Search users by name or email..."
-                        value={managerSearchQuery}
-                        onChange={(e) => handleSearchManagers(e.target.value)}
-                      />
-                      {potentialManagers.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 bg-white shadow-lg border border-gray-200 mt-1 max-h-48 overflow-y-auto z-10 rounded-lg">
-                          {potentialManagers.map(user => (
-                            <div
-                              key={user.id}
-                              className="p-2 hover:bg-gray-50 cursor-pointer flex justify-between items-center"
-                              onClick={() => handleAddManager(user)}
-                            >
-                              <div className="flex items-center space-x-2">
-                                {user.avatar_url ? (
-                                  <img src={user.avatar_url} className="w-6 h-6 rounded-full" />
-                                ) : (
-                                  <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-500">
-                                    {user.first_name?.[0]}{user.last_name?.[0]}
-                                  </div>
-                                )}
-                                <span className="text-sm font-medium text-gray-700">{user.first_name} {user.last_name}</span>
-                                <span className="text-xs text-gray-500">({user.email})</span>
-                              </div>
-                              <span className="text-xs text-brand-primary font-semibold uppercase">Add</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">Current Managers</h3>
-                    {managersLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
-                      </div>
-                    ) : communityManagers.length === 0 ? (
-                      <p className="text-sm text-gray-500">No managers assigned.</p>
-                    ) : (
-                      <ul className="space-y-3">
-                        {communityManagers.map(manager => (
-                          <li key={manager.id} className="flex items-center justify-between bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
-                            <div className="flex items-center space-x-3">
-                              {manager.avatar_url ? (
-                                <img src={manager.avatar_url} className="w-8 h-8 rounded-full" />
-                              ) : (
-                                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium text-gray-500">
-                                  {manager.first_name?.[0]}{manager.last_name?.[0]}
-                                </div>
-                              )}
-                              <div>
-                                <p className="text-sm font-medium text-[#363f49]">{manager.first_name} {manager.last_name}</p>
-                                <p className="text-xs text-gray-500">{manager.email}</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleRemoveManager(manager.id)}
-                              className="text-red-600 hover:text-red-700 p-1"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
       )}
-    </div >
+    </div>
   );
 };

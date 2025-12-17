@@ -1,10 +1,14 @@
-import { Building2, Calendar, Edit, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
+import { Building2, Calendar, Edit, Eye, EyeOff, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
 import { adminResetUserPassword } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME } from '../types';
 import { cn } from '../utils/helper';
+import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
+import { EntitySelector } from './common/EntitySelector';
 
 interface FormData {
   email: string;
@@ -15,6 +19,7 @@ interface FormData {
   role: Role;
   is_shared_account: boolean;
   managed_community_ids: string[];
+  organization_id: string;
 }
 
 const initialFormData: FormData = {
@@ -26,9 +31,11 @@ const initialFormData: FormData = {
   role: ROLE.MEMBER,
   is_shared_account: false,
   managed_community_ids: [],
+  organization_id: '',
 };
 
 export const AdminUserManagement: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [communityFilter, setCommunityFilter] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,6 +56,7 @@ export const AdminUserManagement: React.FC = () => {
   });
 
   const { communities } = useCommunities();
+  const { organizations } = useAdminOrganizations();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -59,7 +67,9 @@ export const AdminUserManagement: React.FC = () => {
   const [passwordResetUserId, setPasswordResetUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
-  const [communitySearchQuery, setCommunitySearchQuery] = useState('');
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const stats = {
     totalUsers: users.length,
@@ -79,6 +89,10 @@ export const AdminUserManagement: React.FC = () => {
         if (formData.managed_community_ids.length === 0) {
           throw new Error('Please select at least one community');
         }
+      } else if (formData.role === ROLE.ORGANIZATION_MANAGER) {
+        if (!formData.organization_id) {
+          throw new Error('Please select an organization');
+        }
       } else if (formData.role !== ROLE.ADMIN && !formData.community_id) {
         throw new Error('Please select a community');
       }
@@ -92,6 +106,7 @@ export const AdminUserManagement: React.FC = () => {
           community_id: formData.role === ROLE.MEMBER ? formData.community_id : null,
           is_shared_account: formData.is_shared_account,
           managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
+          organization_id: formData.role === ROLE.ORGANIZATION_MANAGER ? formData.organization_id : undefined,
         });
 
         if (error) throw new Error(error);
@@ -113,6 +128,7 @@ export const AdminUserManagement: React.FC = () => {
           role: formData.role,
           is_shared_account: formData.is_shared_account,
           managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
+          organization_id: formData.role === ROLE.ORGANIZATION_MANAGER ? formData.organization_id : undefined,
         });
 
         if (error) throw new Error(error);
@@ -129,6 +145,7 @@ export const AdminUserManagement: React.FC = () => {
         role: ROLE.MEMBER,
         is_shared_account: false,
         managed_community_ids: [],
+        organization_id: '',
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -175,22 +192,33 @@ export const AdminUserManagement: React.FC = () => {
         role: user.role,
         is_shared_account: user.is_shared_account || false,
         managed_community_ids: user.managed_community_ids || [],
+        organization_id: user.profile?.organization?.id || '',
       });
       setShowCreateForm(true);
     }
   };
 
-  const handleDelete = async (userId: string) => {
+  const handleDeleteClick = (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
-
     const userName = `${user.profile?.first_name} ${user.profile?.last_name}`.trim() || user.email;
+    setUserToDelete({ id: userId, name: userName });
+  };
 
-    if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone and will remove all associated data.`)) {
-      const { error } = await deleteUser(userId);
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      const { error } = await deleteUser(userToDelete.id);
       if (error) {
-        alert(`Failed to delete user: ${error}`);
+        throw new Error(error);
       }
+      setUserToDelete(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete user');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -221,6 +249,7 @@ export const AdminUserManagement: React.FC = () => {
               role: ROLE.MEMBER,
               is_shared_account: false,
               managed_community_ids: [],
+              organization_id: '',
             });
             setShowCreateForm(true);
           }}
@@ -281,9 +310,10 @@ export const AdminUserManagement: React.FC = () => {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Roles</option>
-              <option value={ROLE.ADMIN}>Admin</option>
-              <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
               <option value={ROLE.MEMBER}>Member</option>
+              <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
+              <option value={ROLE.ORGANIZATION_MANAGER}>Organization Manager</option>
+              <option value={ROLE.ADMIN}>Admin</option>
             </select>
           </div>
         </div>
@@ -336,7 +366,7 @@ export const AdminUserManagement: React.FC = () => {
                       <div className="ml-3">
                         <div className="flex items-center space-x-2">
                           <p className="text-sm font-medium text-[#363f49]">
-                            {user.profile?.first_name} {user.profile?.last_name}
+                            {user.profile?.first_name} {user.profile?.last_name} {user.id === currentUser?.id && '(You)'}
                           </p>
                           {user.is_shared_account && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
@@ -382,19 +412,6 @@ export const AdminUserManagement: React.FC = () => {
                       )}
                     </div>
                   </td>
-                  {/* <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {user.role === ROLE.COMMUNITY_MANAGER ? (
-                        <span className="text-xs text-gray-500" title={user.managed_community_ids?.map(id => communities.find(c => c.id === id)?.name).join(', ')}>
-                          {user.managed_community_ids?.length
-                            ? user.managed_community_ids.length > 1 ? `${user.managed_community_ids.length} Communities` : communities.find(c => c.id === user.managed_community_ids?.[0])?.name
-                            : 'No Communities'}
-                        </span>
-                      ) : (
-                        user.profile?.community?.name || 'N/A'
-                      )}
-                    </div>
-                  </td> */}
                   <td className="px-6 py-4">
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar className="h-4 w-4 mr-2 text-gray-400" />
@@ -402,39 +419,36 @@ export const AdminUserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(user.id)}
-                        className="text-brand-primary hover:text-brand-d-blue"
-                        title="Edit user"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openPasswordResetModal(user.id)}
-                        className="text-blue-600 hover:text-blue-700"
-                        title="Reset password"
-                      >
-                        <Key className="h-4 w-4" />
-                      </button>
-                      {(() => {
-
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleDelete(user.id);
-                            }}
-                            className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Delete user"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        );
-                      })()}
-                    </div>
+                    {user.id !== currentUser?.id && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(user.id)}
+                          className="text-brand-primary hover:text-brand-d-blue"
+                          title="Edit user"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openPasswordResetModal(user.id)}
+                          className="text-blue-600 hover:text-blue-700"
+                          title="Reset password"
+                        >
+                          <Key className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleDeleteClick(user.id);
+                          }}
+                          className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Delete user"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -453,6 +467,15 @@ export const AdminUserManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message={`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone.`}
+        isDeleting={deleteLoading}
+      />
 
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -513,14 +536,27 @@ export const AdminUserManagement: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Password <span className="text-red-500">*</span> (min. 6 characters)
                     </label>
-                    <input
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                      required
-                      minLength={6}
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary pr-10"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" aria-hidden="true" />
+                        ) : (
+                          <Eye className="h-5 w-5" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -534,13 +570,20 @@ export const AdminUserManagement: React.FC = () => {
                       <>
                         <select
                           value={formData.role}
-                          onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                          onChange={(e) => {
+                            const newRole = e.target.value as Role;
+                            setFormData({
+                              ...formData,
+                              role: newRole,
+                              is_shared_account: newRole === ROLE.MEMBER ? formData.is_shared_account : false,
+                            });
+                          }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                           required
-                          disabled={formData.role === ROLE.ORGANIZATION_MANAGER}
                         >
                           <option value={ROLE.MEMBER}>Member</option>
                           <option value={ROLE.COMMUNITY_MANAGER}>Community Manager</option>
+                          <option value={ROLE.ORGANIZATION_MANAGER}>Organization Manager</option>
                           <option value={ROLE.ADMIN}>Admin</option>
                         </select>
                       </>
@@ -553,145 +596,63 @@ export const AdminUserManagement: React.FC = () => {
                     </p>
                   )}
                 </div>
+
                 {formData.role === ROLE.MEMBER && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Community {!editingUser && <span className="text-red-500">*</span>}
-                    </label>
-
-                    {/* Community Search Input */}
-                    <div className="relative mb-2">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search communities..."
-                        value={communitySearchQuery}
-                        onChange={(e) => setCommunitySearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
-                      />
-                    </div>
-
-                    <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto p-2 space-y-2">
-                      {communities
-                        .filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase()))
-                        .map(community => (
-                          <div key={community.id} className="flex items-center">
-                            <input
-                              type="radio"
-                              name="community_id"
-                              id={`community-${community.id}`}
-                              value={community.id}
-                              checked={formData.community_id === community.id}
-                              onChange={(e) => setFormData({ ...formData, community_id: e.target.value })}
-                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded-full mr-2"
-                              required={!editingUser}
-                            />
-                            <label htmlFor={`community-${community.id}`} className={`text-sm select-none cursor-pointer flex-1 text-gray-700`}>
-                              {community.name}
-                            </label>
-                          </div>
-                        ))}
-                      {communities.filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase())).length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-2">No communities found</p>
-                      )}
-                    </div>
-                  </div>
+                  <EntitySelector
+                    mode="single"
+                    required={!editingUser}
+                    label="Community"
+                    entityName="community"
+                    entityNamePlural="communities"
+                    entities={communities}
+                    selectedId={formData.community_id}
+                    onSelect={(id) => setFormData({ ...formData, community_id: id as string })}
+                  />
                 )}
 
                 {formData.role === ROLE.COMMUNITY_MANAGER && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Managed Communities
-                    </label>
-
-                    {/* Community Search Input */}
-                    <div className="relative mb-2">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search communities..."
-                        value={communitySearchQuery}
-                        onChange={(e) => setCommunitySearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
-                      />
-                    </div>
-
-                    <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto p-2 space-y-2">
-                      {communities
-                        .filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase()))
-                        .map(community => {
-                          const isOrgCommunity = !!community.organization_id;
-                          const isSelected = formData.managed_community_ids.includes(community.id);
-
-                          // Determine if disabled:
-                          // 1. If an org community is selected, deselect all others (unless this is the one selected)
-                          // 2. If standalone communities are selected, deselect org communities
-
-                          // Auto-switching logic: checking an org community deselects others.
-
-                          return (
-                            <div key={community.id} className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id={`managed-${community.id}`}
-                                checked={isSelected}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    if (isOrgCommunity) {
-                                      // Exclusive selection for org communities
-                                      setFormData({ ...formData, managed_community_ids: [community.id] });
-                                    } else {
-                                      // For standalone, remove any existing org communities first
-                                      const standaloneIds = formData.managed_community_ids.filter(id => {
-                                        const c = communities.find(c => c.id === id);
-                                        return !c?.organization_id;
-                                      });
-                                      setFormData({ ...formData, managed_community_ids: [...standaloneIds, community.id] });
-                                    }
-                                  } else {
-                                    const newIds = formData.managed_community_ids.filter(id => id !== community.id);
-                                    setFormData({ ...formData, managed_community_ids: newIds });
-                                  }
-                                }}
-                                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded mr-2"
-                              />
-                              <label htmlFor={`managed-${community.id}`} className="text-sm text-gray-700 select-none cursor-pointer flex-1">
-                                {community.name}
-                                {isOrgCommunity && <span className="text-xs text-gray-500 ml-2">(Org: {community.organization?.name})</span>}
-                              </label>
-                            </div>
-                          )
-                        })}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Select communities. Note: Organization communities can only be managed singly.
-                    </p>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_shared_account"
-                    checked={formData.is_shared_account}
-                    onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
-                    className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                  <EntitySelector
+                    mode="multi"
+                    required
+                    label="Managed Communities"
+                    entityName="community"
+                    entityNamePlural="communities"
+                    entities={communities}
+                    selectedIds={formData.managed_community_ids}
+                    onSelect={(ids) => setFormData({ ...formData, managed_community_ids: ids as string[] })}
                   />
-                  <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
-                    Shared Account
-                  </label>
-                  <span className="text-xs text-gray-500">
-                    (Multiple users can use this account)
-                  </span>
-                </div>
+                )}
 
-                {/* {editingUser && formData.is_shared_account && (
-                  <div className="flex items-center space-x-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                    <Users className="h-4 w-4 text-purple-600" />
-                    <span className="text-sm text-purple-700">
-                      This is a shared account. The shared account setting cannot be changed after creation.
+                {formData.role === ROLE.ORGANIZATION_MANAGER && (
+                  <EntitySelector
+                    mode="single"
+                    required={!editingUser}
+                    label="Organization"
+                    entityName="organization"
+                    entityNamePlural="organizations"
+                    entities={organizations}
+                    selectedId={formData.organization_id}
+                    onSelect={(id) => setFormData({ ...formData, organization_id: id as string })}
+                  />
+                )}
+
+                {formData.role === ROLE.MEMBER && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_shared_account"
+                      checked={formData.is_shared_account}
+                      onChange={(e) => setFormData({ ...formData, is_shared_account: e.target.checked })}
+                      className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                    />
+                    <label htmlFor="is_shared_account" className="text-sm font-medium text-gray-700">
+                      Shared Account
+                    </label>
+                    <span className="text-xs text-gray-500">
+                      (Multiple users can use this account)
                     </span>
                   </div>
-                )} */}
+                )}
 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
@@ -713,62 +674,64 @@ export const AdminUserManagement: React.FC = () => {
                     {formLoading ? 'Saving...' : editingUser ? 'Update' : 'Create'} User
                   </button>
                 </div>
-              </form>
-            </div>
-          </div>
-        </div>
+              </form >
+            </div >
+          </div >
+        </div >
       )}
 
       {/* Password Reset Modal */}
-      {showPasswordResetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Reset Password</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Enter a new password for this user. This will immediately update their login credentials.
-              </p>
+      {
+        showPasswordResetModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold mb-4">Reset Password</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enter a new password for this user. This will immediately update their login credentials.
+                </p>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password * (min. 6 characters)
-                  </label>
-                  <input
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                    required
-                    minLength={6}
-                    placeholder="Enter new password"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Password <span className="text-red-500">*</span> (min. 6 characters)
+                    </label>
+                    <input
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                      required
+                      minLength={6}
+                      placeholder="Enter new password"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordResetModal(false);
-                    setPasswordResetUserId(null);
-                    setNewPassword('');
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handlePasswordReset}
-                  disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
-                  className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm disabled:opacity-50"
-                >
-                  {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
-                </button>
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordResetModal(false);
+                      setPasswordResetUserId(null);
+                      setNewPassword('');
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePasswordReset}
+                    disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
+                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm disabled:opacity-50"
+                  >
+                    {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
