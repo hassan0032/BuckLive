@@ -54,9 +54,30 @@ export function EntitySelector<T extends { id: string; name: string }>({
 
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
+      <div className="flex items-center justify-between mb-1">
+        <label className="block text-sm font-medium text-gray-700">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        {mode === 'single' && selectedId && !required && (
+          <button
+            type="button"
+            onClick={() => onSelect('')}
+            className="text-xs text-red-600 hover:text-red-700 font-medium uppercase"
+            disabled={disabled}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Show selected entity name */}
+      {/* {mode === 'single' && selectedEntity && (
+        <div className="mb-2 px-3 py-2 bg-brand-beige-light border border-brand-primary rounded-md">
+          <p className="text-sm text-gray-700">
+            <span className="font-medium">Selected:</span> {selectedEntity.name}
+          </p>
+        </div>
+      )} */}
 
       {/* Search Input */}
       <div className="relative mb-2">
