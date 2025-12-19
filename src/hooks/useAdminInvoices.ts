@@ -16,6 +16,8 @@ export function useAdminInvoices() {
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [pendingCommunities, setPendingCommunities] = useState<Array<{ id: string; name: string }>>([])
+  const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
     if (authLoading || communitiesLoading) {
@@ -33,6 +35,16 @@ export function useAdminInvoices() {
       setError(null)
 
       try {
+        // Fetch all active communities to check for pending invoices
+        const { data: allCommunities, error: communitiesError } = await client
+          .from('communities')
+          .select('id, name')
+          .eq('is_active', true)
+
+        if (communitiesError) {
+          console.error('Error fetching communities:', communitiesError)
+        }
+
         let query = client
           .from('invoices')
           .select('*, organization:organization_id(name)')
@@ -51,6 +63,15 @@ export function useAdminInvoices() {
           setIsLoading(false)
           return
         }
+
+        // Determine pending communities (communities without invoices)
+        const invoicedCommunityIds = new Set(
+          (data || []).map((inv: any) => inv.community_id)
+        )
+        const pending = (allCommunities || []).filter(
+          (c) => !invoicedCommunityIds.has(c.id)
+        )
+        setPendingCommunities(pending)
 
         const normalizedInvoices: Invoice[] = (data || []).map((inv: any) => ({
           invoice_no: Number(inv.invoice_no),
@@ -178,6 +199,96 @@ export function useAdminInvoices() {
     setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId))
   }
 
+  const generateNow = async () => {
+    if (pendingCommunities.length === 0) return
+
+    setIsGenerating(true)
+    try {
+      const { error } = await client.functions.invoke('create-first-invoice', {
+        body: {
+          force: true,
+          communityIds: pendingCommunities.map((c) => c.id),
+        },
+      })
+
+      if (error) throw error
+
+      // Reload invoices after generation
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        // Fetch all active communities to check for pending invoices
+        const { data: allCommunities, error: communitiesError } = await client
+          .from('communities')
+          .select('id, name')
+          .eq('is_active', true)
+
+        if (communitiesError) {
+          console.error('Error fetching communities:', communitiesError)
+        }
+
+        let query = client
+          .from('invoices')
+          .select('*, organization:organization_id(name)')
+          .order('period_start', { ascending: false })
+
+        if (selectedCommunityId) {
+          query = query.eq('community_id', selectedCommunityId)
+        }
+
+        const { data, error: fetchError } = await query
+
+        if (fetchError) {
+          setError(fetchError.message)
+          setIsLoading(false)
+          return
+        }
+
+        // Determine pending communities
+        const invoicedCommunityIds = new Set(
+          (data || []).map((inv: any) => inv.community_id)
+        )
+        const pending = (allCommunities || []).filter(
+          (c) => !invoicedCommunityIds.has(c.id)
+        )
+        setPendingCommunities(pending)
+
+        const normalizedInvoices: Invoice[] = (data || []).map((inv: any) => ({
+          invoice_no: Number(inv.invoice_no),
+          issueDate: inv.issue_date,
+          periodStart: inv.period_start,
+          periodEnd: inv.period_end,
+          amountCents: Number(inv.amount_cents),
+          currency: inv.currency,
+          status: inv.status,
+          discountPercentage: inv.discount_percentage ?? 0,
+          communityId: inv.community_id,
+          communityName: inv.community_name || null,
+          communityCode: inv.community_code || null,
+          communityTier: inv.community_tier as PaymentTier,
+          id: inv.id,
+          createdAt: inv.created_at,
+          communityManagerEmail: inv.community_manager_email ?? null,
+          communityManagerName: inv.community_manager_name ?? null,
+          organizationId: inv.organization_id ?? null,
+          organizationName: inv.organization?.name ?? null,
+        }))
+
+        setInvoices(applyDiscountFromDatabase(normalizedInvoices))
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to refresh invoices')
+      } finally {
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error('Error generating invoices:', error)
+      throw error
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   return useMemo(
     () => ({
       invoices,
@@ -186,6 +297,9 @@ export function useAdminInvoices() {
       setSelectedCommunityId,
       isLoading,
       error,
+      pendingCommunities,
+      isGenerating,
+      generateNow,
       updateInvoiceStatus,
       deleteInvoice,
       refresh: async () => {
@@ -246,7 +360,7 @@ export function useAdminInvoices() {
         }
       },
     }),
-    [invoices, communities, selectedCommunityId, isLoading, error, isAdmin]
+    [invoices, communities, selectedCommunityId, isLoading, error, pendingCommunities, isGenerating, generateNow, isAdmin]
   )
 }
 

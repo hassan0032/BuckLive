@@ -9,6 +9,8 @@ export const useOrganizationInvoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingCommunities, setPendingCommunities] = useState<Array<{ id: string; name: string }>>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const fetchInvoices = async () => {
     if (!user || !isOrganizationManager) {
@@ -29,19 +31,40 @@ export const useOrganizationInvoices = () => {
       if (managerError) throw managerError;
       if (!managerRecord) {
         setInvoices([]);
+        setPendingCommunities([]);
         return;
       }
 
       const organizationName = (managerRecord.organizations as any)?.name;
+      const organizationId = managerRecord.organization_id;
+
+      // Fetch all communities in the organization
+      const { data: communities, error: communitiesError } = await supabase
+        .from('communities')
+        .select('id, name')
+        .eq('organization_id', organizationId);
+
+      if (communitiesError) {
+        console.error('Error fetching communities:', communitiesError);
+      }
 
       // Fetch invoices directly by organization_id
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .select('*')
-        .eq('organization_id', managerRecord.organization_id)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (invoiceError) throw invoiceError;
+
+      // Determine which communities have no invoices (pending)
+      const invoicedCommunityIds = new Set(
+        (invoiceData || []).map((inv: any) => inv.community_id)
+      );
+      const pending = (communities || []).filter(
+        (c) => !invoicedCommunityIds.has(c.id)
+      );
+      setPendingCommunities(pending);
 
       const enrichedInvoices: Invoice[] = invoiceData?.map(inv => {
         return {
@@ -78,6 +101,30 @@ export const useOrganizationInvoices = () => {
     }
   };
 
+  const generateNow = async () => {
+    if (pendingCommunities.length === 0) return;
+
+    setIsGenerating(true);
+    try {
+      const { error } = await supabase.functions.invoke('create-first-invoice', {
+        body: {
+          force: true,
+          communityIds: pendingCommunities.map((c) => c.id),
+        },
+      });
+
+      if (error) throw error;
+
+      // Reload invoices after generation
+      await fetchInvoices();
+    } catch (error) {
+      console.error('Error generating invoices:', error);
+      throw error;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   useEffect(() => {
     fetchInvoices();
   }, [user, isOrganizationManager]);
@@ -86,6 +133,9 @@ export const useOrganizationInvoices = () => {
     invoices,
     loading,
     error,
+    pendingCommunities,
+    isGenerating,
+    generateNow,
     refetch: fetchInvoices
   };
 };
