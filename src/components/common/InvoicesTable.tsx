@@ -386,7 +386,7 @@ export function InvoicesTable({
             <div className="flex justify-end items-center gap-2">
               <button
                 title="Download invoice"
-                className="flex items-center gap-2 rounded-md px-3 py-2 bg-brand-primary hover:bg-brand-primary/80 text-xs text-white"
+                className="flex items-center gap-2 rounded-md p-2 bg-brand-primary hover:bg-brand-primary/80 text-xs text-white"
                 onClick={() => handleDownload(row.id)}
               >
                 <Download className="w-4 h-4" /> PDF
