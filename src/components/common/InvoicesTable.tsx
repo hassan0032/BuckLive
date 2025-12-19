@@ -1,5 +1,6 @@
 import html2pdf from 'html2pdf.js'
 import { Calendar, Check, Download, Edit2, Loader2, X, Trash2 } from 'lucide-react'
+import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { useMemo, useState } from 'react'
 import { formatInvoiceStatus, INVOICE_STATUS, Invoice, InvoiceStatus, parseInvoiceStatus, User } from '../../types'
 import { formatInvoiceNumber, generateInvoicePdf } from '../../utils/helper'
@@ -403,39 +404,14 @@ export function InvoicesTable({
         )
       })}
       {/* Delete Confirmation Modal */}
-      {invoiceToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Invoice</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this invoice? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setInvoiceToDelete(null)}
-                disabled={isDeleting}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmationModal
+        isOpen={!!invoiceToDelete}
+        onClose={() => setInvoiceToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Invoice"
+        message="Are you sure you want to delete this invoice? This action cannot be undone."
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }

@@ -83,7 +83,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
           last_name: profile.last_name || '',
           avatar_url: profile.avatar_url || '',
           community: profile.community || undefined,
-          organization: profile.organization?.[0] || undefined,
+          organization: profile.organization?.[0] ? { id: profile.organization?.[0].organization_id, name: profile.organization?.[0].name } : undefined,
         },
       }));
 
@@ -106,6 +106,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     role?: Role;
     is_shared_account?: boolean;
     managed_community_ids?: string[];
+    organization_id?: string;
   }) => {
     try {
       // Get the current session to pass auth header
@@ -132,6 +133,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
           role: userData.role,
           is_shared_account: userData.is_shared_account || false,
           managed_community_ids: userData.managed_community_ids || [],
+          organization_id: userData.organization_id,
         }),
       });
 
@@ -160,6 +162,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     community_id?: string | null;
     is_shared_account?: boolean;
     managed_community_ids?: string[];
+    organization_id?: string;
   }) => {
     try {
       const currentUser = users.find(u => u.id === userId);
@@ -258,6 +261,39 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
             if (managerError) throw managerError;
           }
         }
+      }
+
+      // 3. Handle organization manager assignment
+      if (effectiveRole === ROLE.ORGANIZATION_MANAGER) {
+        if (updates.organization_id !== undefined) {
+          // Delete existing assignment
+          const { error: deleteOrgError } = await supabase
+            .from('organization_managers')
+            .delete()
+            .eq('user_id', userId);
+
+          if (deleteOrgError) throw deleteOrgError;
+
+          // Insert new assignment if organization_id is provided
+          if (updates.organization_id) {
+            const { error: insertOrgError } = await supabase
+              .from('organization_managers')
+              .insert({
+                user_id: userId,
+                organization_id: updates.organization_id
+              });
+
+            if (insertOrgError) throw insertOrgError;
+          }
+        }
+      } else if (currentUser.role === ROLE.ORGANIZATION_MANAGER) {
+        // If transitioning AWAY from Organization Manager, remove assignment
+        const { error: deleteOrgError } = await supabase
+          .from('organization_managers')
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteOrgError) throw deleteOrgError;
       }
 
       await fetchUsers();
