@@ -35,7 +35,7 @@ export function OrganizationInvoices() {
       <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3 text-blue-800">
         <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
         <p className="text-sm leading-relaxed">
-          Please note: The invoice for a new community is generated automatically 24 hours after creation.
+          Please note: Invoices will be generated in 24 hours so you can benefit from volume discounts.
         </p>
       </div>
 
