@@ -30,7 +30,15 @@ BEGIN
     NEW.name, 
     NEW.name, 
     COALESCE(
-      (SELECT first_name || ' ' || last_name FROM user_profiles WHERE id = NEW.created_by_manager_id OR id = NEW.organization_id),
+      -- First try: get name from created_by_manager_id (for Community Managers)
+      (SELECT first_name || ' ' || last_name FROM user_profiles WHERE id = NEW.created_by_manager_id),
+      -- Second try: get Organization Manager name via organization_managers table
+      (SELECT up2.first_name || ' ' || up2.last_name 
+       FROM user_profiles up2
+       JOIN organization_managers om ON om.user_id = up2.id
+       WHERE om.organization_id = NEW.organization_id
+       LIMIT 1),
+      -- Fallback if neither works
       'Unknown Manager'
     ),
     false
