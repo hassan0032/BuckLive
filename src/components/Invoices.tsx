@@ -42,14 +42,16 @@ function Invoices() {
         </div>
       </div>
 
-      {pendingCommunities.length > 0 && (
-        <div className="flex justify-between items-center mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3 text-blue-800">
-          <div className='flex items-center gap-2'>
-            <Info className="w-5 h-5" />
-            <p className="text-sm leading-relaxed">
-              Invoices will be generated in 24 hours so you can benefit from volume discounts. <span className="font-semibold">{pendingCommunities.length}</span> {pendingCommunities.length === 1 ? 'invoice is' : 'invoices are'} pending.
-            </p>
-          </div>
+      <div className="flex justify-between items-center mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3 text-blue-800">
+        <div className='flex items-center gap-2'>
+          <Info className="w-5 h-5" />
+          <p className="text-sm leading-relaxed">
+            Invoices will be generated in 24 hours so you can benefit from volume discounts.{pendingCommunities.length > 0 && (
+              <> <span className="font-semibold">{pendingCommunities.length}</span> {pendingCommunities.length === 1 ? 'invoice is' : 'invoices are'} pending.</>
+            )}
+          </p>
+        </div>
+        {pendingCommunities.length > 0 && (
           <button
             onClick={handleGenerateNow}
             disabled={isGenerating}
@@ -64,8 +66,8 @@ function Invoices() {
               'Generate Now'
             )}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <InvoicesTable
         invoices={invoices}
