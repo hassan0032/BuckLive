@@ -86,8 +86,8 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={isOrganizationManager ? <Navigate to="/organization-manager" replace /> : <Navigate to="/library" replace />} />
-                  <Route path="/library" element={isOrganizationManager ? <Navigate to="/organization-manager" replace /> : <ContentLibrary />} />
-                  <Route path="/content/:id" element={isOrganizationManager ? <Navigate to="/organization-manager" replace /> : <ContentDetail />} />
+                  <Route path="/library" element={<ContentLibrary />} />
+                  <Route path="/content/:id" element={<ContentDetail />} />
                   <Route path="/profile" element={isSharedAccount ? <Navigate to="/library" replace /> : <UserProfile />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/library" replace />} />

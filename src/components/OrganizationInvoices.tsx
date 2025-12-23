@@ -8,7 +8,7 @@ import { InvoicesTable } from './common/InvoicesTable'
 export function OrganizationInvoices() {
   const { user, isOrganizationManager, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const { invoices, loading: invoicesLoading, error } = useOrganizationInvoices()
+  const { invoices, loading: invoicesLoading, error, pendingCommunities, isGenerating, generateNow } = useOrganizationInvoices()
 
   const canView = isOrganizationManager
 
@@ -17,6 +17,14 @@ export function OrganizationInvoices() {
       navigate('/library')
     }
   }, [authLoading, user, canView, navigate])
+
+  const handleGenerateNow = async () => {
+    try {
+      await generateNow()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to generate invoices')
+    }
+  }
 
   if (authLoading || invoicesLoading) {
     return (
@@ -32,11 +40,31 @@ export function OrganizationInvoices() {
     <div>
       <h1 className="text-2xl font-semibold text-[#363f49] mb-6">Invoices</h1>
 
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3 text-blue-800">
-        <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-        <p className="text-sm leading-relaxed">
-          Please note: The invoice for a new community is generated automatically 24 hours after creation.
-        </p>
+      <div className="flex justify-between items-center mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3 text-blue-800">
+        <div className='flex items-center gap-2'>
+          <Info className="w-5 h-5" />
+          <p className="text-sm leading-relaxed">
+            Invoices will be generated in 24 hours so you can benefit from volume discounts.{pendingCommunities.length > 0 && (
+              <> <span className="font-semibold">{pendingCommunities.length}</span> {pendingCommunities.length === 1 ? 'invoice is' : 'invoices are'} pending.</>
+            )}
+          </p>
+        </div>
+        {pendingCommunities.length > 0 && (
+          <button
+            onClick={handleGenerateNow}
+            disabled={isGenerating}
+            className="px-4 py-2 bg-brand-primary text-white text-sm font-medium rounded-md hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              'Generate Now'
+            )}
+          </button>
+        )}
       </div>
 
       <InvoicesTable

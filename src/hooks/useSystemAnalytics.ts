@@ -101,9 +101,9 @@ export const useSystemAnalytics = (communityFilter?: string) => {
       };
 
       const usersByTier = {
-        silver: users?.filter(u => u.payment_tier === PAYMENT_TIER.SILVER).length || 0,
-        gold: users?.filter(u => u.payment_tier === PAYMENT_TIER.GOLD).length || 0,
-        none: users?.filter(u => !u.payment_tier).length || 0,
+        silver: users?.filter(u => u.communities?.membership_tier === PAYMENT_TIER.SILVER).length || 0,
+        gold: users?.filter(u => u.communities?.membership_tier === PAYMENT_TIER.GOLD).length || 0,
+        none: users?.filter(u => !u.communities?.membership_tier).length || 0,
       };
 
       if (userIds.length === 0) {

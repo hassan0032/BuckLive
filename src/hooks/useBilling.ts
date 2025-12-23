@@ -12,12 +12,15 @@ export function useBilling() {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [renewalDate, setRenewalDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingCommunities, setPendingCommunities] = useState<Array<{ id: string; name: string }>>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const loadInvoices = useCallback(async () => {
     if (!enabled || !user?.id) {
       setInvoices([]);
       setStartDate(null);
       setRenewalDate(null);
+      setPendingCommunities([]);
       setIsLoading(false);
       return;
     }
@@ -33,6 +36,7 @@ export function useBilling() {
     if (cmError || !managerCommunities) {
       console.error('Error fetching communities for manager:', cmError);
       setInvoices([]);
+      setPendingCommunities([]);
       setIsLoading(false);
       return;
     }
@@ -41,8 +45,19 @@ export function useBilling() {
 
     if (communityIds.length === 0) {
       setInvoices([]);
+      setPendingCommunities([]);
       setIsLoading(false);
       return;
+    }
+
+    // Fetch community details to check for pending invoices
+    const { data: communities, error: communitiesError } = await supabase
+      .from('communities')
+      .select('id, name')
+      .in('id', communityIds);
+
+    if (communitiesError) {
+      console.error('Error fetching communities:', communitiesError);
     }
 
     // Fetch existing invoices including community info and organization info
@@ -57,9 +72,19 @@ export function useBilling() {
     if (invoiceError) {
       console.error('Error fetching invoices:', invoiceError);
       setInvoices([]);
+      setPendingCommunities([]);
       setIsLoading(false);
       return;
     }
+
+    // Determine which communities have no invoices (pending)
+    const invoicedCommunityIds = new Set(
+      (existingInvoices || []).map((inv: any) => inv.community_id)
+    );
+    const pending = (communities || []).filter(
+      (c) => !invoicedCommunityIds.has(c.id)
+    );
+    setPendingCommunities(pending);
 
     // Map to Invoice type
     const normalized: Invoice[] = (existingInvoices || []).map((inv: any) => ({
@@ -99,6 +124,30 @@ export function useBilling() {
     setIsLoading(false);
   }, [enabled, user?.id]);
 
+  const generateNow = useCallback(async () => {
+    if (pendingCommunities.length === 0) return;
+
+    setIsGenerating(true);
+    try {
+      const { error } = await supabase.functions.invoke('create-first-invoice', {
+        body: {
+          force: true,
+          communityIds: pendingCommunities.map((c) => c.id),
+        },
+      });
+
+      if (error) throw error;
+
+      // Reload invoices after generation
+      await loadInvoices();
+    } catch (error) {
+      console.error('Error generating invoices:', error);
+      throw error;
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [pendingCommunities, loadInvoices]);
+
   useEffect(() => {
     if (authLoading) {
       setIsLoading(true);
@@ -114,11 +163,14 @@ export function useBilling() {
       renewalDate,
       invoices,
       isLoading,
+      pendingCommunities,
+      isGenerating,
+      generateNow,
       refresh: async () => {
         if (!authLoading) await loadInvoices();
       },
     }),
-    [enabled, startDate, renewalDate, invoices, isLoading, authLoading, loadInvoices]
+    [enabled, startDate, renewalDate, invoices, isLoading, pendingCommunities, isGenerating, generateNow, authLoading, loadInvoices]
   );
 }
 

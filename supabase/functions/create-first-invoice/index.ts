@@ -79,6 +79,20 @@ Deno.serve(async (req: Request) => {
       throw new Error("Missing Supabase environment variables");
     }
 
+    // Parse request body for optional parameters
+    let force = false;
+    let requestedCommunityIds: string[] | null = null;
+
+    try {
+      const body = await req.json();
+      force = body.force === true;
+      requestedCommunityIds = Array.isArray(body.communityIds) ? body.communityIds : null;
+      console.log(`Request parameters: force=${force}, communityIds=${requestedCommunityIds?.length || 'all'}`);
+    } catch {
+      // No body or invalid JSON - use defaults
+      console.log('No request body - using default parameters');
+    }
+
     // Use Service Role Key for admin operations
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
     const today = getCurrentDateInNY();
@@ -126,26 +140,39 @@ Deno.serve(async (req: Request) => {
     );
 
     // Filter to communities without any invoice
-    const communitiesWithoutInvoice = allCommunities.filter(
+    let communitiesWithoutInvoice = allCommunities.filter(
       (c: { id: string }) => !invoicedCommunityIds.has(c.id)
     );
+
+    // If specific community IDs were requested, filter to only those
+    if (requestedCommunityIds && requestedCommunityIds.length > 0) {
+      const requestedSet = new Set(requestedCommunityIds);
+      communitiesWithoutInvoice = communitiesWithoutInvoice.filter(
+        (c: { id: string }) => requestedSet.has(c.id)
+      );
+      console.log(`Filtered to ${communitiesWithoutInvoice.length} requested communities.`);
+    }
 
     console.log(`Found ${communitiesWithoutInvoice.length} communities without invoices.`);
 
     for (const community of communitiesWithoutInvoice) {
       const { id: communityId, name: communityName, code: communityCode, membership_tier: tier, created_at: createdAt } = community;
 
-      // 2. Check 24-hour delay
-      const createdAtDate = new Date(createdAt);
-      const currentTime = new Date();
+      // 2. Check 24-hour delay (skip if force=true)
+      if (!force) {
+        const createdAtDate = new Date(createdAt);
+        const currentTime = new Date();
 
-      // Calculate time difference in hours
-      const diffInHours = (currentTime.getTime() - createdAtDate.getTime()) / (1000 * 60 * 60);
+        // Calculate time difference in hours
+        const diffInHours = (currentTime.getTime() - createdAtDate.getTime()) / (1000 * 60 * 60);
 
-      if (diffInHours < 24) {
-        console.log(`Skipping community ${communityName}: Created ${diffInHours.toFixed(2)} hours ago (needs 24h)`);
-        results.skippedTooEarly++;
-        continue;
+        if (diffInHours < 24) {
+          console.log(`Skipping community ${communityName}: Created ${diffInHours.toFixed(2)} hours ago (needs 24h)`);
+          results.skippedTooEarly++;
+          continue;
+        }
+      } else {
+        console.log(`Force mode enabled - bypassing 24-hour delay for ${communityName}`);
       }
 
       console.log(`Processing first invoice for community: ${communityName} (Created: ${createdAt})`);

@@ -383,20 +383,21 @@ export function InvoicesTable({
 
             <div className="text-right font-medium">{row.amountDisplay}</div>
 
-            <div className="text-right">
+            <div className="flex justify-end items-center gap-2">
               <button
+                title="Download invoice"
+                className="flex items-center gap-2 rounded-md p-2 bg-brand-primary hover:bg-brand-primary/80 text-xs text-white"
                 onClick={() => handleDownload(row.id)}
-                className="inline-flex items-center gap-2 text-white bg-brand-primary hover:bg-brand-primary/90 px-3 py-2 rounded-md text-sm"
               >
                 <Download className="w-4 h-4" /> PDF
               </button>
               {isAdmin && deleteInvoice && (
                 <button
-                  onClick={() => handleDeleteClick(row.id)}
-                  className="text-red-600 hover:text-red-700 inline-block ml-2"
                   title="Delete invoice"
+                  className="rounded-md p-2 bg-red-500 hover:bg-red-500/80 text-xs text-white"
+                  onClick={() => handleDeleteClick(row.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               )}
             </div>
