@@ -1,22 +1,24 @@
 import { BarChart3, Edit, FileText, Image as ImageIcon, Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
+import { useAllUsers } from '../hooks/useAllUsers';
 import { useCommunities } from '../hooks/useCommunities';
+import { useCommunityManagers } from '../hooks/useCommunityManagers';
 import { useContent } from '../hooks/useContent';
 import { useDocuments } from '../hooks/useDocuments';
 import { supabase } from '../lib/supabase';
-import { Community, CommunityDocument, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier } from '../types';
+import { Community, CommunityDocument, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier, ROLE } from '../types';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import AdminNotifications from './AdminNotifications';
 import { AdminOrganizationManagement } from './AdminOrganizationManagement';
 import { AdminUserManagement } from './AdminUserManagement';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
+import { EntitySelector } from './common/EntitySelector';
 import { EnhancedContentForm } from './EnhancedContentForm';
 import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
 import { PDFUploader } from './PDFUploader';
-import { EntitySelector } from './common/EntitySelector';
-import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 
 interface CommunityFormData {
   name: string;
@@ -61,7 +63,6 @@ export const AdminDashboard: React.FC = () => {
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
-  const { organizations } = useAdminOrganizations();
   const {
     documents: storedPdfs,
     loading: pdfsLoading,
@@ -78,7 +79,11 @@ export const AdminDashboard: React.FC = () => {
     }
     return 'content';
   });
-  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents'>('details');
+  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents' | 'managers'>('details');
+  const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
+  const [managerSearchTerm, setManagerSearchTerm] = useState<string>('');
+
+  const { organizations } = useAdminOrganizations();
   const {
     loading: communitiesLoading,
     communities,
@@ -86,7 +91,31 @@ export const AdminDashboard: React.FC = () => {
     updateCommunity,
     deleteCommunity,
   } = useCommunities();
-  const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
+  const {
+    managers,
+    loading: managersLoading,
+    addManager,
+    removeManager,
+  } = useCommunityManagers(editingCommunity || undefined);
+
+  // Fetch all community managers for selection
+  const { users: allUsers, loading: usersLoading } = useAllUsers({ role: ROLE.COMMUNITY_MANAGER });
+
+  // Filter out users who are already managers of this community
+  const availableUsers = allUsers.filter(
+    user => !managers.some(manager => manager.user_id === user.id)
+  );
+
+  // Filter available users by search term
+  const filteredUsers = managerSearchTerm.trim()
+    ? availableUsers.filter(user => {
+      const searchLower = managerSearchTerm.toLowerCase();
+      const fullName = `${user.profile?.first_name} ${user.profile?.last_name}`.toLowerCase();
+      const email = user.email.toLowerCase();
+      return fullName.includes(searchLower) || email.includes(searchLower);
+    })
+    : [];
+
   const [deletingPdfId, setDeletingPdfId] = useState<string | null>(null);
 
   // Modal States
@@ -778,6 +807,16 @@ export const AdminDashboard: React.FC = () => {
                     >
                       PDF Library
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommunityModalTab('managers')}
+                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${communityModalTab === 'managers'
+                        ? 'border-brand-primary text-brand-primary'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                      Managers
+                    </button>
                   </nav>
                 </div>
               )}
@@ -997,6 +1036,133 @@ export const AdminDashboard: React.FC = () => {
                     )}
                     {pdfUploading && (
                       <p className="text-xs text-gray-500 mt-2">Uploading...</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {editingCommunity && communityModalTab === 'managers' && (
+                <div className="space-y-8 py-2">
+                  {/* Add Manager Section - Comes First */}
+                  <div>
+                    <div className="relative">
+                      <label className="block mb-1 text-sm font-medium text-gray-700">
+                        Add Manager
+                      </label>
+                      <input
+                        type="text"
+                        value={managerSearchTerm}
+                        onChange={(e) => setManagerSearchTerm(e.target.value)}
+                        placeholder="Search users by name or email..."
+                        className="focus:ring-2 focus:ring-brand-primary focus:border-brand-primary border border-gray-300 rounded-lg px-3 py-2 w-full"
+                      />
+
+                      {/* Search Results Dropdown */}
+                      {managerSearchTerm.trim() && (
+                        <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {usersLoading ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-5 w-5 animate-spin text-brand-primary" />
+                            </div>
+                          ) : filteredUsers.length === 0 ? (
+                            <div className="px-4 py-3 text-sm text-gray-500">
+                              No users found
+                            </div>
+                          ) : (
+                            filteredUsers.map(user => {
+                              const initials = `${user.profile?.first_name?.charAt(0) || ''}${user.profile?.last_name?.charAt(0) || ''}`.toUpperCase();
+                              return (
+                                <div
+                                  key={user.id}
+                                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-600">
+                                      {initials}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-semibold text-[#363f49]">
+                                        {user.profile?.first_name} {user.profile?.last_name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        ({user.email})
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const { error } = await addManager(user.id);
+                                      if (error) {
+                                        alert(`Failed to add manager: ${error}`);
+                                      } else {
+                                        setManagerSearchTerm('');
+                                      }
+                                    }}
+                                    className="px-3 py-1 text-sm font-bold text-brand-primary hover:text-brand-d-blue uppercase"
+                                  >
+                                    ADD
+                                  </button>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Current Managers Section */}
+                  <div>
+                    <h3 className="mb-1 text-sm font-semibold text-gray-700">
+                      Current Managers
+                    </h3>
+                    {managersLoading && !managers.length ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-6 w-6 animate-spin text-brand-primary" />
+                      </div>
+                    ) : managers.length === 0 ? (
+                      <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-4">
+                        No managers assigned yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {managers.map((manager) => {
+                          const initials = `${manager.user_profiles?.first_name?.charAt(0) || ''}${manager.user_profiles?.last_name?.charAt(0) || ''}`.toUpperCase();
+                          return (
+                            <div
+                              key={manager.id}
+                              className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-4"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-600">
+                                  {initials}
+                                </div>
+                                <div>
+                                  <p className="text-base font-semibold text-[#363f49]">
+                                    {manager.user_profiles?.first_name} {manager.user_profiles?.last_name}
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    {manager.user_profiles?.email}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const { error } = await removeManager(manager.id);
+                                  if (error) {
+                                    alert(`Failed to remove manager: ${error}`);
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-700 transition-colors p-2"
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 </div>
