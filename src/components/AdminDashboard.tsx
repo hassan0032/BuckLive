@@ -137,6 +137,10 @@ export const AdminDashboard: React.FC = () => {
     }
   }, [location.state]);
 
+  useEffect(() => {
+    setManagerSearchTerm('');
+  }, [communityModalTab]);
+
   const handleSetActiveTab = (tab: (typeof allowedTabs)[number]) => {
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
