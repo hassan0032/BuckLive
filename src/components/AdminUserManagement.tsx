@@ -9,6 +9,7 @@ import { ROLE, Role, ROLE_DISPLAY_NAME } from '../types';
 import { cn } from '../utils/helper';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { EntitySelector } from './common/EntitySelector';
+import { SearchableEntitySelector } from './common/SearchableEntitySelector';
 
 interface FormData {
   email: string;
@@ -624,7 +625,7 @@ export const AdminUserManagement: React.FC = () => {
                 )}
 
                 {formData.role === ROLE.ORGANIZATION_MANAGER && (
-                  <EntitySelector
+                  <SearchableEntitySelector
                     mode="single"
                     required={!editingUser}
                     label="Organization"
