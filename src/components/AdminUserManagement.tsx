@@ -625,7 +625,7 @@ export const AdminUserManagement: React.FC = () => {
                 )}
 
                 {formData.role === ROLE.ORGANIZATION_MANAGER && (
-                  <EntitySelector
+                  <SearchableEntitySelector
                     mode="single"
                     required={!editingUser}
                     label="Organization"
