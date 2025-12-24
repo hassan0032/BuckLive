@@ -19,6 +19,7 @@ import { EnhancedContentForm } from './EnhancedContentForm';
 import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
 import { PDFUploader } from './PDFUploader';
+import { SearchableEntitySelector } from './common/SearchableEntitySelector';
 
 interface CommunityFormData {
   name: string;
@@ -928,7 +929,7 @@ export const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <EntitySelector
+                    <SearchableEntitySelector
                       mode="single"
                       label="Organization (Optional)"
                       entityName="organization"
@@ -938,6 +939,7 @@ export const AdminDashboard: React.FC = () => {
                       onSelect={(id) => setCommunityFormData({ ...communityFormData, organization_id: id as string })}
                     />
                   </div>
+
 
                   <div className="flex items-center">
                     <input
