@@ -125,6 +125,7 @@ export interface Community {
   created_at: string;
   updated_at: string;
   created_by_manager_id?: string;
+  creator_id?: string | null;
   member_count?: number;
   is_sharable?: boolean;
   sharable_token?: string | null;
@@ -229,6 +230,7 @@ export interface Notification {
   title: string | null;
   content: string | null;
   name: string | null; // Legacy field for simple user notifications
+  community_id?: string | null;
   // Read tracking
   is_read: boolean;
   read_at: string | null;
