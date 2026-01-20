@@ -1,4 +1,4 @@
-import html2pdf from 'html2pdf.js'
+import html2pdf from 'html2pdf.js';
 import { Calendar, Check, Download, Edit2, Loader2, X, Trash2 } from 'lucide-react'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { useMemo, useState } from 'react'
