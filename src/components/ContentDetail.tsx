@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useContent } from '../hooks/useContent';
 import { useContentTracking } from '../hooks/useContentTracking';
 import { getPDFUrl, getThumbnailUrl } from '../lib/supabase';
-import { Content } from '../types';
+import { Content, getContentTypeBadgeLabel } from '../types';
 import ContentFeedbackForm from './ContentFeedbackForm';
 
 export const ContentDetail: React.FC = () => {
@@ -158,7 +158,7 @@ export const ContentDetail: React.FC = () => {
         <div className="p-8">
           <div className="flex items-center gap-3 mb-4">
             <span className={`px-3 py-1 rounded-md text-sm font-medium ${getTypeColor(singleContent.type)}`}>
-              {singleContent.type.toUpperCase()}
+              {getContentTypeBadgeLabel(singleContent.type)}
             </span>
             {singleContent.required_tier === 'gold' && (
               <span className="bg-yellow-500 text-white px-3 py-1 rounded-md text-sm font-medium">
@@ -295,7 +295,7 @@ export const ContentDetail: React.FC = () => {
                       </div>
                     )}
                     <div className={`absolute top-2 left-2 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`}>
-                      {item.type.toUpperCase()}
+                      {getContentTypeBadgeLabel(item.type)}
                     </div>
                   </div>
                   <div className="p-4">

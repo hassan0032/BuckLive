@@ -41,6 +41,32 @@ export const CONTENT_TYPE = {
 } as const;
 export type ContentType = typeof CONTENT_TYPE[keyof typeof CONTENT_TYPE];
 
+export const CONTENT_TYPE_DISPLAY_NAME = {
+  [CONTENT_TYPE.VIDEO]: 'Videos',
+  [CONTENT_TYPE.PDF]: 'Resources',
+  [CONTENT_TYPE.BLOG]: 'Articles',
+} as const;
+
+export const CONTENT_TYPE_DISPLAY_NAME_SINGULAR = {
+  [CONTENT_TYPE.VIDEO]: 'Video',
+  [CONTENT_TYPE.PDF]: 'Resource',
+  [CONTENT_TYPE.BLOG]: 'Article',
+} as const;
+
+export const CONTENT_TYPE_DISPLAY_BADGE = {
+  [CONTENT_TYPE.VIDEO]: 'VIDEO',
+  [CONTENT_TYPE.PDF]: 'RESOURCE',
+  [CONTENT_TYPE.BLOG]: 'ARTICLE',
+} as const;
+
+export function getContentTypeDisplayName(type: ContentType, singular = false): string {
+  return singular ? CONTENT_TYPE_DISPLAY_NAME_SINGULAR[type] : CONTENT_TYPE_DISPLAY_NAME[type];
+}
+
+export function getContentTypeBadgeLabel(type: ContentType): string {
+  return CONTENT_TYPE_DISPLAY_BADGE[type];
+}
+
 export const CONTENT_STATUS = {
   DRAFT: 'draft',
   PUBLISHED: 'published',

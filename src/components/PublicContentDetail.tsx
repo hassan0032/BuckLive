@@ -14,7 +14,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useContentTracking } from '../hooks/useContentTracking';
 import { usePublicShare } from '../hooks/usePublicShare';
 import { getPDFUrl, getThumbnailUrl } from '../lib/supabase';
-import { Content } from '../types';
+import { Content, getContentTypeBadgeLabel } from '../types';
 import ContentFeedbackForm from './ContentFeedbackForm';
 
 export const PublicContentDetail: React.FC = () => {
@@ -218,7 +218,7 @@ export const PublicContentDetail: React.FC = () => {
           <div className="p-8">
             <div className="flex items-center gap-3 mb-4">
               <span className={`px-3 py-1 rounded-md text-sm font-medium ${getTypeColor(content.type)}`}>
-                {content.type.toUpperCase()}
+                {getContentTypeBadgeLabel(content.type)}
               </span>
               {content.required_tier.toLowerCase() === 'gold' && (
                 <span className="bg-yellow-500 text-white px-3 py-1 rounded-md text-sm font-medium">
