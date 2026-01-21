@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { getThumbnailUrl } from '../lib/supabase';
-import { Content, CONTENT_TYPE, ContentType, getContentTypeBadgeLabel, PAYMENT_TIER } from '../types';
+import { Content, CONTENT_TYPE, ContentType, PAYMENT_TIER } from '../types';
 import { cn } from '../utils/helper';
 
 export const ContentLibrary: React.FC = () => {
@@ -373,8 +373,8 @@ export const ContentLibrary: React.FC = () => {
             >
               <option value="">All Types</option>
               <option value="video">Videos</option>
-              <option value="pdf">Resources</option>
-              <option value="blog">Articles</option>
+              <option value="pdf">PDFs</option>
+              <option value="blog">Blog Posts</option>
             </select>
 
             <select
@@ -422,7 +422,7 @@ export const ContentLibrary: React.FC = () => {
 
                 {/* Type Badge */}
                 <div className={cn(`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`)}>
-                  {getContentTypeBadgeLabel(item.type)}
+                  {item.type.toUpperCase()}
                 </div>
 
                 {/* Tier Badge */}
@@ -495,7 +495,7 @@ export const ContentLibrary: React.FC = () => {
                   onClick={() => navigate(`/content/${item.id}`)}
                   className="w-full mt-3 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm"
                 >
-                  {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download Resource' : 'Read Article'}
+                  {item.type === 'video' ? 'Watch Now' : item.type === 'pdf' ? 'Download PDF' : 'Read Article'}
                 </button>
               </div>
             </div>

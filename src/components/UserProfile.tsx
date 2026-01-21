@@ -295,7 +295,7 @@ export const UserProfile: React.FC = () => {
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-lg">
                 <p className="text-2xl font-bold text-purple-600">{stats.pdfsDownloaded}</p>
-                <p className="text-sm text-gray-600">Resources Downloaded</p>
+                <p className="text-sm text-gray-600">PDFs Downloaded</p>
               </div>
             </div>
           </div>

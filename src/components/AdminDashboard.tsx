@@ -8,7 +8,7 @@ import { useCommunityManagers } from '../hooks/useCommunityManagers';
 import { useContent } from '../hooks/useContent';
 import { useDocuments } from '../hooks/useDocuments';
 import { supabase } from '../lib/supabase';
-import { Community, CommunityDocument, Content, CONTENT_STATUS, getContentTypeBadgeLabel, PAYMENT_TIER, PaymentTier, ROLE } from '../types';
+import { Community, CommunityDocument, Content, CONTENT_STATUS, PAYMENT_TIER, PaymentTier, ROLE } from '../types';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import AdminNotifications from './AdminNotifications';
 import { AdminOrganizationManagement } from './AdminOrganizationManagement';
@@ -473,7 +473,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">Resources</p>
+                <p className="text-sm font-medium text-gray-600">PDFs</p>
                 <p className="text-3xl font-bold text-brand-primary">{stats.pdfs}</p>
               </div>
               <FileText className="h-8 w-8 text-brand-primary" />
@@ -483,7 +483,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">Articles</p>
+                <p className="text-sm font-medium text-gray-600">Blog Posts</p>
                 <p className="text-3xl font-bold text-green-600">{stats.blogs}</p>
               </div>
               <Upload className="h-8 w-8 text-green-600" />
@@ -559,7 +559,7 @@ export const AdminDashboard: React.FC = () => {
                             : 'bg-green-100 text-green-700'
                           }`}
                       >
-                        {getContentTypeBadgeLabel(item.type)}
+                        {item.type.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
