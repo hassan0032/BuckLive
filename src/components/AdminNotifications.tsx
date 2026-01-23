@@ -1,5 +1,5 @@
-import React, { FormEvent, useState } from 'react';
-import { Loader2, PlusCircle, Trash2, X, Bell, CheckCircle, Circle } from 'lucide-react';
+import React, { FormEvent, useState, useRef } from 'react';
+import { Loader2, PlusCircle, Trash2, X, Bell, CheckCircle, Circle, Upload, FileText } from 'lucide-react';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import { useNotificationContext } from '../contexts/NotificationContext';
 
@@ -38,11 +38,15 @@ const AdminNotifications: React.FC = () => {
   const [content, setContent] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
     setTitle('');
     setContent('');
     setFormError(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const closeModal = () => {
@@ -65,7 +69,11 @@ const AdminNotifications: React.FC = () => {
       return;
     }
 
-    const { error: createError } = await createNotification({ title, content });
+    const { error: createError } = await createNotification({
+      title,
+      content,
+      pdfFile: selectedFile || undefined
+    });
 
     if (createError) {
       setFormError(createError);
@@ -358,6 +366,57 @@ const AdminNotifications: React.FC = () => {
                   rows={5}
                   placeholder="Enter notification content"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Attachment (Optional)</label>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {selectedFile ? 'Change PDF' : 'Upload PDF'}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.type !== 'application/pdf') {
+                          setFormError('Only PDF files are allowed.');
+                          return;
+                        }
+                        if (file.size > 50 * 1024 * 1024) { // 50MB
+                          setFormError('File size must be less than 50MB.');
+                          return;
+                        }
+                        setFormError(null);
+                        setSelectedFile(file);
+                      }
+                    }}
+                  />
+                  {selectedFile && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate max-w-[200px]">{selectedFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        className="text-gray-400 hover:text-red-500 ml-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">

@@ -264,6 +264,8 @@ export interface Notification {
   created_at: string;
   updated_at: string | null;
   // Optional user profile join (for admin view)
+  pdf_url?: string | null;
+  pdf_storage_path?: string | null;
   user_profiles?: {
     first_name: string;
     last_name: string;

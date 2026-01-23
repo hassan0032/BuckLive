@@ -6,6 +6,7 @@ import { useNotificationContext } from '../contexts/NotificationContext';
 interface CreateNotificationInput {
   title: string;
   content: string;
+  pdfFile?: File;
 }
 
 interface CreateNotificationResult {
@@ -71,12 +72,46 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
     }
   }, [includeReadStatus]);
 
+  const uploadPdf = useCallback(async (file: File): Promise<{ pdfUrl: string; pdfStoragePath: string } | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('notification-pdfs')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('notification-pdfs')
+        .getPublicUrl(filePath);
+
+      return { pdfUrl: publicUrl, pdfStoragePath: filePath };
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw new Error('Failed to upload PDF. Please try again.');
+    }
+  }, []);
+
   const createAdminNotification = useCallback(
-    async ({ title, content }: CreateNotificationInput): Promise<CreateNotificationResult> => {
+    async ({ title, content, pdfFile }: CreateNotificationInput): Promise<CreateNotificationResult> => {
       try {
         setAdminCreating(true);
         const trimmedTitle = title.trim();
         const trimmedContent = content.trim();
+
+        let pdfUrl: string | null = null;
+        let pdfStoragePath: string | null = null;
+
+        if (pdfFile) {
+          const uploadResult = await uploadPdf(pdfFile);
+          if (uploadResult) {
+            pdfUrl = uploadResult.pdfUrl;
+            pdfStoragePath = uploadResult.pdfStoragePath;
+          }
+        }
 
         const { error: insertError } = await supabase
           .from('notifications')
@@ -86,6 +121,8 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
               user_id: null, // NULL triggers broadcast
               title: trimmedTitle,
               content: trimmedContent,
+              pdf_url: pdfUrl,
+              pdf_storage_path: pdfStoragePath,
             },
           ]);
 
@@ -102,7 +139,7 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
         setAdminCreating(false);
       }
     },
-    [fetchAdminNotifications]
+    [fetchAdminNotifications, uploadPdf]
   );
 
   const deleteAdminNotification = useCallback(

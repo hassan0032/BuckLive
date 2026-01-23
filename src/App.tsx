@@ -96,7 +96,7 @@ function App() {
                   <Route
                     path="/notifications"
                     element={
-                      isCommunityManager ? <CommunityManagerNotifications /> : <Navigate to="/library" replace />
+                      (isCommunityManager || isOrganizationManager) ? <CommunityManagerNotifications /> : <Navigate to="/library" replace />
                     }
                   />
                   <Route path="*" element={isOrganizationManager ? <Navigate to="/organization-manager" replace /> : <Navigate to="/library" replace />} />

@@ -6,6 +6,8 @@ import { useAuth } from './AuthContext';
 interface CreateNotificationInput {
     title: string;
     content: string;
+    pdfUrl?: string;
+    pdfStoragePath?: string;
 }
 
 interface CreateNotificationResult {
@@ -40,7 +42,7 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user, isCommunityManager, isAdmin } = useAuth();
+    const { user, isCommunityManager, isAdmin, isOrganizationManager } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // Determine notification type based on user role
     const notificationType = isAdmin ? ROLE.COMMUNITY_MANAGER : ROLE.ADMIN;
-    const shouldFetch = (isCommunityManager || isAdmin) && user;
+    const shouldFetch = (isCommunityManager || isAdmin || isOrganizationManager) && user;
 
     // Calculate unread count whenever notifications change
     useEffect(() => {
@@ -95,10 +97,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } finally {
             setLoading(false);
         }
-    }, [user, isCommunityManager, isAdmin, shouldFetch]);
+    }, [user, isCommunityManager, isAdmin, isOrganizationManager, shouldFetch]);
 
     const createNotification = useCallback(
-        async ({ title, content }: CreateNotificationInput): Promise<CreateNotificationResult> => {
+        async ({ title, content, pdfUrl, pdfStoragePath }: CreateNotificationInput): Promise<CreateNotificationResult> => {
             try {
                 setCreating(true);
 
@@ -113,6 +115,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                             user_id: null, // NULL triggers the broadcast to all community managers
                             title: trimmedTitle,
                             content: trimmedContent,
+                            pdf_url: pdfUrl || null,
+                            pdf_storage_path: pdfStoragePath || null,
                         },
                     ]);
 

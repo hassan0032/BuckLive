@@ -1,4 +1,4 @@
-import { Bell, Check } from 'lucide-react';
+import { Bell, Check, FileText } from 'lucide-react';
 import React from 'react';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 
@@ -116,6 +116,20 @@ const CommunityManagerNotifications: React.FC = () => {
                                         <p className={`${isUnread ? 'text-gray-700' : 'text-gray-600'} whitespace-pre-line leading-relaxed`}>
                                             {notification.content}
                                         </p>
+                                        {notification.pdf_url && (
+                                            <div className="mt-3">
+                                                <a
+                                                    href={notification.pdf_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 border border-gray-200 transition-colors"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <FileText className="h-4 w-4 text-brand-primary" />
+                                                    View Attachment
+                                                </a>
+                                            </div>
+                                        )}
                                         {isUnread && (
                                             markingAsReadId === notification.id ? (
                                                 <p className="text-xs text-brand-primary mt-2">Marking as read...</p>

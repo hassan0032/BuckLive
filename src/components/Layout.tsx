@@ -18,7 +18,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Fetch unread count for managers (admin notifications)
   const { unreadCount: managerUnreadCount } = useAdminNotifications({
-    includeReadStatus: isCommunityManager && !isAdmin
+    includeReadStatus: (isCommunityManager || isOrganizationManager) && !isAdmin
   });
 
   // Fetch unread count for admins (community notifications) - uses unified context
@@ -80,7 +80,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="text-sm text-gray-700">
                 Welcome, {user?.profile?.first_name || user?.email}
               </div>
-              {(isCommunityManager || isAdmin) && (
+              {(isCommunityManager || isOrganizationManager || isAdmin) && (
                 <button
                   onClick={() => {
                     if (isAdmin) {
