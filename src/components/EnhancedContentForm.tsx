@@ -42,6 +42,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
     blog_content_draft: '',
     vimeo_video_id: '',
     status: 'published' as 'draft' | 'published',
+    enable_questions: false,
   });
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         blog_content_draft: editingContent.blog_content_draft || '',
         vimeo_video_id: editingContent.vimeo_video_id || '',
         status: editingContent.status || 'published',
+        enable_questions: editingContent.enable_questions || false,
       });
     }
   }, [editingContent]);
@@ -174,6 +176,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         required_tier: formData.required_tier,
         status: isDraft ? 'draft' : 'published',
         vimeo_video_id: formData.vimeo_video_id || '',
+        enable_questions: formData.enable_questions,
       };
 
       if (formData.type === 'video' && formData.duration) {
@@ -389,6 +392,19 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                     />
                   </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="enable-questions"
+                    checked={formData.enable_questions}
+                    onChange={(e) => setFormData({ ...formData, enable_questions: e.target.checked })}
+                    className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
+                  />
+                  <label htmlFor="enable-questions" className="text-sm font-medium text-gray-700">
+                    Enable question submissions for this content
+                  </label>
                 </div>
               </div>
             )}

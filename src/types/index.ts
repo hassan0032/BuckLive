@@ -215,6 +215,7 @@ export interface Content {
   status?: ContentStatus;
   vimeo_video_id?: string;
   published_at?: string;
+  enable_questions?: boolean;
 }
 
 export interface ContentVersion {
@@ -237,6 +238,15 @@ export interface ContentFeedback {
   email: string;
   comment: string | null;
   was_helpful: boolean;
+  created_at: string;
+}
+
+export interface ContentQuestion {
+  id: string;
+  content_id: string;
+  name: string;
+  email: string | null;
+  question: string;
   created_at: string;
 }
 

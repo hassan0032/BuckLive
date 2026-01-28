@@ -7,6 +7,7 @@ import { useContentTracking } from '../hooks/useContentTracking';
 import { getPDFUrl, getThumbnailUrl } from '../lib/supabase';
 import { Content, getContentTypeBadgeLabel } from '../types';
 import ContentFeedbackForm from './ContentFeedbackForm';
+import ContentQuestionForm from './ContentQuestionForm';
 
 export const ContentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -269,6 +270,14 @@ export const ContentDetail: React.FC = () => {
 
       {/* Feedback Section */}
       <ContentFeedbackForm contentId={singleContent.id} />
+
+      {/* Question Section */}
+      {singleContent.enable_questions && (
+        <ContentQuestionForm 
+          contentId={singleContent.id} 
+          contentTitle={singleContent.title}
+        />
+      )}
 
       {relatedContent.length > 0 && (
         <div className="space-y-4">
