@@ -125,11 +125,39 @@ export const PublicShareView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-beige-light to-brand-beige">
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-semibold text-[#363f49] mb-2">{shareInfo?.name}'s Library</h1>
+      {/* Header */}
+      <div className="bg-white shadow-sm mb-6">
+        <div className="container mx-auto px-4 py-6">
+          {/* Mobile: Stacked layout */}
+          <div className="flex flex-col items-center gap-4 md:hidden">
+            <img src="/live-logo.png" alt="LIVE - Longevity-Inspired Vitality Education" className="h-12 w-auto" />
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-[#363f49]">
+                {shareInfo?.name}
+              </h1>
+              <p className="text-lg font-semibold text-brand-primary mt-1">
+                LIVE Library
+              </p>
+            </div>
+          </div>
+          {/* Desktop: Logo left, text truly centered */}
+          <div className="hidden md:block relative min-h-[3rem]">
+            <div className="absolute left-0 top-1/2 -translate-y-1/2">
+              <img src="/live-logo.png" alt="LIVE - Longevity-Inspired Vitality Education" className="h-12 w-auto" />
+            </div>
+            <div className="text-center">
+              <h1 className="text-2xl lg:text-3xl font-bold text-[#363f49]">
+                {shareInfo?.name}
+              </h1>
+              <p className="text-lg lg:text-xl font-semibold text-brand-primary mt-1">
+                LIVE Library
+              </p>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className="container mx-auto px-4 pb-8 space-y-6">
 
         {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
