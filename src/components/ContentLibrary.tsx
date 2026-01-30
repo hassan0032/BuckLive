@@ -420,17 +420,20 @@ export const ContentLibrary: React.FC = () => {
                   </div>
                 )}
 
-                {/* Type Badge */}
-                <div className={cn(`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`)}>
-                  {getContentTypeBadgeLabel(item.type)}
-                </div>
-
-                {/* Tier Badge */}
-                {item.required_tier === PAYMENT_TIER.GOLD && (
-                  <div className="absolute top-3 left-20 bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-medium">
-                    {PAYMENT_TIER.GOLD.toUpperCase()}
+                {/* Badges Container */}
+                <div className="absolute top-3 left-3 flex items-center gap-2">
+                  {/* Type Badge */}
+                  <div className={cn(`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(item.type)}`)}>
+                    {getContentTypeBadgeLabel(item.type)}
                   </div>
-                )}
+
+                  {/* Tier Badge */}
+                  {item.required_tier === PAYMENT_TIER.GOLD && (
+                    <div className="bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-medium">
+                      {PAYMENT_TIER.GOLD.toUpperCase()}
+                    </div>
+                  )}
+                </div>
 
                 {/* Duration/Size Badge */}
                 {((item.type === 'video' && (item.duration ?? 0) > 0) || ((item.file_size ?? 0) > 0)) ? (
