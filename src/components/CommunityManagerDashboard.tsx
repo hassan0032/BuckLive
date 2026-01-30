@@ -1,14 +1,14 @@
-import { BarChart3, Building2, Check, Clock, Copy, Eye, Link2, Plus, RefreshCw, TrendingUp, Users } from 'lucide-react';
+import { BarChart3, Building2, Clock, Eye, Plus, TrendingUp, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCommunityAnalytics } from '../hooks/useCommunityAnalytics';
 import { useManagedCommunities } from '../hooks/useManagedCommunities';
-import { supabase } from '../lib/supabase';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { CommunityManagement } from './CommunityManagement';
 import CommunityManagerInvoices from './CommunityManagerInvoices';
 import { UserManagement } from './UserManagement';
 import Documents from './Documents';
+import { ShareLinkManagement } from './ShareLinkManagement';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -25,87 +25,6 @@ export const CommunityManagerDashboard: React.FC = () => {
   }, [communities, selectedCommunityId]);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
-  const [shareLinkCopied, setShareLinkCopied] = useState(false);
-  const [updatingShareLink, setUpdatingShareLink] = useState(false);
-  const [regeneratingToken, setRegeneratingToken] = useState(false);
-
-  const generateShareToken = () => {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < 10; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
-
-  const handleToggleShareLink = async (enabled: boolean) => {
-    if (!selectedCommunityId) return;
-
-    setUpdatingShareLink(true);
-    try {
-      const updateData: any = { is_sharable: enabled };
-
-      let newToken: string | undefined = selectedCommunity?.sharable_token || undefined;
-
-      if (enabled && !selectedCommunity?.sharable_token) {
-        newToken = generateShareToken();
-        updateData.sharable_token = newToken;
-      }
-
-      const { error } = await supabase
-        .from('communities')
-        .update(updateData)
-        .eq('id', selectedCommunityId);
-
-      if (error) throw error;
-
-      updateCommunity(selectedCommunityId, {
-        is_sharable: enabled,
-        sharable_token: newToken,
-      });
-    } catch (err) {
-      console.error('Error updating share link:', err);
-      alert('Failed to update share link. Please try again.');
-    } finally {
-      setUpdatingShareLink(false);
-    }
-  };
-
-  const handleRegenerateToken = async () => {
-    if (!selectedCommunityId) return;
-
-    setUpdatingShareLink(true);
-    setRegeneratingToken(true);
-    try {
-      const newToken = generateShareToken();
-      const { error } = await supabase
-        .from('communities')
-        .update({ sharable_token: newToken })
-        .eq('id', selectedCommunityId);
-
-      if (error) throw error;
-
-      updateCommunity(selectedCommunityId, {
-        sharable_token: newToken,
-      });
-    } catch (err) {
-      console.error('Error regenerating token:', err);
-      alert('Failed to regenerate token. Please try again.');
-    } finally {
-      setUpdatingShareLink(false);
-      setRegeneratingToken(false);
-    }
-  };
-
-  const handleCopyShareLink = () => {
-    if (!selectedCommunity?.sharable_token) return;
-
-    const shareLink = `${window.location.origin}/public/${selectedCommunity.sharable_token}`;
-    navigator.clipboard.writeText(shareLink).then(() => {
-      setShareLinkCopied(true);
-      setTimeout(() => setShareLinkCopied(false), 2000);
-    });
-  };
 
   if (communitiesLoading) {
     return (
@@ -159,102 +78,14 @@ export const CommunityManagerDashboard: React.FC = () => {
 
       {/* Share Link Management */}
       {selectedCommunity && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-[#363f49] mb-4 flex items-center">
-            <Link2 className="h-5 w-5 mr-2 text-brand-primary" />
-            Public Share Link
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-sm text-gray-600 mb-3">
-                  Allow anonymous users to view your community's content without logging in.
-                </p>
-                <div className="flex items-center">
-                  <input
-                    id="communityToggle"
-                    type="checkbox"
-                    checked={selectedCommunity.is_sharable || false}
-                    onChange={(e) => handleToggleShareLink(e.target.checked)}
-                    disabled={updatingShareLink}
-                    className="sr-only"
-                  />
-
-                  {/* Make this clickable by linking to the input */}
-                  <label
-                    htmlFor="communityToggle"
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors 
-                    ${(selectedCommunity.is_sharable || false) ? 'bg-brand-primary' : 'bg-gray-300'}
-                    ${updatingShareLink ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                    `}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform 
-                      ${(selectedCommunity.is_sharable || false) ? 'translate-x-6' : 'translate-x-1'}
-                      `}
-                    />
-                  </label>
-
-                  {/* Text also links to checkbox only */}
-                  <label
-                    htmlFor="communityToggle"
-                    className="ml-3 text-sm font-medium text-gray-700 cursor-pointer"
-                  >
-                    {selectedCommunity.is_sharable ? 'Enabled' : 'Disabled'}
-                  </label>
-                </div>
-
-              </div>
-            </div>
-
-            {selectedCommunity.is_sharable && selectedCommunity.sharable_token && (
-              <div className="border-t border-gray-200 pt-4 space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Share Link
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={`${window.location.origin}/public/${selectedCommunity.sharable_token}`}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-                    />
-                    <button
-                      onClick={handleCopyShareLink}
-                      className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors text-sm font-medium"
-                    >
-                      {shareLinkCopied ? (
-                        <>
-                          <Check className="h-4 w-4 mr-2" />
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <button
-                    onClick={handleRegenerateToken}
-                    disabled={updatingShareLink}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${regeneratingToken ? 'animate-spin' : ''}`} />
-                    Regenerate Token
-                  </button>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Regenerating the token will invalidate the current share link. You'll need to share the new link.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <ShareLinkManagement
+          community={selectedCommunity}
+          onUpdate={(updates) => {
+            if (selectedCommunityId) {
+              updateCommunity(selectedCommunityId, updates);
+            }
+          }}
+        />
       )}
 
       <div className="border-b border-gray-200">

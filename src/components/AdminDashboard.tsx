@@ -14,12 +14,12 @@ import AdminNotifications from './AdminNotifications';
 import { AdminOrganizationManagement } from './AdminOrganizationManagement';
 import { AdminUserManagement } from './AdminUserManagement';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
-import { EntitySelector } from './common/EntitySelector';
 import { EnhancedContentForm } from './EnhancedContentForm';
 import { FeedbackManagement } from './FeedbackManagement';
 import Invoices from './Invoices';
 import { PDFUploader } from './PDFUploader';
 import { SearchableEntitySelector } from './common/SearchableEntitySelector';
+import { ShareLinkManagement } from './ShareLinkManagement';
 
 interface CommunityFormData {
   name: string;
@@ -80,7 +80,7 @@ export const AdminDashboard: React.FC = () => {
     }
     return 'content';
   });
-  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents' | 'managers'>('details');
+  const [communityModalTab, setCommunityModalTab] = useState<'details' | 'documents' | 'managers' | 'sharing'>('details');
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
   const [managerSearchTerm, setManagerSearchTerm] = useState<string>('');
 
@@ -822,6 +822,16 @@ export const AdminDashboard: React.FC = () => {
                     >
                       Managers
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommunityModalTab('sharing')}
+                      className={`py-3 px-4 border-b-2 font-semibold text-xs uppercase transition-colors ${communityModalTab === 'sharing'
+                        ? 'border-brand-primary text-brand-primary'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                      Public Sharing
+                    </button>
                   </nav>
                 </div>
               )}
@@ -1171,6 +1181,19 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {editingCommunity && communityModalTab === 'sharing' && (
+                <div className="py-4">
+                  <ShareLinkManagement
+                    community={communities.find(c => c.id === editingCommunity)!}
+                    onUpdate={(updates) => {
+                      if (editingCommunity) {
+                        updateCommunity(editingCommunity, updates);
+                      }
+                    }}
+                  />
                 </div>
               )}
             </div>
