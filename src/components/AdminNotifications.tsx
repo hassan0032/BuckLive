@@ -3,7 +3,7 @@ import { Loader2, PlusCircle, Trash2, X, Bell, CheckCircle, Circle, Upload, File
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import { useNotificationContext } from '../contexts/NotificationContext';
 
-import { Notification, ROLE } from '../types';
+import { Notification, ROLE, TARGET_TIER, TargetTier } from '../types';
 
 type TabType = 'create' | 'view';
 
@@ -36,6 +36,7 @@ const AdminNotifications: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [targetTier, setTargetTier] = useState<TargetTier>(TARGET_TIER.ALL);
   const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -44,6 +45,7 @@ const AdminNotifications: React.FC = () => {
   const resetForm = () => {
     setTitle('');
     setContent('');
+    setTargetTier(TARGET_TIER.ALL);
     setFormError(null);
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -72,7 +74,8 @@ const AdminNotifications: React.FC = () => {
     const { error: createError } = await createNotification({
       title,
       content,
-      pdfFile: selectedFile || undefined
+      pdfFile: selectedFile || undefined,
+      targetTier
     });
 
     if (createError) {
@@ -115,7 +118,6 @@ const AdminNotifications: React.FC = () => {
   const communityNotifications = (userNotifications || []).filter(n => n.type === ROLE.COMMUNITY_MANAGER);
 
   const formatUserName = (notification: Notification) => {
-    // For community notifications, the manager's name is stored in the content field
     if (notification.type === ROLE.COMMUNITY_MANAGER && notification.title) {
       return notification.title;
     }
@@ -304,6 +306,11 @@ const AdminNotifications: React.FC = () => {
                       <h3 className="text-lg font-semibold text-[#363f49]">{notification.title}</h3>
                       <p className="text-sm text-gray-500">
                         {new Date(notification.created_at).toLocaleString()}
+                        {notification.target_tier && notification.target_tier !== 'all' && (
+                          <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                            Target: {notification.target_tier}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <button
@@ -343,7 +350,24 @@ const AdminNotifications: React.FC = () => {
                 <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
                   {formError}
                 </div>
-              )}
+              )
+              }
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience Tier</label>
+                <select
+                  value={targetTier}
+                  onChange={(e) => setTargetTier(e.target.value as TargetTier)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                >
+                  <option value={TARGET_TIER.ALL}>All Tiers</option>
+                  <option value={TARGET_TIER.GOLD}>Gold Tier Managers Only</option>
+                  <option value={TARGET_TIER.SILVER}>Silver Tier Managers Only</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Notification will only be sent to managers of communities with this tier.
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
@@ -436,11 +460,11 @@ const AdminNotifications: React.FC = () => {
                   Create
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
+            </form >
+          </div >
+        </div >
       )}
-    </div>
+    </div >
   );
 };
 

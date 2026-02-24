@@ -7,6 +7,7 @@ interface CreateNotificationInput {
   title: string;
   content: string;
   pdfFile?: File;
+  targetTier?: 'all' | 'gold' | 'silver';
 }
 
 interface CreateNotificationResult {
@@ -96,7 +97,7 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
   }, []);
 
   const createAdminNotification = useCallback(
-    async ({ title, content, pdfFile }: CreateNotificationInput): Promise<CreateNotificationResult> => {
+    async ({ title, content, pdfFile, targetTier = 'all' }: CreateNotificationInput): Promise<CreateNotificationResult> => {
       try {
         setAdminCreating(true);
         const trimmedTitle = title.trim();
@@ -123,6 +124,7 @@ export const useAdminNotifications = (options: UseAdminNotificationsOptions = {}
               content: trimmedContent,
               pdf_url: pdfUrl,
               pdf_storage_path: pdfStoragePath,
+              target_tier: targetTier,
             },
           ]);
 

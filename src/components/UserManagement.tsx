@@ -6,6 +6,7 @@ import { useCommunityUsers } from '../hooks/useCommunityUsers';
 import { adminResetUserPassword } from '../lib/supabase';
 import { ROLE, ROLE_DISPLAY_NAME } from '../types';
 import { cn } from '../utils/helper';
+import { CredentialsModal } from './common/CredentialsModal';
 
 interface UserManagementProps {
   communityId: string;
@@ -24,7 +25,15 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
     first_name: '',
     last_name: '',
     is_shared_account: false,
+    send_email: false,
   });
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    password?: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  } | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
@@ -72,7 +81,22 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
           last_name: formData.last_name,
           community_id: communityId,
           is_shared_account: formData.is_shared_account,
+          send_email: formData.send_email,
         });
+
+        if (error) throw new Error(error);
+
+        if (formData.send_email) {
+          alert('User created successfully and credentials sent via email.');
+        } else {
+          setCreatedCredentials({
+            email: formData.email,
+            password: formData.password,
+            firstName: formData.first_name,
+            lastName: formData.last_name,
+            role: ROLE.MEMBER,
+          });
+        }
 
         if (error) throw new Error(error);
       }
@@ -85,6 +109,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
         first_name: '',
         last_name: '',
         is_shared_account: false,
+        send_email: false,
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -128,6 +153,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
         first_name: user.profile?.first_name || '',
         last_name: user.profile?.last_name || '',
         is_shared_account: user.is_shared_account || false,
+        send_email: false,
       });
       setShowCreateForm(true);
     }
@@ -188,6 +214,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
               first_name: '',
               last_name: '',
               is_shared_account: false,
+              send_email: false,
             });
             setShowCreateForm(true);
           }}
@@ -391,19 +418,33 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
                 </div>
 
                 {!editingUser && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password <span className="text-red-500">*</span> (min. 6 characters)
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                      required
-                      minLength={6}
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Password <span className="text-red-500">*</span> (min. 6 characters)
+                      </label>
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <div className="flex items-center mt-2">
+                      <input
+                        id="send_email"
+                        type="checkbox"
+                        checked={formData.send_email}
+                        onChange={(e) => setFormData({ ...formData, send_email: e.target.checked })}
+                        className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                      />
+                      <label htmlFor="send_email" className="ml-2 text-sm text-gray-700">
+                        Send credentials via email
+                      </label>
+                    </div>
+                  </>
                 )}
 
                 <div className="flex items-center space-x-2">
@@ -454,60 +495,75 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
               </form>
             </div>
           </div>
-        </div>
+        </div >
       )}
 
       {/* Password Reset Modal */}
-      {showPasswordResetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Reset Password</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Enter a new password for this user. This will immediately update their login credentials.
-              </p>
+      {
+        showPasswordResetModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold mb-4">Reset Password</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enter a new password for this user. This will immediately update their login credentials.
+                </p>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password <span className="text-red-500">*</span> (min. 6 characters)
-                  </label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                    required
-                    minLength={6}
-                    placeholder="Enter new password"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Password <span className="text-red-500">*</span> (min. 6 characters)
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                      required
+                      minLength={6}
+                      placeholder="Enter new password"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordResetModal(false);
-                    setPasswordResetUserId(null);
-                    setNewPassword('');
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handlePasswordReset}
-                  disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
-                  className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm disabled:opacity-50"
-                >
-                  {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
-                </button>
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordResetModal(false);
+                      setPasswordResetUserId(null);
+                      setNewPassword('');
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase font-semibold text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePasswordReset}
+                    disabled={passwordResetLoading || !newPassword || newPassword.length < 6}
+                    className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-d-blue transition-colors uppercase font-semibold text-sm disabled:opacity-50"
+                  >
+                    {passwordResetLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
+      {
+        createdCredentials && (
+          <CredentialsModal
+            isOpen={!!createdCredentials}
+            onClose={() => setCreatedCredentials(null)}
+            email={createdCredentials.email}
+            password={createdCredentials.password}
+            firstName={createdCredentials.firstName}
+            lastName={createdCredentials.lastName}
+            role={createdCredentials.role}
+          />
+        )
+      }
       <DeleteConfirmationModal
         isOpen={!!userToDelete}
         onClose={() => setUserToDelete(null)}
@@ -516,6 +572,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({ communityId, com
         message={`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone.`}
         isDeleting={deletingUser}
       />
-    </div>
+    </div >
   );
 };

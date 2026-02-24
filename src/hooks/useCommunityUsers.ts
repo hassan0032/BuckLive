@@ -65,6 +65,7 @@ export const useCommunityUsers = (communityId?: string) => {
     last_name: string;
     community_id: string;
     is_shared_account?: boolean;
+    send_email?: boolean;
   }) => {
     try {
       // Get the current session to pass auth header
@@ -90,6 +91,7 @@ export const useCommunityUsers = (communityId?: string) => {
           community_id: userData.community_id,
           role: ROLE.MEMBER,
           is_shared_account: userData.is_shared_account || false,
+          send_email: userData.send_email,
         }),
       });
 
