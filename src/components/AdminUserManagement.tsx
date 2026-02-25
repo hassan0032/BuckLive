@@ -45,6 +45,7 @@ export const AdminUserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   const [sortConfig, setSortConfig] = useState<{ key: 'user' | 'community', direction: 'asc' | 'desc' } | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -59,6 +60,12 @@ export const AdminUserManagement: React.FC = () => {
     role: roleFilter || undefined,
     searchTerm: debouncedSearch || undefined,
   });
+
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) {
+      setHasLoadedOnce(true);
+    }
+  }, [loading, hasLoadedOnce]);
 
   const { communities } = useCommunities();
   const { organizations } = useAdminOrganizations();
@@ -293,7 +300,7 @@ export const AdminUserManagement: React.FC = () => {
     setSortConfig({ key, direction });
   };
 
-  if (loading) {
+  if (loading && !hasLoadedOnce) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
@@ -439,120 +446,131 @@ export const AdminUserManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className={cn(
-                        'h-10 w-10 rounded-full flex items-center justify-center bg-green-100',
-                        { 'bg-red-100': user.role === ROLE.ADMIN },
-                        { 'bg-purple-100': user.role === ROLE.ORGANIZATION_MANAGER },
-                        { 'bg-blue-100': user.role === ROLE.COMMUNITY_MANAGER },
-                      )}>
-                        {user.role === ROLE.ADMIN ? (
-                          <Shield className="h-5 w-5 text-red-600" />
-                        ) : user.role === ROLE.ORGANIZATION_MANAGER ? (
-                          <Building2 className="h-5 w-5 text-purple-600" />
-                        ) : user.role === ROLE.COMMUNITY_MANAGER ? (
-                          <Users2 className="h-5 w-5 text-blue-600" />
-                        ) : (
-                          <User2 className="h-5 w-5 text-green-700" />
-                        )}
-                      </div>
-                      <div className="ml-3">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium text-[#363f49]">
-                            {user.profile?.first_name} {user.profile?.last_name} {user.id === currentUser?.id && '(You)'}
-                          </p>
-                          {user.is_shared_account && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                              <Users className="h-3 w-3 mr-1" />
-                              Shared
-                            </span>
-                          )}
-                        </div>
-                      </div>
+              {loading && hasLoadedOnce ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                      <span className="ml-3 text-sm text-gray-500">Loading users...</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                      {user.email}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
-                      { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },
-                      { 'bg-purple-100 text-purple-700': user.role === ROLE.ORGANIZATION_MANAGER },
-                      { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER },
-                    )}>
-                      {ROLE_DISPLAY_NAME[user.role]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-600">
-                      {user.role === ROLE.COMMUNITY_MANAGER && user.managed_community_ids && user.managed_community_ids.length > 0 ? (
-                        <span>
-                          {communities.find(c => c.id === user.managed_community_ids![0])?.name || 'Unknown Community'}
-                          {user.managed_community_ids!.length > 1 && (
-                            <span className="text-gray-400 ml-1" title={
-                              // Optional: Show full list on hover
-                              user.managed_community_ids!.slice(1).map(id => communities.find(c => c.id === id)?.name).join(', ')
-                            }>
-                              +{user.managed_community_ids!.length - 1} more
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        user.profile?.community?.name || 'N/A'
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {user.id !== currentUser?.id && (
-                      <div className="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(user.id)}
-                          className="text-brand-primary hover:text-brand-d-blue"
-                          title="Edit user"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openPasswordResetModal(user.id)}
-                          className="text-blue-600 hover:text-blue-700"
-                          title="Reset password"
-                        >
-                          <Key className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleDeleteClick(user.id);
-                          }}
-                          className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Delete user"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                sortedUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className={cn(
+                          'h-10 w-10 rounded-full flex items-center justify-center bg-green-100',
+                          { 'bg-red-100': user.role === ROLE.ADMIN },
+                          { 'bg-purple-100': user.role === ROLE.ORGANIZATION_MANAGER },
+                          { 'bg-blue-100': user.role === ROLE.COMMUNITY_MANAGER },
+                        )}>
+                          {user.role === ROLE.ADMIN ? (
+                            <Shield className="h-5 w-5 text-red-600" />
+                          ) : user.role === ROLE.ORGANIZATION_MANAGER ? (
+                            <Building2 className="h-5 w-5 text-purple-600" />
+                          ) : user.role === ROLE.COMMUNITY_MANAGER ? (
+                            <Users2 className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <User2 className="h-5 w-5 text-green-700" />
+                          )}
+                        </div>
+                        <div className="ml-3">
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium text-[#363f49]">
+                              {user.profile?.first_name} {user.profile?.last_name} {user.id === currentUser?.id && '(You)'}
+                            </p>
+                            {user.is_shared_account && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                <Users className="h-3 w-3 mr-1" />
+                                Shared
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                        {user.email}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
+                        { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },
+                        { 'bg-purple-100 text-purple-700': user.role === ROLE.ORGANIZATION_MANAGER },
+                        { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER },
+                      )}>
+                        {ROLE_DISPLAY_NAME[user.role]}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-600">
+                        {user.role === ROLE.COMMUNITY_MANAGER && user.managed_community_ids && user.managed_community_ids.length > 0 ? (
+                          <span>
+                            {communities.find(c => c.id === user.managed_community_ids![0])?.name || 'Unknown Community'}
+                            {user.managed_community_ids!.length > 1 && (
+                              <span className="text-gray-400 ml-1" title={
+                                // Optional: Show full list on hover
+                                user.managed_community_ids!.slice(1).map(id => communities.find(c => c.id === id)?.name).join(', ')
+                              }>
+                                +{user.managed_community_ids!.length - 1} more
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          user.profile?.community?.name || 'N/A'
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.id !== currentUser?.id && (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(user.id)}
+                            className="text-brand-primary hover:text-brand-d-blue"
+                            title="Edit user"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openPasswordResetModal(user.id)}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="Reset password"
+                          >
+                            <Key className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleDeleteClick(user.id);
+                            }}
+                            className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {users.length === 0 && (
+        {users.length === 0 && !loading && (
           <div className="text-center py-12">
             <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">
