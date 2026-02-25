@@ -278,7 +278,7 @@ export const ContentLibrary: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-semibold text-[#363f49] mb-2">Content Library</h1>
+        <h1 className="text-3xl font-semibold text-[#363f49] mb-2">Portal Library</h1>
         <p className="text-gray-600">Discover videos, articles, and resources to help you live better longer.</p>
       </div>
 
@@ -431,6 +431,13 @@ export const ContentLibrary: React.FC = () => {
                   {item.required_tier === PAYMENT_TIER.GOLD && (
                     <div className="bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-medium">
                       {PAYMENT_TIER.GOLD.toUpperCase()}
+                    </div>
+                  )}
+
+                  {/* Manager Only Badge */}
+                  {item.is_manager_only && (
+                    <div className="bg-purple-600 text-white px-2 py-1 rounded-md text-xs font-medium">
+                      MANAGER ONLY
                     </div>
                   )}
                 </div>

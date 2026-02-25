@@ -1,4 +1,4 @@
-import { Building2, Edit, Loader2, Trash2, Users, Eye } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Building2, Edit, Eye, Loader2, Trash2, Users } from 'lucide-react';
 import React, { useState } from 'react';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { AdminOrganization, useAdminOrganizations } from '../hooks/useAdminOrganizations';
@@ -39,6 +39,8 @@ export const AdminOrganizationManagement: React.FC = () => {
 
   const [orgToDelete, setOrgToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deletingOrg, setDeletingOrg] = useState(false);
+
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
 
   const resetCreateForm = () => {
     setCreateFormData({
@@ -116,6 +118,19 @@ export const AdminOrganizationManagement: React.FC = () => {
     setShowCommunitiesModal(true);
   };
 
+  const sortedOrganizations = [...organizations].sort((a, b) => {
+    if (!sortDirection) return 0;
+    const nameA = a.name.toLowerCase();
+    const nameB = b.name.toLowerCase();
+    if (nameA < nameB) return sortDirection === 'asc' ? -1 : 1;
+    if (nameA > nameB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const handleSort = () => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-lg shadow-sm">
@@ -145,14 +160,28 @@ export const AdminOrganizationManagement: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 group"
+                    onClick={handleSort}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Organization</span>
+                      <span className="text-gray-400 group-hover:text-gray-600">
+                        {sortDirection ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        )}
+                      </span>
+                    </div>
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Communities</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Managers</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {organizations.map((org) => (
+                {sortedOrganizations.map((org) => (
                   <tr key={org.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">

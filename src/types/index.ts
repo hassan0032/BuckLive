@@ -34,6 +34,14 @@ export const PAYMENT_TIER = {
 } as const;
 export type PaymentTier = typeof PAYMENT_TIER[keyof typeof PAYMENT_TIER];
 
+
+export const TARGET_TIER = {
+  ALL: 'all',
+  GOLD: 'gold',
+  SILVER: 'silver',
+} as const;
+export type TargetTier = typeof TARGET_TIER[keyof typeof TARGET_TIER];
+
 export const CONTENT_TYPE = {
   VIDEO: 'video',
   PDF: 'pdf',
@@ -216,6 +224,7 @@ export interface Content {
   vimeo_video_id?: string;
   published_at?: string;
   enable_questions?: boolean;
+  is_manager_only?: boolean;
 }
 
 export interface ContentVersion {
@@ -280,6 +289,7 @@ export interface Notification {
     first_name: string;
     last_name: string;
   };
+  target_tier?: 'all' | 'gold' | 'silver';
 }
 
 // Legacy type for backward compatibility with existing code

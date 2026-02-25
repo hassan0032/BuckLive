@@ -43,6 +43,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
     vimeo_video_id: '',
     status: 'published' as 'draft' | 'published',
     enable_questions: false,
+    is_manager_only: false,
   });
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         vimeo_video_id: editingContent.vimeo_video_id || '',
         status: editingContent.status || 'published',
         enable_questions: editingContent.enable_questions || false,
+        is_manager_only: editingContent.is_manager_only || false,
       });
     }
   }, [editingContent]);
@@ -177,6 +179,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         status: isDraft ? 'draft' : 'published',
         vimeo_video_id: formData.vimeo_video_id || '',
         enable_questions: formData.enable_questions,
+        is_manager_only: formData.is_manager_only,
       };
 
       if (formData.type === 'video' && formData.duration) {
@@ -260,8 +263,8 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
               <button
                 onClick={() => setActiveTab('general')}
                 className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${activeTab === 'general'
-                    ? 'border-brand-primary text-brand-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
               >
                 General
@@ -269,8 +272,8 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
               <button
                 onClick={() => setActiveTab('media')}
                 className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${activeTab === 'media'
-                    ? 'border-brand-primary text-brand-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
               >
                 Media
@@ -279,8 +282,8 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                 <button
                   onClick={() => setActiveTab('content')}
                   className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${activeTab === 'content'
-                      ? 'border-brand-primary text-brand-primary'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                    ? 'border-brand-primary text-brand-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
                   Content Editor
@@ -394,17 +397,32 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="enable-questions"
-                    checked={formData.enable_questions}
-                    onChange={(e) => setFormData({ ...formData, enable_questions: e.target.checked })}
-                    className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
-                  />
-                  <label htmlFor="enable-questions" className="text-sm font-medium text-gray-700">
-                    Enable question submissions for this content
-                  </label>
+                <div className="flex flex-col space-y-3 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enable-questions"
+                      checked={formData.enable_questions}
+                      onChange={(e) => setFormData({ ...formData, enable_questions: e.target.checked })}
+                      className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
+                    />
+                    <label htmlFor="enable-questions" className="text-sm font-medium text-gray-700">
+                      Enable question submissions for this content
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="manager-only"
+                      checked={formData.is_manager_only}
+                      onChange={(e) => setFormData({ ...formData, is_manager_only: e.target.checked })}
+                      className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
+                    />
+                    <label htmlFor="manager-only" className="text-sm font-medium text-gray-700">
+                      Visible only to Managers and Admins
+                    </label>
+                  </div>
                 </div>
               </div>
             )}

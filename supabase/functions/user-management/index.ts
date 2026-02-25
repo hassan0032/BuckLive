@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // @ts-ignore
 import { createClient } from "npm:@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,7 @@ interface CreateUserRequest {
   is_shared_account?: boolean;
   managed_community_ids?: string[]; // Optional list of communities to manage if role is community_manager
   organization_id?: string; // Optional organization ID if role is organization_manager
+  send_email?: boolean;
 }
 
 interface DeleteUserRequest {
@@ -160,6 +162,7 @@ async function handleCreateUser(
     is_shared_account,
     managed_community_ids,
     organization_id,
+    send_email,
   } = request;
 
   // Validate required fields
@@ -490,6 +493,70 @@ async function handleCreateUser(
         );
       } else {
         console.log(`✅ Assigned user ${authData.user.id} as organization manager for organization ${organization_id}`);
+      }
+    }
+
+    // Send email if requested
+    if (send_email) {
+      try {
+        const SMTP_USER = Deno.env.get("SMTP_USER");
+        const SMTP_PASS = Deno.env.get("SMTP_PASS");
+        const SMTP_SENDER = Deno.env.get("SMTP_SENDER") || `Buck Live <${SMTP_USER}>`;
+
+        if (SMTP_USER && SMTP_PASS) {
+          const transporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 465,
+            secure: true,
+            auth: { user: SMTP_USER, pass: SMTP_PASS },
+          });
+
+          const emailHTML = `
+            <div style="font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; max-width: 600px;">
+              <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="color: #2c3e50; margin-top: 0; border-bottom: 3px solid #3498db; padding-bottom: 10px;">
+                  Welcome to BuckLive!
+                </h2>
+                <div style="margin: 20px 0;">
+                  <p style="font-size: 16px; color: #2c3e50; line-height: 1.6;">
+                    Hello ${first_name},
+                  </p>
+                  <p style="font-size: 16px; color: #2c3e50; line-height: 1.6;">
+                    Your account has been successfully created. Here are your login credentials:
+                  </p>
+                  <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #3498db; margin: 15px 0;">
+                    <p style="font-size: 14px; color: #555; margin: 0 0 5px 0;"><strong>Email:</strong></p>
+                    <p style="font-size: 16px; color: #2c3e50; margin: 0 0 15px 0; font-family: monospace;">${email}</p>
+                    
+                    <p style="font-size: 14px; color: #555; margin: 0 0 5px 0;"><strong>Password:</strong></p>
+                    <p style="font-size: 16px; color: #2c3e50; margin: 0; font-family: monospace;">${password}</p>
+                  </div>
+                  <p style="font-size: 14px; color: #555; margin-top: 20px;">
+                    Please change your password after your first login.
+                  </p>
+                </div>
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+                <p style="font-size: 12px; color: #999; margin: 0; text-align: center;">
+                  This is an automated notification from BuckLive. Please do not reply to this email.
+                </p>
+              </div>
+            </div>
+          `;
+
+          await transporter.sendMail({
+            from: SMTP_SENDER,
+            to: email,
+            subject: "Your BuckLive Account Credentials",
+            html: emailHTML,
+          });
+
+          console.log(`📧 Credentials sent to ${email}`);
+        } else {
+          console.warn("⚠️ SMTP credentials missing. Email not sent.");
+        }
+      } catch (emailError) {
+        console.error("❌ Failed to send credential email:", emailError);
+        // Don't fail the request if email fails, just log it
       }
     }
 

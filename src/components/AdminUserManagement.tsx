@@ -1,4 +1,4 @@
-import { Building2, Calendar, Edit, Eye, EyeOff, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Building2, Calendar, Edit, Eye, EyeOff, Key, Mail, Plus, Search, Shield, Trash2, User2, User as UserIcon, Users, Users2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
@@ -10,6 +10,7 @@ import { cn } from '../utils/helper';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
 import { EntitySelector } from './common/EntitySelector';
 import { SearchableEntitySelector } from './common/SearchableEntitySelector';
+import { CredentialsModal } from './common/CredentialsModal';
 
 interface FormData {
   email: string;
@@ -21,6 +22,7 @@ interface FormData {
   is_shared_account: boolean;
   managed_community_ids: string[];
   organization_id: string;
+  send_email: boolean;
 }
 
 const initialFormData: FormData = {
@@ -33,6 +35,7 @@ const initialFormData: FormData = {
   is_shared_account: false,
   managed_community_ids: [],
   organization_id: '',
+  send_email: false,
 };
 
 export const AdminUserManagement: React.FC = () => {
@@ -41,6 +44,8 @@ export const AdminUserManagement: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  const [sortConfig, setSortConfig] = useState<{ key: 'user' | 'community', direction: 'asc' | 'desc' } | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -55,6 +60,12 @@ export const AdminUserManagement: React.FC = () => {
     role: roleFilter || undefined,
     searchTerm: debouncedSearch || undefined,
   });
+
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) {
+      setHasLoadedOnce(true);
+    }
+  }, [loading, hasLoadedOnce]);
 
   const { communities } = useCommunities();
   const { organizations } = useAdminOrganizations();
@@ -71,6 +82,13 @@ export const AdminUserManagement: React.FC = () => {
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    password?: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  } | null>(null);
 
   const stats = {
     totalUsers: users.length,
@@ -130,9 +148,22 @@ export const AdminUserManagement: React.FC = () => {
           is_shared_account: formData.is_shared_account,
           managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
           organization_id: formData.role === ROLE.ORGANIZATION_MANAGER ? formData.organization_id : undefined,
+          send_email: formData.send_email,
         });
 
         if (error) throw new Error(error);
+
+        if (formData.send_email) {
+          alert('User created successfully and credentials sent via email.');
+        } else {
+          setCreatedCredentials({
+            email: formData.email,
+            password: formData.password,
+            firstName: formData.first_name,
+            lastName: formData.last_name,
+            role: formData.role,
+          });
+        }
       }
 
       setShowCreateForm(false);
@@ -147,6 +178,7 @@ export const AdminUserManagement: React.FC = () => {
         is_shared_account: false,
         managed_community_ids: [],
         organization_id: '',
+        send_email: false,
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -194,6 +226,7 @@ export const AdminUserManagement: React.FC = () => {
         is_shared_account: user.is_shared_account || false,
         managed_community_ids: user.managed_community_ids || [],
         organization_id: user.profile?.organization?.id || '',
+        send_email: false,
       });
       setShowCreateForm(true);
     }
@@ -223,7 +256,51 @@ export const AdminUserManagement: React.FC = () => {
     }
   };
 
-  if (loading) {
+  const sortedUsers = [...users].sort((a, b) => {
+    if (!sortConfig) return 0;
+
+    if (sortConfig.key === 'user') {
+      const nameA = `${a.profile?.first_name || ''} ${a.profile?.last_name || ''}`.trim().toLowerCase() || a.email.toLowerCase();
+      const nameB = `${b.profile?.first_name || ''} ${b.profile?.last_name || ''}`.trim().toLowerCase() || b.email.toLowerCase();
+      if (nameA < nameB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (nameA > nameB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    if (sortConfig.key === 'community') {
+      let commA = '';
+      if (a.role === ROLE.COMMUNITY_MANAGER && a.managed_community_ids && a.managed_community_ids.length > 0) {
+        commA = communities.find(c => c.id === a.managed_community_ids![0])?.name || '';
+      } else {
+        commA = a.profile?.community?.name || '';
+      }
+      commA = commA.toLowerCase();
+
+      let commB = '';
+      if (b.role === ROLE.COMMUNITY_MANAGER && b.managed_community_ids && b.managed_community_ids.length > 0) {
+        commB = communities.find(c => c.id === b.managed_community_ids![0])?.name || '';
+      } else {
+        commB = b.profile?.community?.name || '';
+      }
+      commB = commB.toLowerCase();
+
+      if (commA < commB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (commA > commB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    return 0;
+  });
+
+  const handleSort = (key: 'user' | 'community') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  if (loading && !hasLoadedOnce) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
@@ -251,6 +328,7 @@ export const AdminUserManagement: React.FC = () => {
               is_shared_account: false,
               managed_community_ids: [],
               organization_id: '',
+              send_email: false,
             });
             setShowCreateForm(true);
           }}
@@ -287,7 +365,7 @@ export const AdminUserManagement: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by name or email..."
+                placeholder="Search by name, email or community..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
@@ -323,8 +401,20 @@ export const AdminUserManagement: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 group"
+                  onClick={() => handleSort('user')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>User</span>
+                    <span className="text-gray-400 group-hover:text-gray-600">
+                      {sortConfig?.key === 'user' ? (
+                        sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </span>
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Email
@@ -332,8 +422,20 @@ export const AdminUserManagement: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Community
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 group"
+                  onClick={() => handleSort('community')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Community</span>
+                    <span className="text-gray-400 group-hover:text-gray-600">
+                      {sortConfig?.key === 'community' ? (
+                        sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </span>
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Joined
@@ -344,120 +446,131 @@ export const AdminUserManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className={cn(
-                        'h-10 w-10 rounded-full flex items-center justify-center bg-green-100',
-                        { 'bg-red-100': user.role === ROLE.ADMIN },
-                        { 'bg-purple-100': user.role === ROLE.ORGANIZATION_MANAGER },
-                        { 'bg-blue-100': user.role === ROLE.COMMUNITY_MANAGER },
-                      )}>
-                        {user.role === ROLE.ADMIN ? (
-                          <Shield className="h-5 w-5 text-red-600" />
-                        ) : user.role === ROLE.ORGANIZATION_MANAGER ? (
-                          <Building2 className="h-5 w-5 text-purple-600" />
-                        ) : user.role === ROLE.COMMUNITY_MANAGER ? (
-                          <Users2 className="h-5 w-5 text-blue-600" />
-                        ) : (
-                          <User2 className="h-5 w-5 text-green-700" />
-                        )}
-                      </div>
-                      <div className="ml-3">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium text-[#363f49]">
-                            {user.profile?.first_name} {user.profile?.last_name} {user.id === currentUser?.id && '(You)'}
-                          </p>
-                          {user.is_shared_account && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                              <Users className="h-3 w-3 mr-1" />
-                              Shared
-                            </span>
-                          )}
-                        </div>
-                      </div>
+              {loading && hasLoadedOnce ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                      <span className="ml-3 text-sm text-gray-500">Loading users...</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                      {user.email}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
-                      { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },
-                      { 'bg-purple-100 text-purple-700': user.role === ROLE.ORGANIZATION_MANAGER },
-                      { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER },
-                    )}>
-                      {ROLE_DISPLAY_NAME[user.role]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-600">
-                      {user.role === ROLE.COMMUNITY_MANAGER && user.managed_community_ids && user.managed_community_ids.length > 0 ? (
-                        <span>
-                          {communities.find(c => c.id === user.managed_community_ids![0])?.name || 'Unknown Community'}
-                          {user.managed_community_ids!.length > 1 && (
-                            <span className="text-gray-400 ml-1" title={
-                              // Optional: Show full list on hover
-                              user.managed_community_ids!.slice(1).map(id => communities.find(c => c.id === id)?.name).join(', ')
-                            }>
-                              +{user.managed_community_ids!.length - 1} more
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        user.profile?.community?.name || 'N/A'
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {user.id !== currentUser?.id && (
-                      <div className="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(user.id)}
-                          className="text-brand-primary hover:text-brand-d-blue"
-                          title="Edit user"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openPasswordResetModal(user.id)}
-                          className="text-blue-600 hover:text-blue-700"
-                          title="Reset password"
-                        >
-                          <Key className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleDeleteClick(user.id);
-                          }}
-                          className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Delete user"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                sortedUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className={cn(
+                          'h-10 w-10 rounded-full flex items-center justify-center bg-green-100',
+                          { 'bg-red-100': user.role === ROLE.ADMIN },
+                          { 'bg-purple-100': user.role === ROLE.ORGANIZATION_MANAGER },
+                          { 'bg-blue-100': user.role === ROLE.COMMUNITY_MANAGER },
+                        )}>
+                          {user.role === ROLE.ADMIN ? (
+                            <Shield className="h-5 w-5 text-red-600" />
+                          ) : user.role === ROLE.ORGANIZATION_MANAGER ? (
+                            <Building2 className="h-5 w-5 text-purple-600" />
+                          ) : user.role === ROLE.COMMUNITY_MANAGER ? (
+                            <Users2 className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <User2 className="h-5 w-5 text-green-700" />
+                          )}
+                        </div>
+                        <div className="ml-3">
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium text-[#363f49]">
+                              {user.profile?.first_name} {user.profile?.last_name} {user.id === currentUser?.id && '(You)'}
+                            </p>
+                            {user.is_shared_account && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                <Users className="h-3 w-3 mr-1" />
+                                Shared
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                        {user.email}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={cn('inline-flex px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 text-nowrap',
+                        { 'bg-red-100 text-red-700': user.role === ROLE.ADMIN },
+                        { 'bg-purple-100 text-purple-700': user.role === ROLE.ORGANIZATION_MANAGER },
+                        { 'bg-blue-100 text-blue-700': user.role === ROLE.COMMUNITY_MANAGER },
+                      )}>
+                        {ROLE_DISPLAY_NAME[user.role]}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-600">
+                        {user.role === ROLE.COMMUNITY_MANAGER && user.managed_community_ids && user.managed_community_ids.length > 0 ? (
+                          <span>
+                            {communities.find(c => c.id === user.managed_community_ids![0])?.name || 'Unknown Community'}
+                            {user.managed_community_ids!.length > 1 && (
+                              <span className="text-gray-400 ml-1" title={
+                                // Optional: Show full list on hover
+                                user.managed_community_ids!.slice(1).map(id => communities.find(c => c.id === id)?.name).join(', ')
+                              }>
+                                +{user.managed_community_ids!.length - 1} more
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          user.profile?.community?.name || 'N/A'
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.id !== currentUser?.id && (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(user.id)}
+                            className="text-brand-primary hover:text-brand-d-blue"
+                            title="Edit user"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openPasswordResetModal(user.id)}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="Reset password"
+                          >
+                            <Key className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleDeleteClick(user.id);
+                            }}
+                            className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {users.length === 0 && (
+        {users.length === 0 && !loading && (
           <div className="text-center py-12">
             <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">
@@ -557,6 +670,18 @@ export const AdminUserManagement: React.FC = () => {
                           <Eye className="h-5 w-5" aria-hidden="true" />
                         )}
                       </button>
+                    </div>
+                    <div className="flex items-center mt-2">
+                      <input
+                        id="send_email"
+                        type="checkbox"
+                        checked={formData.send_email}
+                        onChange={(e) => setFormData({ ...formData, send_email: e.target.checked })}
+                        className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                      />
+                      <label htmlFor="send_email" className="ml-2 text-sm text-gray-700">
+                        Send credentials via email
+                      </label>
                     </div>
                   </div>
                 )}
@@ -731,6 +856,19 @@ export const AdminUserManagement: React.FC = () => {
               </div>
             </div>
           </div>
+        )
+      }
+      {
+        createdCredentials && (
+          <CredentialsModal
+            isOpen={!!createdCredentials}
+            onClose={() => setCreatedCredentials(null)}
+            email={createdCredentials.email}
+            password={createdCredentials.password}
+            firstName={createdCredentials.firstName}
+            lastName={createdCredentials.lastName}
+            role={createdCredentials.role}
+          />
         )
       }
     </div >

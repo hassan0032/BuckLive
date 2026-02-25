@@ -6,7 +6,9 @@ import { adminResetUserPassword, supabase } from '../lib/supabase';
 import { ROLE, Role, ROLE_DISPLAY_NAME, User } from '../types';
 import { cn } from '../utils/helper';
 import { DeleteConfirmationModal } from './common/DeleteConfirmationModal';
+
 import { EntitySelector } from './common/EntitySelector';
+import { CredentialsModal } from './common/CredentialsModal';
 
 export const OrganizationUserManagement: React.FC = () => {
   const { user } = useAuth();
@@ -27,8 +29,18 @@ export const OrganizationUserManagement: React.FC = () => {
     role: ROLE.MEMBER as Role,
     community_id: '',
     is_shared_account: false,
+
     managed_community_ids: [] as string[],
+    send_email: false,
   });
+
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    password?: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  } | null>(null);
 
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -226,7 +238,9 @@ export const OrganizationUserManagement: React.FC = () => {
             community_id: effectiveCommunityId,
             role: formData.role,
             is_shared_account: formData.is_shared_account,
+
             managed_community_ids: formData.role === ROLE.COMMUNITY_MANAGER ? formData.managed_community_ids : [],
+            send_email: formData.send_email,
           }),
         });
 
@@ -234,6 +248,20 @@ export const OrganizationUserManagement: React.FC = () => {
 
         if (!response.ok || result.error) {
           throw new Error(result.error || 'Failed to create user');
+        }
+
+
+        if (formData.send_email) {
+          alert('User created successfully and credentials sent via email.');
+        } else {
+          console.log('User created, showing credentials modal');
+          setCreatedCredentials({
+            email: formData.email,
+            password: formData.password,
+            firstName: formData.first_name,
+            lastName: formData.last_name,
+            role: formData.role,
+          });
         }
       }
 
@@ -248,7 +276,9 @@ export const OrganizationUserManagement: React.FC = () => {
         role: ROLE.MEMBER,
         community_id: '',
         is_shared_account: false,
+
         managed_community_ids: [],
+        send_email: false,
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save user');
@@ -329,6 +359,7 @@ export const OrganizationUserManagement: React.FC = () => {
       community_id: user.community_id || '',
       is_shared_account: user.is_shared_account || false,
       managed_community_ids: user.managed_community_ids || [],
+      send_email: false,
     });
     setShowCreateForm(true);
   };
@@ -356,6 +387,7 @@ export const OrganizationUserManagement: React.FC = () => {
                 community_id: communities[0]?.id || '',
                 is_shared_account: false,
                 managed_community_ids: [],
+                send_email: false,
               });
               setShowCreateForm(true);
             }}
@@ -598,6 +630,7 @@ export const OrganizationUserManagement: React.FC = () => {
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary pr-10"
+
                             placeholder="Minimum 6 characters"
                           />
                           <button
@@ -611,6 +644,18 @@ export const OrganizationUserManagement: React.FC = () => {
                               <Eye className="h-5 w-5" aria-hidden="true" />
                             )}
                           </button>
+                        </div>
+                        <div className="flex items-center mt-2">
+                          <input
+                            id="send_email"
+                            type="checkbox"
+                            checked={formData.send_email}
+                            onChange={(e) => setFormData({ ...formData, send_email: e.target.checked })}
+                            className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                          />
+                          <label htmlFor="send_email" className="ml-2 text-sm text-gray-700">
+                            Send credentials via email
+                          </label>
                         </div>
                       </div>
                     )}
@@ -776,6 +821,18 @@ export const OrganizationUserManagement: React.FC = () => {
         message="Are you sure you want to delete this user? This action cannot be undone."
         isDeleting={deletingUser}
       />
+
+      {createdCredentials && (
+        <CredentialsModal
+          isOpen={!!createdCredentials}
+          onClose={() => setCreatedCredentials(null)}
+          email={createdCredentials.email}
+          password={createdCredentials.password}
+          firstName={createdCredentials.firstName}
+          lastName={createdCredentials.lastName}
+          role={createdCredentials.role}
+        />
+      )}
     </div >
   );
 };

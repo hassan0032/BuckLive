@@ -27,19 +27,20 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
         `)
         .order('created_at', { ascending: false });
 
+      let targetOrgId: string | null = null;
       if (filters.communityId) {
-        query = query.eq('community_id', filters.communityId);
+        // We will filter by communityId after fetching, so we don't apply it to the main query here.
+        // We fetch the organization_id of the community to be able to filter Organization Managers.
+        const { data: commData } = await supabase
+          .from('communities')
+          .select('organization_id')
+          .eq('id', filters.communityId)
+          .single();
+        targetOrgId = commData?.organization_id || null;
       }
 
       if (filters.role) {
         query = query.eq('role', filters.role);
-      }
-
-      if (filters.searchTerm) {
-        const searchLower = filters.searchTerm.toLowerCase();
-        query = query.or(
-          `email.ilike.%${searchLower}%,first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%`
-        );
       }
 
       const { data, error: fetchError } = await query;
@@ -50,20 +51,26 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
       const communityManagerIds = data?.filter(u => u.role === ROLE.COMMUNITY_MANAGER).map(u => u.id) || [];
       const { data: managersData } = await supabase
         .from('community_managers')
-        .select('user_id, community_id')
+        .select('user_id, community_id, community:communities(name)')
         .in('user_id', communityManagerIds);
 
       const managersMap = new Map<string, string[]>();
+      const managerCommunityNamesMap = new Map<string, string[]>();
+
       if (managersData) {
         managersData.forEach((item: any) => {
           if (!managersMap.has(item.user_id)) {
             managersMap.set(item.user_id, []);
+            managerCommunityNamesMap.set(item.user_id, []);
           }
           managersMap.get(item.user_id)?.push(item.community_id);
+          if (item.community?.name) {
+            managerCommunityNamesMap.get(item.user_id)?.push(item.community.name);
+          }
         });
       }
 
-      const formattedUsers: User[] = (data || []).map(profile => ({
+      let formattedUsers: User[] = (data || []).map(profile => ({
         id: profile.id,
         email: profile.email,
         role: profile.role as Role,
@@ -87,6 +94,35 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
         },
       }));
 
+      // Filter by community to include all associated users (Members, CMs, OMs)
+      if (filters.communityId) {
+        formattedUsers = formattedUsers.filter(user => {
+          if (user.role === ROLE.MEMBER && user.community_id === filters.communityId) return true;
+          if (user.role === ROLE.COMMUNITY_MANAGER && user.managed_community_ids?.includes(filters.communityId!)) return true;
+          if (user.role === ROLE.ORGANIZATION_MANAGER && targetOrgId && user.profile?.organization?.id === targetOrgId) return true;
+          // Admins are global and not tied to a specific community typically, so we omit them here
+          return false;
+        });
+      }
+
+      // Apply search term filtering here to support full name and community search
+      if (filters.searchTerm) {
+        const searchParts = filters.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+        formattedUsers = formattedUsers.filter(user => {
+          const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.toLowerCase();
+          const email = (user.email || '').toLowerCase();
+          const primaryCommunityName = (user.profile?.community?.name || '').toLowerCase();
+          const managedCommunityNames = (managerCommunityNamesMap.get(user.id) || []).map(n => n.toLowerCase());
+
+          return searchParts.every(part =>
+            fullName.includes(part) ||
+            email.includes(part) ||
+            primaryCommunityName.includes(part) ||
+            managedCommunityNames.some(name => name.includes(part))
+          );
+        });
+      }
+
       setUsers(formattedUsers);
       setError(null);
     } catch (err) {
@@ -107,6 +143,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
     is_shared_account?: boolean;
     managed_community_ids?: string[];
     organization_id?: string;
+    send_email?: boolean;
   }) => {
     try {
       // Get the current session to pass auth header
@@ -134,6 +171,7 @@ export const useAllUsers = (filters: UseAllUsersFilters = {}) => {
           is_shared_account: userData.is_shared_account || false,
           managed_community_ids: userData.managed_community_ids || [],
           organization_id: userData.organization_id,
+          send_email: userData.send_email,
         }),
       });
 
