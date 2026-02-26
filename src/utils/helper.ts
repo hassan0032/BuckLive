@@ -484,3 +484,49 @@ export function generateInvoicePdf({
 
   return { container, opt }
 }
+
+export function downloadInvoicesCSV(invoices: any[]) {
+  if (!invoices || !invoices.length) return;
+  const headers = ['Invoice Number', 'Issue Date', 'Period Start', 'Period End', 'Community', 'Organization', 'Tier', 'Status', 'Amount', 'Currency'];
+
+  const escapeCsv = (str: any) => {
+    if (str === null || str === undefined) return '';
+    const stringified = String(str);
+    if (stringified.includes(',') || stringified.includes('"') || stringified.includes('\n')) {
+      return `"${stringified.replace(/"/g, '""')}"`;
+    }
+    return stringified;
+  };
+
+  const csvRows = invoices.map(inv => {
+    const amountCents = inv.calculatedAmountCents ?? inv.amountCents ?? 0;
+    const amount = (amountCents / 100).toFixed(2);
+
+    return [
+      escapeCsv(formatInvoiceNumber(inv.invoice_no, inv.communityCode)),
+      escapeCsv(new Date(inv.issueDate).toLocaleDateString()),
+      escapeCsv(new Date(inv.periodStart).toLocaleDateString()),
+      escapeCsv(new Date(inv.periodEnd).toLocaleDateString()),
+      escapeCsv(inv.communityName || ''),
+      escapeCsv(inv.organizationName || ''),
+      escapeCsv(inv.communityTier || ''),
+      escapeCsv(inv.status),
+      escapeCsv(amount),
+      escapeCsv(inv.currency)
+    ].join(',');
+  });
+
+  const csvContent = [headers.join(','), ...csvRows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `invoices_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+export function downloadInvoiceCSV(invoice: any) {
+  downloadInvoicesCSV([invoice]);
+}

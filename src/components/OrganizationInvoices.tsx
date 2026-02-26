@@ -1,9 +1,10 @@
-import { Loader2, Info } from 'lucide-react'
+import { Loader2, Info, Download } from 'lucide-react'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizationInvoices } from '../hooks/useOrganizationInvoices'
 import { InvoicesTable } from './common/InvoicesTable'
+import { downloadInvoicesCSV } from '../utils/helper'
 
 export function OrganizationInvoices() {
   const { user, isOrganizationManager, loading: authLoading } = useAuth()
@@ -38,7 +39,15 @@ export function OrganizationInvoices() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-[#363f49] mb-6">Invoices</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold text-[#363f49]">Invoices</h1>
+        <button
+          onClick={() => downloadInvoicesCSV(invoices)}
+          className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 flex items-center gap-2 shadow-sm"
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </button>
+      </div>
 
       <div className="flex justify-between items-center mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3 text-blue-800">
         <div className='flex items-center gap-2'>

@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useAdminInvoices } from '../hooks/useAdminInvoices'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Download } from 'lucide-react'
 import { InvoicesTable } from './common/InvoicesTable'
 import { Info } from 'lucide-react'
+import { downloadInvoicesCSV } from '../utils/helper'
 
 function Invoices() {
   const { user, isAdmin, isCommunityManager, loading: authLoading } = useAuth()
@@ -40,6 +41,12 @@ function Invoices() {
           <h1 className="text-2xl font-semibold text-[#363f49]">Invoices</h1>
           <p className="text-gray-600 mt-1">View and manage invoices</p>
         </div>
+        <button
+          onClick={() => downloadInvoicesCSV(invoices)}
+          className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 flex items-center gap-2 shadow-sm"
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </button>
       </div>
 
       <div className="flex justify-between items-center mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3 text-blue-800">
