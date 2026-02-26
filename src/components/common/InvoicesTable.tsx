@@ -3,7 +3,7 @@ import { Calendar, Check, Download, Edit2, Loader2, X, Trash2 } from 'lucide-rea
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { useMemo, useState } from 'react'
 import { formatInvoiceStatus, INVOICE_STATUS, Invoice, InvoiceStatus, parseInvoiceStatus, User } from '../../types'
-import { formatInvoiceNumber, generateInvoicePdf, downloadInvoiceCSV } from '../../utils/helper'
+import { formatInvoiceNumber, generateInvoicePdf } from '../../utils/helper'
 
 interface InvoicesTableProps {
 
@@ -41,10 +41,6 @@ export function InvoicesTable({
   const [customStatusText, setCustomStatusText] = useState<string>('')
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
-
-  // State for download modal
-  const [downloadModalOpen, setDownloadModalOpen] = useState(false)
-  const [selectedInvoiceForDownload, setSelectedInvoiceForDownload] = useState<string | null>(null)
 
   // State for filtering by status (Admin only)
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('')
@@ -151,23 +147,6 @@ export function InvoicesTable({
       .then(() => {
         document.body.removeChild(container)
       })
-  }
-
-  const handleOpenDownloadModal = (invoiceId: string) => {
-    setSelectedInvoiceForDownload(invoiceId)
-    setDownloadModalOpen(true)
-  }
-
-  const handleDownloadChoice = (type: 'pdf' | 'csv') => {
-    if (!selectedInvoiceForDownload) return;
-    const invoice = invoices.find(i => i.id === selectedInvoiceForDownload);
-    if (type === 'pdf') {
-      handleDownload(selectedInvoiceForDownload);
-    } else if (invoice) {
-      downloadInvoiceCSV(invoice);
-    }
-    setDownloadModalOpen(false);
-    setSelectedInvoiceForDownload(null);
   }
 
   const handleStartEditStatus = (invoiceId: string, currentStatus: string) => {
@@ -408,7 +387,7 @@ export function InvoicesTable({
               <button
                 title="Download invoice"
                 className="items-center rounded-md p-2 bg-brand-primary hover:bg-brand-primary/80 text-xs text-white"
-                onClick={() => handleOpenDownloadModal(row.id)}
+                onClick={() => handleDownload(row.id)}
               >
                 <Download className="w-4 h-4" />
               </button>
@@ -434,36 +413,6 @@ export function InvoicesTable({
         message="Are you sure you want to delete this invoice? This action cannot be undone."
         isDeleting={isDeleting}
       />
-
-      {/* Download Format Modal */}
-      {downloadModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Download Invoice</h3>
-            <p className="text-gray-600 mb-6 text-sm">Select the format you would like to download.</p>
-            <div className="flex flex-col gap-3">
-              <button
-                className="w-full flex items-center justify-center gap-2 rounded-md py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-medium transition-colors"
-                onClick={() => handleDownloadChoice('pdf')}
-              >
-                <Download className="w-5 h-5" /> Download as PDF
-              </button>
-              <button
-                className="w-full flex items-center justify-center gap-2 rounded-md py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium transition-colors"
-                onClick={() => handleDownloadChoice('csv')}
-              >
-                <Download className="w-5 h-5" /> Download as CSV
-              </button>
-              <button
-                className="w-full mt-2 py-2 text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors"
-                onClick={() => { setDownloadModalOpen(false); setSelectedInvoiceForDownload(null); }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
