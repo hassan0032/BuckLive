@@ -86,7 +86,16 @@ export const useCommunityAnalytics = (communityId?: string) => {
         return;
       }
 
-      // Fetch authenticated user views
+      // Fetch authenticated user views count
+      const { count: totalViewsCount, error: viewsCountError } = await supabase
+        .from('content_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('community_id', communityId)
+        .not('user_id', 'is', null);
+
+      if (viewsCountError) throw viewsCountError;
+
+      // Fetch recent authenticated user views for display
       const { data: views, error: viewsError } = await supabase
         .from('content_views')
         .select('*')
@@ -97,9 +106,18 @@ export const useCommunityAnalytics = (communityId?: string) => {
 
       if (viewsError) throw viewsError;
 
-      const totalViews = views?.length || 0;
+      const totalViews = totalViewsCount || 0;
 
-      // Fetch anonymous user views (where user_id is null)
+      // Fetch anonymous user views count
+      const { count: anonymousViewsCount, error: anonymousViewsCountError } = await supabase
+        .from('content_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('community_id', communityId)
+        .is('user_id', null);
+
+      if (anonymousViewsCountError) throw anonymousViewsCountError;
+
+      // Fetch recent anonymous user views for display
       const { data: anonymousViews, error: anonymousViewsError } = await supabase
         .from('content_views')
         .select('*')
@@ -131,8 +149,15 @@ export const useCommunityAnalytics = (communityId?: string) => {
         ? allSessions.reduce((sum, s) => sum + (s.session_duration || 0), 0) / allSessions.length
         : 0;
 
+      // Fetch ALL views for accurate top content calculation (not just recent 100)
+      const { data: allAuthViews } = await supabase
+        .from('content_views')
+        .select('content_id, view_duration')
+        .eq('community_id', communityId)
+        .not('user_id', 'is', null);
+
       const contentViewMap = new Map<string, { count: number; duration: number }>();
-      views?.forEach(view => {
+      allAuthViews?.forEach(view => {
         const existing = contentViewMap.get(view.content_id) || { count: 0, duration: 0 };
         contentViewMap.set(view.content_id, {
           count: existing.count + 1,
@@ -197,7 +222,7 @@ export const useCommunityAnalytics = (communityId?: string) => {
       });
 
       // Process anonymous analytics
-      const anonymousTotalViews = anonymousViews?.length || 0;
+      const anonymousTotalViews = anonymousViewsCount || 0;
 
       // Calculate engagement rate (views today / total views)
       // Reuse the 'today' variable already defined above
@@ -209,8 +234,15 @@ export const useCommunityAnalytics = (communityId?: string) => {
         ? Math.round((anonymousViewsToday / anonymousTotalViews) * 100)
         : 0;
 
+      // Fetch ALL anonymous views for accurate top content calculation (not just recent 100)
+      const { data: allAnonViews } = await supabase
+        .from('content_views')
+        .select('content_id, view_duration')
+        .eq('community_id', communityId)
+        .is('user_id', null);
+
       const anonymousContentViewMap = new Map<string, { count: number; duration: number }>();
-      anonymousViews?.forEach(view => {
+      allAnonViews?.forEach(view => {
         const existing = anonymousContentViewMap.get(view.content_id) || { count: 0, duration: 0 };
         anonymousContentViewMap.set(view.content_id, {
           count: existing.count + 1,
