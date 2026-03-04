@@ -123,6 +123,18 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         return;
       }
 
+      let viewsCountQuery = supabase
+        .from('content_views')
+        .select('*', { count: 'exact', head: true });
+
+      if (communityFilter) {
+        viewsCountQuery = viewsCountQuery.eq('community_id', communityFilter);
+      }
+
+      const { count: totalViewsCount, error: viewsCountError } = await viewsCountQuery;
+
+      if (viewsCountError) throw viewsCountError;
+
       let viewsQuery = supabase
         .from('content_views')
         .select(`
@@ -146,7 +158,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       if (viewsError) throw viewsError;
 
-      const totalViews = views?.length || 0;
+      const totalViews = totalViewsCount || 0;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -173,8 +185,19 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         ? allSessions.reduce((sum, s) => sum + (s.session_duration || 0), 0) / allSessions.length
         : 0;
 
+      // Fetch ALL views for accurate top content calculation (not just recent 100)
+      let allViewsQuery = supabase
+        .from('content_views')
+        .select('content_id, view_duration');
+
+      if (communityFilter) {
+        allViewsQuery = allViewsQuery.eq('community_id', communityFilter);
+      }
+
+      const { data: allViewsData } = await allViewsQuery;
+
       const contentViewMap = new Map<string, { count: number; duration: number }>();
-      views?.forEach(view => {
+      allViewsData?.forEach(view => {
         const existing = contentViewMap.get(view.content_id) || { count: 0, duration: 0 };
         contentViewMap.set(view.content_id, {
           count: existing.count + 1,
@@ -245,9 +268,9 @@ export const useSystemAnalytics = (communityFilter?: string) => {
               const communityUsers = users?.filter(u => u.community_id === community.id) || [];
               const communityUserIds = communityUsers.map(u => u.id);
 
-              const { data: communityViews } = await supabase
+              const { count: communityViewsCount } = await supabase
                 .from('content_views')
-                .select('*')
+                .select('*', { count: 'exact', head: true })
                 .eq('community_id', community.id);
 
               const { data: communitySessions } = await supabase
@@ -273,7 +296,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
                 community_name: community.name,
                 member_count: communityUsers.length,
                 active_users_today: activeToday,
-                total_views: communityViews?.length || 0,
+                total_views: communityViewsCount || 0,
                 avg_session_duration: Math.round(avgSessionDuration),
                 engagement_rate: communityUsers.length > 0
                   ? Math.round((activeToday / communityUsers.length) * 100)
