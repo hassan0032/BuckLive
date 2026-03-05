@@ -162,27 +162,36 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const todayISO = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
-      const sessionsQuery = supabase
-        .from('user_sessions')
+      // Calculate active users from content views instead of user sessions
+      let todayViewsQuery = supabase
+        .from('content_views')
         .select('user_id')
-        .in('user_id', userIds)
-        .gte('login_at', today.toISOString());
+        .gte('viewed_at', todayISO);
 
-      const { data: todaySessions } = await sessionsQuery;
+      if (communityFilter) {
+        todayViewsQuery = todayViewsQuery.eq('community_id', communityFilter);
+      }
 
-      const activeUsersToday = new Set(todaySessions?.map(s => s.user_id) || []).size;
+      const { data: todayViews } = await todayViewsQuery;
 
-      const allSessionsQuery = supabase
-        .from('user_sessions')
-        .select('session_duration')
-        .in('user_id', userIds)
-        .not('session_duration', 'is', null);
+      const activeUsersToday = new Set(todayViews?.map(v => v.user_id) || []).size;
 
-      const { data: allSessions } = await allSessionsQuery;
+      // Calculate average duration from all content views
+      let allViewsDurationQuery = supabase
+        .from('content_views')
+        .select('view_duration')
+        .not('view_duration', 'is', null);
 
-      const avgDuration = allSessions && allSessions.length > 0
-        ? allSessions.reduce((sum, s) => sum + (s.session_duration || 0), 0) / allSessions.length
+      if (communityFilter) {
+        allViewsDurationQuery = allViewsDurationQuery.eq('community_id', communityFilter);
+      }
+
+      const { data: allViewsDuration } = await allViewsDurationQuery;
+
+      const avgDuration = allViewsDuration && allViewsDuration.length > 0
+        ? allViewsDuration.reduce((sum, v) => sum + (v.view_duration || 0), 0) / allViewsDuration.length
         : 0;
 
       // Fetch ALL views for accurate top content calculation (not just recent 100)
@@ -266,40 +275,49 @@ export const useSystemAnalytics = (communityFilter?: string) => {
           communityPerformance = await Promise.all(
             communities.map(async (community) => {
               const communityUsers = users?.filter(u => u.community_id === community.id) || [];
-              const communityUserIds = communityUsers.map(u => u.id);
 
               const { count: communityViewsCount } = await supabase
                 .from('content_views')
                 .select('*', { count: 'exact', head: true })
                 .eq('community_id', community.id);
 
-              const { data: communitySessions } = await supabase
-                .from('user_sessions')
-                .select('user_id, session_duration')
-                .in('user_id', communityUserIds)
-                .gte('login_at', today.toISOString());
+              // Get all unique users who have ever viewed content in this community
+              const { data: allCommunityViewUsers } = await supabase
+                .from('content_views')
+                .select('user_id')
+                .eq('community_id', community.id);
 
-              const activeToday = new Set(communitySessions?.map(s => s.user_id) || []).size;
+              const uniqueCommunityViewers = new Set(allCommunityViewUsers?.map(v => v.user_id) || []).size;
 
-              const { data: allCommunitySessions } = await supabase
-                .from('user_sessions')
-                .select('session_duration')
-                .in('user_id', communityUserIds)
-                .not('session_duration', 'is', null);
+              // Get active users from content views today
+              const { data: communityViewsToday } = await supabase
+                .from('content_views')
+                .select('user_id')
+                .eq('community_id', community.id)
+                .gte('viewed_at', todayISO);
 
-              const avgSessionDuration = allCommunitySessions && allCommunitySessions.length > 0
-                ? allCommunitySessions.reduce((sum, s) => sum + (s.session_duration || 0), 0) / allCommunitySessions.length
+              const activeToday = new Set(communityViewsToday?.map(v => v.user_id) || []).size;
+
+              // Calculate average session duration from content view durations
+              const { data: communityViewsDurations } = await supabase
+                .from('content_views')
+                .select('view_duration')
+                .eq('community_id', community.id)
+                .not('view_duration', 'is', null);
+
+              const avgSessionDuration = communityViewsDurations && communityViewsDurations.length > 0
+                ? communityViewsDurations.reduce((sum, v) => sum + (v.view_duration || 0), 0) / communityViewsDurations.length
                 : 0;
 
               return {
                 community_id: community.id,
                 community_name: community.name,
-                member_count: communityUsers.length,
+                member_count: communityUsers.length > 0 ? communityUsers.length : uniqueCommunityViewers,
                 active_users_today: activeToday,
                 total_views: communityViewsCount || 0,
                 avg_session_duration: Math.round(avgSessionDuration),
-                engagement_rate: communityUsers.length > 0
-                  ? Math.round((activeToday / communityUsers.length) * 100)
+                engagement_rate: uniqueCommunityViewers > 0
+                  ? Math.round((activeToday / uniqueCommunityViewers) * 100)
                   : 0,
               };
             })
