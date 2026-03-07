@@ -1,5 +1,5 @@
-import { BarChart3, Edit, FileText, Image as ImageIcon, Loader2, Plus, Trash2, Upload } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { ArrowDown, ArrowUp, BarChart3, Edit, FileText, Image as ImageIcon, Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 import { useAllUsers } from '../hooks/useAllUsers';
@@ -84,6 +84,10 @@ export const AdminDashboard: React.FC = () => {
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
   const [managerSearchTerm, setManagerSearchTerm] = useState<string>('');
 
+  type CommunitiesSortBy = 'name' | 'created_at';
+  const [communitiesSortBy, setCommunitiesSortBy] = useState<CommunitiesSortBy>('name');
+  const [communitiesSortOrder, setCommunitiesSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const { organizations } = useAdminOrganizations();
   const {
     loading: communitiesLoading,
@@ -92,6 +96,26 @@ export const AdminDashboard: React.FC = () => {
     updateCommunity,
     deleteCommunity,
   } = useCommunities();
+
+  const sortedCommunities = useMemo(() => {
+    const list = [...communities];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (communitiesSortBy === 'name') {
+        cmp = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      } else {
+        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return communitiesSortOrder === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [communities, communitiesSortBy, communitiesSortOrder]);
+
+  const handleCommunitiesSort = (field: CommunitiesSortBy) => {
+    setCommunitiesSortBy(field);
+    setCommunitiesSortOrder((prev) => (communitiesSortBy === field ? (prev === 'asc' ? 'desc' : 'asc') : 'asc'));
+  };
+
   const {
     managers,
     loading: managersLoading,
@@ -624,7 +648,14 @@ export const AdminDashboard: React.FC = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
+                      <button
+                        type="button"
+                        onClick={() => handleCommunitiesSort('name')}
+                        className="flex items-center gap-1 hover:text-gray-700 focus:outline-none"
+                      >
+                        Name
+                        {communitiesSortBy === 'name' && (communitiesSortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Access Code
@@ -642,7 +673,14 @@ export const AdminDashboard: React.FC = () => {
                       Billing Code
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
+                      <button
+                        type="button"
+                        onClick={() => handleCommunitiesSort('created_at')}
+                        className="flex items-center gap-1 hover:text-gray-700 focus:outline-none"
+                      >
+                        Created
+                        {communitiesSortBy === 'created_at' && (communitiesSortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -650,7 +688,7 @@ export const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {communities.map((community) => (
+                  {sortedCommunities.map((community) => (
                     <tr key={community.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-[#363f49]">{community.name}</div>
