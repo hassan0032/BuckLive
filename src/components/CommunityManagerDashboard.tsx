@@ -9,12 +9,13 @@ import CommunityManagerInvoices from './CommunityManagerInvoices';
 import { UserManagement } from './UserManagement';
 import Documents from './Documents';
 import { ShareLinkManagement } from './ShareLinkManagement';
+import { FeedbackManagement } from './FeedbackManagement';
 
 export const CommunityManagerDashboard: React.FC = () => {
   const { user } = useAuth();
   const { communities, loading: communitiesLoading, refetch, updateCommunity } = useManagedCommunities(user?.id);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | undefined>();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices' | 'documents'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'analytics' | 'communities' | 'invoices' | 'documents' | 'feedback'>('overview');
 
   const { analytics } = useCommunityAnalytics(selectedCommunityId);
 
@@ -144,6 +145,15 @@ export const CommunityManagerDashboard: React.FC = () => {
           >
             <span className="inline-flex items-center gap-2">Documents</span>
           </button>
+          <button
+            onClick={() => setActiveTab('feedback')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'feedback'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            <span className="inline-flex items-center gap-2">Feedback</span>
+          </button>
         </nav>
       </div>
 
@@ -269,6 +279,10 @@ export const CommunityManagerDashboard: React.FC = () => {
 
       {activeTab === 'documents' && (
         <Documents communityId={selectedCommunityId} />
+      )}
+
+      {activeTab === 'feedback' && (
+        <FeedbackManagement />
       )}
 
     </div>
