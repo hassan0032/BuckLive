@@ -20,6 +20,7 @@ import Invoices from './Invoices';
 import { PDFUploader } from './PDFUploader';
 import { SearchableEntitySelector } from './common/SearchableEntitySelector';
 import { ShareLinkManagement } from './ShareLinkManagement';
+import QuestionsManagement from './QuestionsManagement';
 
 interface CommunityFormData {
   name: string;
@@ -50,7 +51,7 @@ const generateAccessCode = () => {
   return result;
 };
 
-const allowedTabs = ['content', 'communities', 'users', 'organizations', 'analytics', 'invoices', 'notifications', 'feedback'] as const;
+const allowedTabs = ['content', 'communities', 'users', 'organizations', 'analytics', 'invoices', 'notifications', 'feedback', 'questions'] as const;
 
 type AdminLocationState = {
   forceTab?: (typeof allowedTabs)[number];
@@ -422,7 +423,7 @@ export const AdminDashboard: React.FC = () => {
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
           >
-            User Management
+            Users
           </button>
           <button
             onClick={() => handleSetActiveTab('organizations')}
@@ -468,6 +469,15 @@ export const AdminDashboard: React.FC = () => {
               }`}
           >
             Feedback
+          </button>
+          <button
+            onClick={() => handleSetActiveTab('questions')}
+            className={`py-2 px-1 border-b-2 font-semibold text-sm uppercase ${activeTab === 'questions'
+              ? 'border-brand-primary text-brand-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            Questions
           </button>
         </nav>
       </div>
@@ -763,6 +773,8 @@ export const AdminDashboard: React.FC = () => {
       {activeTab === 'notifications' && <AdminNotifications />}
 
       {activeTab === 'feedback' && <FeedbackManagement />}
+
+      {activeTab === 'questions' && <QuestionsManagement />}
 
       {showForm && (
         <EnhancedContentForm
