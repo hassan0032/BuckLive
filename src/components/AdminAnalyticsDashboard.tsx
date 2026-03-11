@@ -52,14 +52,14 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           <p className="text-xs text-gray-500 mt-1">All time</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        {/* <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-gray-600">Active Users Today</h3>
             <TrendingUp className="h-5 w-5 text-blue-600" />
           </div>
           <p className="text-3xl font-bold text-[#363f49]">{analytics.activeUsersToday}</p>
           <p className="text-xs text-gray-500 mt-1">Out of {analytics.totalUsers} total</p>
-        </div>
+        </div> */}
 
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-2">
@@ -85,7 +85,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               : 0}
             %
           </p>
-          <p className="text-xs text-gray-500 mt-1">Users active today</p>
+          <p className="text-xs text-gray-500 mt-1">Unique viewers / total views</p>
         </div>
       </div>
 

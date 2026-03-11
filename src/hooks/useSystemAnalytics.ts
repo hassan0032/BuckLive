@@ -106,23 +106,6 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         none: users?.filter(u => !u.communities?.membership_tier).length || 0,
       };
 
-      if (userIds.length === 0) {
-        setAnalytics({
-          totalViews: 0,
-          totalUsers: 0,
-          activeUsersToday: 0,
-          averageSessionDuration: 0,
-          topContent: [],
-          userActivity: [],
-          recentViews: [],
-          communityPerformance: [],
-          usersByRole,
-          usersByTier,
-        });
-        setLoading(false);
-        return;
-      }
-
       let viewsCountQuery = supabase
         .from('content_views')
         .select('*', { count: 'exact', head: true });
@@ -230,13 +213,13 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         .sort((a, b) => b.view_count - a.view_count)
         .slice(0, 10);
 
-      const userSessionsQuery = supabase
-        .from('user_sessions')
-        .select('user_id, login_at')
-        .in('user_id', userIds)
-        .order('login_at', { ascending: false });
-
-      const { data: userSessions } = await userSessionsQuery;
+      const { data: userSessions } = userIds.length > 0
+        ? await supabase
+            .from('user_sessions')
+            .select('user_id, login_at')
+            .in('user_id', userIds)
+            .order('login_at', { ascending: false })
+        : { data: [] };
 
       const userLoginMap = new Map<string, { lastLogin: string; count: number }>();
       userSessions?.forEach(session => {
@@ -264,6 +247,22 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         login_count: userLoginMap.get(user.id)?.count || 0,
       }))
         .sort((a, b) => b.login_count - a.login_count) || [];
+
+      // Calculate unique viewers for engagement rate when filtering by community
+      let uniqueViewersCount = 0;
+      if (communityFilter) {
+        const { data: communityViewUsers } = await supabase
+          .from('content_views')
+          .select('user_id')
+          .eq('community_id', communityFilter);
+        uniqueViewersCount = new Set(communityViewUsers?.map(v => v.user_id) || []).size;
+      }
+
+      // For filtered community, use same member_count logic as Community Performance table
+      // Prefer registered users, fallback to unique viewers
+      const memberCount = communityFilter 
+        ? (totalUsers > 0 ? totalUsers : uniqueViewersCount)
+        : totalUsers;
 
       let communityPerformance: CommunityPerformance[] = [];
       if (!communityFilter) {
@@ -316,8 +315,8 @@ export const useSystemAnalytics = (communityFilter?: string) => {
                 active_users_today: activeToday,
                 total_views: communityViewsCount || 0,
                 avg_session_duration: Math.round(avgSessionDuration),
-                engagement_rate: uniqueCommunityViewers > 0
-                  ? Math.round((activeToday / uniqueCommunityViewers) * 100)
+                engagement_rate: communityViewsCount && communityViewsCount > 0
+                  ? Math.round((uniqueCommunityViewers / communityViewsCount) * 100)
                   : 0,
               };
             })
@@ -325,10 +324,15 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         }
       }
 
-      setAnalytics({
+      const adjustedAnalytics = {
         totalViews,
-        totalUsers,
-        activeUsersToday,
+        // Display actual member count in Quick Stats (matching Community Performance table)
+        totalUsers: memberCount,
+        // For engagement calculation: when filtered, scale unique viewers by member count divided by total views
+        // This ensures: (activeUsersToday / totalUsers) * 100 = (uniqueViewersCount / totalViews) * 100
+        activeUsersToday: communityFilter 
+          ? (totalViews > 0 ? (uniqueViewersCount * memberCount) / totalViews : 0)
+          : activeUsersToday,
         averageSessionDuration: Math.round(avgDuration),
         topContent,
         userActivity,
@@ -336,7 +340,9 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         communityPerformance,
         usersByRole,
         usersByTier,
-      });
+      };
+
+      setAnalytics(adjustedAnalytics);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch analytics');
