@@ -258,6 +258,12 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         uniqueViewersCount = new Set(communityViewUsers?.map(v => v.user_id) || []).size;
       }
 
+      // For filtered community, use same member_count logic as Community Performance table
+      // Prefer registered users, fallback to unique viewers
+      const memberCount = communityFilter 
+        ? (totalUsers > 0 ? totalUsers : uniqueViewersCount)
+        : totalUsers;
+
       let communityPerformance: CommunityPerformance[] = [];
       if (!communityFilter) {
         const { data: communities } = await supabase
@@ -320,8 +326,13 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       const adjustedAnalytics = {
         totalViews,
-        totalUsers: communityFilter ? totalViews : totalUsers,
-        activeUsersToday: communityFilter ? uniqueViewersCount : activeUsersToday,
+        // Display actual member count in Quick Stats (matching Community Performance table)
+        totalUsers: memberCount,
+        // For engagement calculation: when filtered, scale unique viewers by member count divided by total views
+        // This ensures: (activeUsersToday / totalUsers) * 100 = (uniqueViewersCount / totalViews) * 100
+        activeUsersToday: communityFilter 
+          ? (totalViews > 0 ? (uniqueViewersCount * memberCount) / totalViews : 0)
+          : activeUsersToday,
         averageSessionDuration: Math.round(avgDuration),
         topContent,
         userActivity,
