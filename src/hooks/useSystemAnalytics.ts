@@ -316,8 +316,8 @@ export const useSystemAnalytics = (communityFilter?: string) => {
                 active_users_today: activeToday,
                 total_views: communityViewsCount || 0,
                 avg_session_duration: Math.round(avgSessionDuration),
-                engagement_rate: uniqueCommunityViewers > 0
-                  ? Math.round((activeToday / uniqueCommunityViewers) * 100)
+                engagement_rate: communityViewsCount && communityViewsCount > 0
+                  ? Math.round((uniqueCommunityViewers / communityViewsCount) * 100)
                   : 0,
               };
             })

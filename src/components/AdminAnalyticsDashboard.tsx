@@ -85,7 +85,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               : 0}
             %
           </p>
-          <p className="text-xs text-gray-500 mt-1">Users active today</p>
+          <p className="text-xs text-gray-500 mt-1">Unique viewers / total views</p>
         </div>
       </div>
 
