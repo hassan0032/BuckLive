@@ -1,6 +1,6 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import nodemailer from "npm:nodemailer";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,26 +39,42 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Gmail SMTP configuration
-    const SMTP_USER = Deno.env.get("SMTP_USER");
-    const SMTP_PASS = Deno.env.get("SMTP_PASS");
-    const SMTP_SENDER = Deno.env.get("SMTP_SENDER") || `Buck Live Notifications <${SMTP_USER}>`;
+    // MS Graph API configuration
+    const tenantId = Deno.env.get("MS_TENANT_ID");
+    const clientId = Deno.env.get("MS_CLIENT_ID");
+    const clientSecret = Deno.env.get("MS_CLIENT_SECRET");
+    const senderEmail = Deno.env.get("MS_SENDER_EMAIL");
     const RECIPIENT_EMAIL = Deno.env.get("QUESTION_RECIPIENT_EMAIL") || "asim@vitalmindmedia.com";
 
-    if (!SMTP_USER || !SMTP_PASS) {
-      console.warn("⚠️ Missing SMTP credentials. Email not sent.");
+    if (!tenantId || !clientId || !clientSecret || !senderEmail) {
+      console.warn("⚠️ Missing MS Graph credentials. Email not sent.");
       return new Response(
-        JSON.stringify({ success: false, error: "SMTP credentials not configured" }),
+        JSON.stringify({ success: false, error: "MS Graph credentials not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465, // SSL
-      secure: true,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    // 1. Get Access Token
+    const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+    const tokenParams = new URLSearchParams();
+    tokenParams.append("client_id", clientId);
+    tokenParams.append("scope", "https://graph.microsoft.com/.default");
+    tokenParams.append("client_secret", clientSecret);
+    tokenParams.append("grant_type", "client_credentials");
+
+    const tokenResponse = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: tokenParams.toString(),
     });
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      throw new Error(`Failed to get MS Graph token: ${errorText}`);
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
 
     const isAnonymous = !email || email === "Anonymous";
     const displayEmail = isAnonymous ? "Anonymous" : email;
@@ -119,15 +135,40 @@ Deno.serve(async (req: Request) => {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: SMTP_SENDER,
-      to: RECIPIENT_EMAIL,
-      replyTo: isAnonymous ? undefined : email,
-      subject: `New Question on Buck LIVE: ${content_title}`,
-      html: emailHTML,
+    const sendUrl = `https://graph.microsoft.com/v1.0/users/${senderEmail}/sendMail`;
+    const toRecipients = [{ emailAddress: { address: RECIPIENT_EMAIL.trim() } }];
+
+    const messageData: any = {
+      message: {
+        subject: `New Question on Buck LIVE: ${content_title}`,
+        body: {
+          contentType: "HTML",
+          content: emailHTML,
+        },
+        toRecipients: toRecipients,
+      },
+      saveToSentItems: "false"
+    };
+
+    if (!isAnonymous && email) {
+      messageData.message.replyTo = [{ emailAddress: { address: email.trim() } }];
+    }
+
+    const sendResponse = await fetch(sendUrl, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(messageData),
     });
 
-    console.log(`📧 Question email sent to ${RECIPIENT_EMAIL} for content: ${content_title}`);
+    if (!sendResponse.ok) {
+      const errorText = await sendResponse.text();
+      throw new Error(`Failed to send MS Graph email: ${errorText}`);
+    }
+
+    console.log(`📧 Question email sent to ${RECIPIENT_EMAIL} via MS Graph for content: ${content_title}`);
 
     return new Response(
       JSON.stringify({ success: true }),
