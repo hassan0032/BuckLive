@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import nodemailer from "npm:nodemailer";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,26 +72,43 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Gmail SMTP configuration
-    const SMTP_USER = Deno.env.get("SMTP_USER"); // bucklivenotifications@gmail.com
-    const SMTP_PASS = Deno.env.get("SMTP_PASS"); // Gmail App Password
+    // MS Graph API configuration
+    const tenantId = Deno.env.get("MS_TENANT_ID");
+    const clientId = Deno.env.get("MS_CLIENT_ID");
+    const clientSecret = Deno.env.get("MS_CLIENT_SECRET");
+    const senderEmail = Deno.env.get("MS_SENDER_EMAIL");
     const ADMIN_EMAIL_RAW = Deno.env.get("ADMIN_NOTIFICATION_EMAIL");
-    const SMTP_SENDER = Deno.env.get("SMTP_SENDER") || `Buck Live Notifications <${SMTP_USER}>`;
+
 
     // Parse comma-separated email addresses
     const adminEmails = ADMIN_EMAIL_RAW
       ? ADMIN_EMAIL_RAW.split(",").map(email => email.trim()).filter(email => email.length > 0)
       : [];
 
-    if (!SMTP_USER || !SMTP_PASS || adminEmails.length === 0) {
-      console.warn("⚠️ Missing SMTP credentials or admin email. Email not sent.");
+    if (!tenantId || !clientId || !clientSecret || !senderEmail || adminEmails.length === 0) {
+      console.warn("⚠️ Missing MS Graph credentials or admin email. Email not sent.");
     } else {
-      const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465, // SSL
-        secure: true,
-        auth: { user: SMTP_USER, pass: SMTP_PASS },
+      // 1. Get Access Token
+      const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+      const tokenParams = new URLSearchParams();
+      tokenParams.append("client_id", clientId);
+      tokenParams.append("scope", "https://graph.microsoft.com/.default");
+      tokenParams.append("client_secret", clientSecret);
+      tokenParams.append("grant_type", "client_credentials");
+
+      const tokenResponse = await fetch(tokenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: tokenParams.toString(),
       });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        throw new Error(`Failed to get MS Graph token: ${errorText}`);
+      }
+
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
 
       const emailHTML = `
         <div style="font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; max-width: 600px;">
@@ -128,14 +145,36 @@ Deno.serve(async (req: Request) => {
         </div>
       `;
 
-      await transporter.sendMail({
-        from: SMTP_SENDER,
-        to: adminEmails.join(", "),
-        subject: `New Community Created: ${communityName}`,
-        html: emailHTML,
+      const sendUrl = `https://graph.microsoft.com/v1.0/users/${senderEmail}/sendMail`;
+      const toRecipients = adminEmails.map(email => ({ emailAddress: { address: email.trim() } }));
+
+      const messageData = {
+        message: {
+          subject: `New Community Created: ${communityName}`,
+          body: {
+            contentType: "HTML",
+            content: emailHTML,
+          },
+          toRecipients: toRecipients,
+        },
+        saveToSentItems: "false"
+      };
+
+      const sendResponse = await fetch(sendUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(messageData),
       });
 
-      console.log(`📧 Email sent via Gmail SMTP for community: ${communityId} to ${adminEmails.length} recipient(s): ${adminEmails.join(", ")}`);
+      if (!sendResponse.ok) {
+        const errorText = await sendResponse.text();
+        throw new Error(`Failed to send MS Graph email: ${errorText}`);
+      }
+
+      console.log(`📧 Email sent via Microsoft Graph API for community: ${communityId} to ${adminEmails.length} recipient(s): ${adminEmails.join(", ")}`);
     }
 
     return new Response(
