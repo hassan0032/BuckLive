@@ -225,6 +225,7 @@ export interface Content {
   published_at?: string;
   enable_questions?: boolean;
   is_manager_only?: boolean;
+  supporting_content?: string[];
 }
 
 export interface ContentVersion {

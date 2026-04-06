@@ -72,6 +72,13 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         enable_questions: editingContent.enable_questions || false,
         is_manager_only: editingContent.is_manager_only || false,
       });
+      setSelectedSupportingContentIds(
+        (editingContent.supporting_content || []).filter((id) => id !== editingContent.id)
+      );
+      setSupportingContentPage(1);
+    } else {
+      setSelectedSupportingContentIds([]);
+      setSupportingContentPage(1);
     }
   }, [editingContent]);
 
@@ -183,6 +190,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         vimeo_video_id: formData.vimeo_video_id || '',
         enable_questions: formData.enable_questions,
         is_manager_only: formData.is_manager_only,
+        supporting_content: selectedSupportingContentIds.filter((id) => id !== editingContent?.id),
       };
 
       if (formData.type === 'video' && formData.duration) {
