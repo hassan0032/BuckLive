@@ -546,13 +546,10 @@ export const AdminDashboard: React.FC = () => {
                     Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Tags
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Author
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created
@@ -598,16 +595,12 @@ export const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${item.status === 'published'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                          }`}
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-md`}
                       >
-                        {(item.status || 'published').toUpperCase()}
+                        {item.tags.join(', ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-[#363f49]">{item.category}</td>
-                    <td className="px-6 py-4 text-sm text-[#363f49]">{item.author}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {new Date(item.created_at).toLocaleDateString()}
                     </td>
