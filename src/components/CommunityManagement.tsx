@@ -256,6 +256,15 @@ export const CommunityManagement: React.FC<CommunityManagementProps> = ({ userId
                     {community.is_active ? 'ACTIVE' : 'INACTIVE'}
                   </span>
                 </div>
+
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Activation Date</span>
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded`}
+                  >
+                    {community.activation_date ? new Date(community.activation_date).toLocaleDateString() : '--'}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
