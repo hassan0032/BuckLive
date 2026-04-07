@@ -157,6 +157,8 @@ export interface Community {
   is_active: boolean;
   membership_tier: PaymentTier;
   created_at: string;
+  activation_date?: string;
+  renewal_date?: string;
   updated_at: string;
   created_by_manager_id?: string;
   creator_id?: string | null;

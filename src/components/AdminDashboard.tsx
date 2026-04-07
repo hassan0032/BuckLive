@@ -85,7 +85,7 @@ export const AdminDashboard: React.FC = () => {
   const [communityFormData, setCommunityFormData] = useState<CommunityFormData>(createEmptyCommunityForm());
   const [managerSearchTerm, setManagerSearchTerm] = useState<string>('');
 
-  type CommunitiesSortBy = 'name' | 'created_at';
+  type CommunitiesSortBy = 'name' | 'renewal_date';
   const [communitiesSortBy, setCommunitiesSortBy] = useState<CommunitiesSortBy>('name');
   const [communitiesSortOrder, setCommunitiesSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -105,7 +105,7 @@ export const AdminDashboard: React.FC = () => {
       if (communitiesSortBy === 'name') {
         cmp = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
       } else {
-        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        cmp = new Date(a.renewal_date || 0).getTime() - new Date(b.renewal_date || 0).getTime();
       }
       return communitiesSortOrder === 'asc' ? cmp : -cmp;
     });
@@ -676,13 +676,16 @@ export const AdminDashboard: React.FC = () => {
                       Billing Code
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Activation Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <button
                         type="button"
-                        onClick={() => handleCommunitiesSort('created_at')}
+                        onClick={() => handleCommunitiesSort('renewal_date')}
                         className="flex items-center gap-1 hover:text-gray-700 focus:outline-none"
                       >
-                        Created
-                        {communitiesSortBy === 'created_at' && (communitiesSortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
+                        Renewal Date
+                        {communitiesSortBy === 'renewal_date' && (communitiesSortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
                       </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -729,7 +732,10 @@ export const AdminDashboard: React.FC = () => {
                         {community.code}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {new Date(community.created_at).toLocaleDateString()}
+                        {community.activation_date ? new Date(community.activation_date).toLocaleDateString() : '--'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {community.renewal_date ? new Date(community.renewal_date).toLocaleDateString() : '--'}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium space-x-2">
                         <button
