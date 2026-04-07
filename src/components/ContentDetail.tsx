@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, Calendar, Clock, Download, FileText, Tag, User, Video } from 'lucide-react';
+import { ArrowLeft, BookOpen, Calendar, Clock, Download, FileText, List, Tag, User, Video } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,7 +13,7 @@ export const ContentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { singleContent, singleLoading, fetchContentById, fetchRelatedContent } = useContent();
+  const { singleContent, singleLoading, fetchContentById, fetchRelatedContent, content } = useContent();
   const [relatedContent, setRelatedContent] = useState<Content[]>([]);
 
   useContentTracking(id, user?.id, user?.community_id);
@@ -116,15 +116,19 @@ export const ContentDetail: React.FC = () => {
     ? (singleContent.vimeo_video_id || extractVimeoId(singleContent.url))
     : null;
   const ContentIcon = getContentIcon(singleContent.type);
+  const supportingContentItems =
+    singleContent.supporting_content && singleContent.supporting_content.length > 0
+      ? content.filter((item) => singleContent.supporting_content?.includes(item.id))
+      : [];
 
   return (
     <div className="space-y-8">
       <button
-        onClick={() => navigate('/library')}
+        onClick={() => navigate(-1)}
         className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors uppercase font-semibold"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Library
+        Back
       </button>
 
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -267,6 +271,61 @@ export const ContentDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Supporting Content Section */}
+      {supportingContentItems.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden my-8">
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-[#363f49] flex items-center">
+              <List className="h-5 w-5 mr-2 text-brand-primary" />
+              Supporting Content
+            </h2>
+            <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
+              {supportingContentItems.length} {supportingContentItems.length === 1 ? 'item' : 'items'}
+            </span>
+          </div>
+          <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-100">
+            {supportingContentItems.map((item, index) => {
+              const SupportingIcon = getContentIcon(item.type);
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => navigate(`/content/${item.id}`)}
+                  className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors cursor-pointer group"
+                >
+                  <div className="text-sm font-medium text-gray-400 w-6 text-center group-hover:text-brand-primary transition-colors">
+                    {index + 1}
+                  </div>
+                  <div className="relative w-32 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 shadow-sm border border-gray-200">
+                    {item.thumbnail_url ? (
+                      <img
+                        src={item.thumbnail_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100 group-hover:bg-gray-200 transition-colors">
+                        <SupportingIcon className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 text-white text-[10px] font-semibold rounded shadow-sm">
+                      {getContentTypeBadgeLabel(item.type).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 pr-4">
+                    <h3 className="text-sm font-bold text-[#363f49] mb-1 line-clamp-2 group-hover:text-brand-primary transition-colors">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-gray-500 line-clamp-2">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Feedback Section */}
       <ContentFeedbackForm contentId={singleContent.id} />
