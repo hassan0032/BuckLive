@@ -18,11 +18,14 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const { uploadThumbnail, uploadPDF, saveDraft } = useContent();
-  const [activeTab, setActiveTab] = useState<'general' | 'media' | 'content'>('general');
+  const { content, loading, uploadThumbnail, uploadPDF, saveDraft } = useContent();
+  const SUPPORTING_CONTENT_PER_PAGE = 6;
+  const [activeTab, setActiveTab] = useState<'general' | 'media' | 'content' | 'supportingContent'>('general');
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [supportingContentPage, setSupportingContentPage] = useState(1);
+  const [selectedSupportingContentIds, setSelectedSupportingContentIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -69,6 +72,13 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         enable_questions: editingContent.enable_questions || false,
         is_manager_only: editingContent.is_manager_only || false,
       });
+      setSelectedSupportingContentIds(
+        (editingContent.supporting_content || []).filter((id) => id !== editingContent.id)
+      );
+      setSupportingContentPage(1);
+    } else {
+      setSelectedSupportingContentIds([]);
+      setSupportingContentPage(1);
     }
   }, [editingContent]);
 
@@ -180,6 +190,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
         vimeo_video_id: formData.vimeo_video_id || '',
         enable_questions: formData.enable_questions,
         is_manager_only: formData.is_manager_only,
+        supporting_content: selectedSupportingContentIds.filter((id) => id !== editingContent?.id),
       };
 
       if (formData.type === 'video' && formData.duration) {
@@ -223,6 +234,26 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
     }
 
     return true;
+  };
+
+  const supportingContentItems = content.filter((item) => item.id !== editingContent?.id);
+  const totalSupportingPages = Math.max(
+    1,
+    Math.ceil(supportingContentItems.length / SUPPORTING_CONTENT_PER_PAGE)
+  );
+  const currentSupportingPage = Math.min(supportingContentPage, totalSupportingPages);
+  const supportingStartIndex = (currentSupportingPage - 1) * SUPPORTING_CONTENT_PER_PAGE;
+  const paginatedSupportingContent = supportingContentItems.slice(
+    supportingStartIndex,
+    supportingStartIndex + SUPPORTING_CONTENT_PER_PAGE
+  );
+
+  const toggleSupportingContentSelection = (contentId: string) => {
+    setSelectedSupportingContentIds((prev) =>
+      prev.includes(contentId)
+        ? prev.filter((id) => id !== contentId)
+        : [...prev, contentId]
+    );
   };
 
   return (
@@ -277,6 +308,15 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                   }`}
               >
                 Media
+              </button>
+              <button
+                onClick={() => setActiveTab('supportingContent')}
+                className={`py-3 px-4 border-b-2 font-semibold text-sm transition-colors uppercase ${activeTab === 'supportingContent'
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                Supporting Materials
               </button>
               {formData.type === 'blog' && (
                 <button
@@ -518,6 +558,117 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                   onAutoSave={editingContent ? handleAutoSave : undefined}
                   placeholder="Write your blog post content here..."
                 />
+              </div>
+            )}
+
+            {activeTab === 'supportingContent' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Supporting Content</h3>
+                {loading ? (
+                  <div className="text-sm text-gray-600">Loading supporting content...</div>
+                ) : supportingContentItems.length === 0 ? (
+                  <div className="text-sm text-gray-600">No supporting content available.</div>
+                ) : (
+                  <>
+                    <div className="mb-4 text-sm text-gray-700">
+                      Selected: <span className="font-semibold">{selectedSupportingContentIds.length}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {paginatedSupportingContent.map((item) => (
+                        <div
+                          key={item.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => toggleSupportingContentSelection(item.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              toggleSupportingContentSelection(item.id);
+                            }
+                          }}
+                          className={`border rounded-lg p-4 bg-white shadow-sm transition-colors ${
+                            selectedSupportingContentIds.includes(item.id)
+                              ? 'border-brand-primary'
+                              : 'border-gray-200'
+                          }`}
+                        >
+                          <label className="flex items-center gap-2 mb-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedSupportingContentIds.includes(item.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={() => toggleSupportingContentSelection(item.id)}
+                              className="h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Select</span>
+                          </label>
+                          <h4 className="font-semibold text-gray-900 line-clamp-2">{item.title}</h4>
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-3">{item.description}</p>
+                          <div className="mt-3 space-y-1 text-xs text-gray-500">
+                            <p>
+                              <span className="font-medium text-gray-700">Type:</span> {item.type.toUpperCase()}
+                            </p>
+                            <p>
+                              <span className="font-medium text-gray-700">Category:</span> {item.category}
+                            </p>
+                            <p>
+                              <span className="font-medium text-gray-700">Author:</span> {item.author}
+                            </p>
+                          </div>
+                          {item.tags.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {item.tags.slice(0, 3).map((tag) => (
+                                <span
+                                  key={`${item.id}-${tag}`}
+                                  className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setSupportingContentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentSupportingPage === 1}
+                        className="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+                      <div className="flex items-center gap-2">
+                        {Array.from({ length: totalSupportingPages }, (_, index) => {
+                          const page = index + 1;
+                          return (
+                            <button
+                              key={page}
+                              type="button"
+                              onClick={() => setSupportingContentPage(page)}
+                              className={`w-8 h-8 rounded-md text-sm font-medium transition-colors ${page === currentSupportingPage
+                                ? 'bg-brand-primary text-white'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSupportingContentPage((prev) => Math.min(totalSupportingPages, prev + 1))}
+                        disabled={currentSupportingPage === totalSupportingPages}
+                        className="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
