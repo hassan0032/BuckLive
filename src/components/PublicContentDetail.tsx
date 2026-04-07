@@ -6,6 +6,7 @@ import {
   Clock,
   Download,
   FileText,
+  List,
   Tag, User,
   Video
 } from 'lucide-react';
@@ -22,6 +23,7 @@ export const PublicContentDetail: React.FC = () => {
   const navigate = useNavigate();
   const { shareInfo, loading: shareLoading, error: shareError } = usePublicShare(token || '');
   const [content, setContent] = useState<Content | null>(null);
+  const [supportingContentItems, setSupportingContentItems] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,6 +84,46 @@ export const PublicContentDetail: React.FC = () => {
     shareInfo?.community_id,
     true // isAnonymous = true
   );
+
+  useEffect(() => {
+    const supportingIds = content?.supporting_content ?? [];
+
+    if (!token || supportingIds.length === 0) {
+      setSupportingContentItems([]);
+      return;
+    }
+
+    const fetchSupportingContent = async () => {
+      try {
+        const responses = await Promise.all(
+          supportingIds.map(async (contentId) => {
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-share-link`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              },
+              body: JSON.stringify({ token, contentId }),
+            });
+
+            if (!res.ok) {
+              return null;
+            }
+
+            const data = await res.json();
+            return data.success && data.content ? (data.content as Content) : null;
+          })
+        );
+
+        setSupportingContentItems(responses.filter((item): item is Content => item !== null));
+      } catch (err) {
+        console.error('Supporting content fetch error:', err);
+        setSupportingContentItems([]);
+      }
+    };
+
+    fetchSupportingContent();
+  }, [token, content?.id, content?.supporting_content]);
 
   const extractVimeoId = (url: string): string | null => {
     const patterns = [
@@ -301,6 +343,61 @@ export const PublicContentDetail: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Supporting Content Section */}
+        {supportingContentItems.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden my-8">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-[#363f49] flex items-center">
+                <List className="h-5 w-5 mr-2 text-brand-primary" />
+                Supporting Content
+              </h2>
+              <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
+                {supportingContentItems.length} {supportingContentItems.length === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+            <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-100">
+              {supportingContentItems.map((item, index) => {
+                const SupportingIcon = getContentIcon(item.type);
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => navigate(`/public/${token}/content/${item.id}`)}
+                    className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors cursor-pointer group"
+                  >
+                    <div className="text-sm font-medium text-gray-400 w-6 text-center group-hover:text-brand-primary transition-colors">
+                      {index + 1}
+                    </div>
+                    <div className="relative w-32 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 shadow-sm border border-gray-200">
+                      {item.thumbnail_url ? (
+                        <img
+                          src={item.thumbnail_url}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 group-hover:bg-gray-200 transition-colors">
+                          <SupportingIcon className="h-8 w-8 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 text-white text-[10px] font-semibold rounded shadow-sm">
+                        {getContentTypeBadgeLabel(item.type).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0 pr-4">
+                      <h3 className="text-sm font-bold text-[#363f49] mb-1 line-clamp-2 group-hover:text-brand-primary transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-gray-500 line-clamp-2">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Feedback Section */}
         <ContentFeedbackForm contentId={content.id} />
