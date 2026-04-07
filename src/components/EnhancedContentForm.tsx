@@ -316,7 +316,7 @@ export const EnhancedContentForm: React.FC<EnhancedContentFormProps> = ({
                   : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
               >
-                Supporting Materials
+                Supporting Content
               </button>
               {formData.type === 'blog' && (
                 <button
