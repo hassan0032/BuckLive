@@ -257,7 +257,7 @@ export function InvoicesTable({
         </div>
       )}
 
-      <div className="grid grid-cols-8 gap-4 px-4 py-3 text-sm font-medium text-gray-500 border-b">
+      <div className="grid grid-cols-8 gap-4 px-4 py-3 text-sm font-medium text-gray-500 border-b uppercase">
         <div className="col-span-2">Period</div>
         <div>{isAdmin || isOrganizationManager ? 'Community' : 'Community'}</div>
         <div>Tier</div>
