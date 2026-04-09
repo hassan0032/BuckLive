@@ -282,7 +282,10 @@ export const CommunityManagerDashboard: React.FC = () => {
       )}
 
       {activeTab === 'feedback' && (
-        <FeedbackManagement />
+        <FeedbackManagement
+          selectedCommunityId={selectedCommunityId}
+          selectedCommunityTier={selectedCommunity?.membership_tier}
+        />
       )}
 
     </div>

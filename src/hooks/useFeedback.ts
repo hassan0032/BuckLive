@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ContentFeedback } from '../types';
 
 export interface FeedbackFilters {
   contentId?: string;
+  contentIds?: string[];
   wasHelpful?: boolean;
   startDate?: string;
   endDate?: string;
@@ -49,6 +50,14 @@ export const useFeedback = () => {
 
       if (filters?.contentId) {
         query = query.eq('content_id', filters.contentId);
+      }
+
+      if (filters?.contentIds) {
+        if (filters.contentIds.length === 0) {
+          setFeedback([]);
+          return { data: [], error: null };
+        }
+        query = query.in('content_id', filters.contentIds);
       }
 
       if (filters?.wasHelpful !== undefined) {

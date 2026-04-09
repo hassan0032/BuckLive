@@ -3,9 +3,27 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 import { FeedbackFilters, useFeedback } from '../hooks/useFeedback';
-import { ContentFeedback } from '../types';
+import { ContentFeedback, PAYMENT_TIER, PaymentTier } from '../types';
 
-export const FeedbackManagement: React.FC = () => {
+interface FeedbackManagementProps {
+  selectedCommunityId?: string;
+  selectedCommunityTier?: PaymentTier;
+}
+
+const normalizeTier = (tier?: string) => (tier || '').toLowerCase();
+
+const canCommunityAccessContent = (contentTier: string, communityTier: string) => {
+  const normalizedContentTier = normalizeTier(contentTier);
+  const normalizedCommunityTier = normalizeTier(communityTier);
+
+  if (normalizedCommunityTier === PAYMENT_TIER.GOLD) return true;
+  return normalizedContentTier === PAYMENT_TIER.SILVER;
+};
+
+export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({
+  selectedCommunityId,
+  selectedCommunityTier,
+}) => {
   const navigate = useNavigate();
   const { feedback, loading, error, fetchFeedback } = useFeedback();
   const { content } = useContent();
@@ -15,18 +33,35 @@ export const FeedbackManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
   const [selectedComment, setSelectedComment] = useState<{ comment: string; name: string; email: string } | null>(null);
+  const scopedContent = useMemo(() => {
+    if (!selectedCommunityId || !selectedCommunityTier) {
+      return content;
+    }
+
+    return content.filter((item) => canCommunityAccessContent(item.required_tier, selectedCommunityTier));
+  }, [content, selectedCommunityId, selectedCommunityTier]);
+  const scopedContentIds = useMemo(() => scopedContent.map((item) => item.id), [scopedContent]);
 
   useEffect(() => {
     // Build content map for quick lookup
     const map: Record<string, string> = {};
-    content.forEach((c) => {
+    scopedContent.forEach((c) => {
       map[c.id] = c.title;
     });
     setContentMap(map);
-  }, [content]);
+  }, [scopedContent]);
+
+  useEffect(() => {
+    if (contentFilter && !scopedContentIds.includes(contentFilter)) {
+      setContentFilter('');
+    }
+  }, [contentFilter, scopedContentIds]);
 
   useEffect(() => {
     const filters: FeedbackFilters = {};
+    if (selectedCommunityId) {
+      filters.contentIds = scopedContentIds;
+    }
     if (contentFilter) {
       filters.contentId = contentFilter;
     }
@@ -36,7 +71,7 @@ export const FeedbackManagement: React.FC = () => {
     fetchFeedback(filters);
     // Reset to page 1 when filters change
     setCurrentPage(1);
-  }, [contentFilter, helpfulFilter]);
+  }, [contentFilter, helpfulFilter, selectedCommunityId, scopedContentIds]);
 
   // Calculate pagination
   const totalPages = Math.ceil(feedback.length / itemsPerPage);
@@ -95,7 +130,7 @@ export const FeedbackManagement: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
             >
               <option value="">All Content</option>
-              {content.map((c) => (
+              {scopedContent.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.title}
                 </option>
