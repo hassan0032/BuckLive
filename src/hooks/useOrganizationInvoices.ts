@@ -41,7 +41,7 @@ export const useOrganizationInvoices = () => {
       // Fetch all communities in the organization
       const { data: communities, error: communitiesError } = await supabase
         .from('communities')
-        .select('id, name')
+        .select('id, name, activation_date')
         .eq('organization_id', organizationId);
 
       if (communitiesError) {
@@ -61,9 +61,13 @@ export const useOrganizationInvoices = () => {
       const invoicedCommunityIds = new Set(
         (invoiceData || []).map((inv: any) => inv.community_id)
       );
-      const pending = (communities || []).filter(
-        (c) => !invoicedCommunityIds.has(c.id)
-      );
+      const pending = (communities || []).filter((c) => {
+        if (invoicedCommunityIds.has(c.id)) return false;
+        if (!c.activation_date) return false;
+        const today = new Date().toISOString().split('T')[0];
+        const actDate = new Date(c.activation_date).toISOString().split('T')[0];
+        return actDate <= today;
+      });
       setPendingCommunities(pending);
 
       const enrichedInvoices: Invoice[] = invoiceData?.map(inv => {

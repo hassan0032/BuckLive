@@ -30,6 +30,7 @@ interface CommunityFormData {
   code: string,
   membership_tier: PaymentTier;
   organization_id?: string;
+  activation_date?: string;
 }
 
 const createEmptyCommunityForm = (): CommunityFormData => ({
@@ -40,6 +41,7 @@ const createEmptyCommunityForm = (): CommunityFormData => ({
   code: '',
   membership_tier: PAYMENT_TIER.SILVER,
   organization_id: '',
+  activation_date: '',
 });
 
 const generateAccessCode = () => {
@@ -65,6 +67,9 @@ export const AdminDashboard: React.FC = () => {
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
+  const [originalActivationDate, setOriginalActivationDate] = useState<string>('');
+  const [showActivationWarning, setShowActivationWarning] = useState(false);
+  const [pendingCommunityPayload, setPendingCommunityPayload] = useState<any>(null);
   const {
     documents: storedPdfs,
     loading: pdfsLoading,
@@ -188,6 +193,7 @@ export const AdminDashboard: React.FC = () => {
   const openCreateCommunityModal = () => {
     resetCommunityForm();
     setEditingCommunity(null);
+    setOriginalActivationDate('');
     setCommunityModalTab('details');
     setShowCommunityForm(true);
   };
@@ -242,17 +248,64 @@ export const AdminDashboard: React.FC = () => {
     }
 
     // Prepare payload with sanitized organization_id
+    let renewal_date: string | undefined;
+    let activation_date: string | undefined;
+
+    if (communityFormData.activation_date) {
+      const dateObj = new Date(communityFormData.activation_date);
+      activation_date = dateObj.toISOString();
+      dateObj.setUTCFullYear(dateObj.getUTCFullYear() + 1);
+      renewal_date = dateObj.toISOString();
+    }
+
     const payload = {
       ...communityFormData,
       organization_id: communityFormData.organization_id || null,
+      activation_date,
+      renewal_date,
     };
 
     if (editingCommunity) {
+      const currentActivationDate = communityFormData.activation_date || '';
+      if (currentActivationDate !== originalActivationDate) {
+        setPendingCommunityPayload(payload);
+        setShowActivationWarning(true);
+        return;
+      }
       await updateCommunity(editingCommunity, payload);
     } else {
       await addCommunity(payload);
     }
 
+    closeCommunityModal();
+  };
+
+  const confirmActivationDateChange = async () => {
+    if (!editingCommunity || !pendingCommunityPayload) return;
+    setIsProcessing(true);
+    
+    // Delete existing invoices
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('community_id', editingCommunity);
+        
+      if (error) {
+        console.error('Failed to delete invoices:', error);
+        alert('Failed to reset invoices for the new activation date.');
+        setIsProcessing(false);
+        setShowActivationWarning(false);
+        return;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    
+    // Proceed with community update
+    await updateCommunity(editingCommunity, pendingCommunityPayload);
+    setIsProcessing(false);
+    setShowActivationWarning(false);
     closeCommunityModal();
   };
 
@@ -262,7 +315,9 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleEditCommunity = (community: Community) => {
+    const actDate = community.activation_date ? new Date(community.activation_date).toISOString().split('T')[0] : '';
     setEditingCommunity(community.id);
+    setOriginalActivationDate(actDate);
     setCommunityFormData({
       name: community.name,
       description: community.description,
@@ -271,6 +326,7 @@ export const AdminDashboard: React.FC = () => {
       code: community.code,
       membership_tier: community.membership_tier,
       organization_id: community.organization_id || '',
+      activation_date: actDate,
     });
     setCommunityModalTab('details');
     setShowCommunityForm(true);
@@ -814,6 +870,15 @@ export const AdminDashboard: React.FC = () => {
         isDeleting={isProcessing}
       />
 
+      <DeleteConfirmationModal
+        isOpen={showActivationWarning}
+        onClose={() => setShowActivationWarning(false)}
+        onConfirm={confirmActivationDateChange}
+        title="Warning: Reset Invoices"
+        message="Changing the activation date will delete all existing invoices for this community. New invoices will be scheduled based on the new date. Proceed?"
+        isDeleting={isProcessing}
+      />
+
       {showCommunityForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -947,6 +1012,21 @@ export const AdminDashboard: React.FC = () => {
                     <p className="mt-1 text-xs text-gray-500">
                       6-character alphanumeric code for community access
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Activation Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={communityFormData.activation_date || ''}
+                      onChange={(e) =>
+                        setCommunityFormData({ ...communityFormData, activation_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                      required
+                    />
                   </div>
 
                   {editingCommunity && (
