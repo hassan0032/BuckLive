@@ -30,6 +30,7 @@ interface CommunityFormData {
   code: string,
   membership_tier: PaymentTier;
   organization_id?: string;
+  activation_date?: string;
 }
 
 const createEmptyCommunityForm = (): CommunityFormData => ({
@@ -40,6 +41,7 @@ const createEmptyCommunityForm = (): CommunityFormData => ({
   code: '',
   membership_tier: PAYMENT_TIER.SILVER,
   organization_id: '',
+  activation_date: '',
 });
 
 const generateAccessCode = () => {
@@ -242,9 +244,21 @@ export const AdminDashboard: React.FC = () => {
     }
 
     // Prepare payload with sanitized organization_id
+    let renewal_date: string | undefined;
+    let activation_date: string | undefined;
+
+    if (communityFormData.activation_date) {
+      const dateObj = new Date(communityFormData.activation_date);
+      activation_date = dateObj.toISOString();
+      dateObj.setUTCFullYear(dateObj.getUTCFullYear() + 1);
+      renewal_date = dateObj.toISOString();
+    }
+
     const payload = {
       ...communityFormData,
       organization_id: communityFormData.organization_id || null,
+      activation_date,
+      renewal_date,
     };
 
     if (editingCommunity) {
@@ -271,6 +285,7 @@ export const AdminDashboard: React.FC = () => {
       code: community.code,
       membership_tier: community.membership_tier,
       organization_id: community.organization_id || '',
+      activation_date: community.activation_date ? new Date(community.activation_date).toISOString().split('T')[0] : '',
     });
     setCommunityModalTab('details');
     setShowCommunityForm(true);
@@ -947,6 +962,21 @@ export const AdminDashboard: React.FC = () => {
                     <p className="mt-1 text-xs text-gray-500">
                       6-character alphanumeric code for community access
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Activation Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={communityFormData.activation_date || ''}
+                      onChange={(e) =>
+                        setCommunityFormData({ ...communityFormData, activation_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                      required
+                    />
                   </div>
 
                   {editingCommunity && (
