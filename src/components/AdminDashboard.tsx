@@ -67,6 +67,9 @@ export const AdminDashboard: React.FC = () => {
   const [showCommunityForm, setShowCommunityForm] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<string | null>(null);
+  const [originalActivationDate, setOriginalActivationDate] = useState<string>('');
+  const [showActivationWarning, setShowActivationWarning] = useState(false);
+  const [pendingCommunityPayload, setPendingCommunityPayload] = useState<any>(null);
   const {
     documents: storedPdfs,
     loading: pdfsLoading,
@@ -190,6 +193,7 @@ export const AdminDashboard: React.FC = () => {
   const openCreateCommunityModal = () => {
     resetCommunityForm();
     setEditingCommunity(null);
+    setOriginalActivationDate('');
     setCommunityModalTab('details');
     setShowCommunityForm(true);
   };
@@ -262,11 +266,46 @@ export const AdminDashboard: React.FC = () => {
     };
 
     if (editingCommunity) {
+      const currentActivationDate = communityFormData.activation_date || '';
+      if (currentActivationDate !== originalActivationDate) {
+        setPendingCommunityPayload(payload);
+        setShowActivationWarning(true);
+        return;
+      }
       await updateCommunity(editingCommunity, payload);
     } else {
       await addCommunity(payload);
     }
 
+    closeCommunityModal();
+  };
+
+  const confirmActivationDateChange = async () => {
+    if (!editingCommunity || !pendingCommunityPayload) return;
+    setIsProcessing(true);
+    
+    // Delete existing invoices
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('community_id', editingCommunity);
+        
+      if (error) {
+        console.error('Failed to delete invoices:', error);
+        alert('Failed to reset invoices for the new activation date.');
+        setIsProcessing(false);
+        setShowActivationWarning(false);
+        return;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    
+    // Proceed with community update
+    await updateCommunity(editingCommunity, pendingCommunityPayload);
+    setIsProcessing(false);
+    setShowActivationWarning(false);
     closeCommunityModal();
   };
 
@@ -276,7 +315,9 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleEditCommunity = (community: Community) => {
+    const actDate = community.activation_date ? new Date(community.activation_date).toISOString().split('T')[0] : '';
     setEditingCommunity(community.id);
+    setOriginalActivationDate(actDate);
     setCommunityFormData({
       name: community.name,
       description: community.description,
@@ -285,7 +326,7 @@ export const AdminDashboard: React.FC = () => {
       code: community.code,
       membership_tier: community.membership_tier,
       organization_id: community.organization_id || '',
-      activation_date: community.activation_date ? new Date(community.activation_date).toISOString().split('T')[0] : '',
+      activation_date: actDate,
     });
     setCommunityModalTab('details');
     setShowCommunityForm(true);
@@ -826,6 +867,15 @@ export const AdminDashboard: React.FC = () => {
         onConfirm={confirmDeletePdf}
         title="Delete PDF"
         message="Delete this PDF from storage?"
+        isDeleting={isProcessing}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={showActivationWarning}
+        onClose={() => setShowActivationWarning(false)}
+        onConfirm={confirmActivationDateChange}
+        title="Warning: Reset Invoices"
+        message="Changing the activation date will delete all existing invoices for this community. New invoices will be scheduled based on the new date. Proceed?"
         isDeleting={isProcessing}
       />
 

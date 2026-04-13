@@ -38,7 +38,7 @@ export function useAdminInvoices() {
         // Fetch all active communities to check for pending invoices
         const { data: allCommunities, error: communitiesError } = await client
           .from('communities')
-          .select('id, name')
+          .select('id, name, activation_date')
           .eq('is_active', true)
 
         if (communitiesError) {
@@ -68,9 +68,13 @@ export function useAdminInvoices() {
         const invoicedCommunityIds = new Set(
           (data || []).map((inv: any) => inv.community_id)
         )
-        const pending = (allCommunities || []).filter(
-          (c) => !invoicedCommunityIds.has(c.id)
-        )
+        const pending = (allCommunities || []).filter((c) => {
+          if (invoicedCommunityIds.has(c.id)) return false
+          if (!c.activation_date) return false
+          const today = new Date().toISOString().split('T')[0]
+          const actDate = new Date(c.activation_date).toISOString().split('T')[0]
+          return actDate <= today
+        })
         setPendingCommunities(pending)
 
         const normalizedInvoices: Invoice[] = (data || []).map((inv: any) => ({
@@ -221,7 +225,7 @@ export function useAdminInvoices() {
         // Fetch all active communities to check for pending invoices
         const { data: allCommunities, error: communitiesError } = await client
           .from('communities')
-          .select('id, name')
+          .select('id, name, activation_date')
           .eq('is_active', true)
 
         if (communitiesError) {
@@ -249,9 +253,13 @@ export function useAdminInvoices() {
         const invoicedCommunityIds = new Set(
           (data || []).map((inv: any) => inv.community_id)
         )
-        const pending = (allCommunities || []).filter(
-          (c) => !invoicedCommunityIds.has(c.id)
-        )
+        const pending = (allCommunities || []).filter((c) => {
+          if (invoicedCommunityIds.has(c.id)) return false
+          if (!c.activation_date) return false
+          const today = new Date().toISOString().split('T')[0]
+          const actDate = new Date(c.activation_date).toISOString().split('T')[0]
+          return actDate <= today
+        })
         setPendingCommunities(pending)
 
         const normalizedInvoices: Invoice[] = (data || []).map((inv: any) => ({

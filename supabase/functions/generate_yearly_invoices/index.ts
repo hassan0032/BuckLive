@@ -29,11 +29,17 @@ function getCurrentDateInNY(): Date {
 }
 
 function addYears(ymd: string, years: number): string {
-  // Parse the date in New York time zone
   const [year, month, day] = ymd.split('-').map(Number);
-  const date = new Date(year, month - 1, day); // month is 0-indexed
-  date.setFullYear(date.getFullYear() + years);
-  return formatYMD(date);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCFullYear(date.getUTCFullYear() + years);
+  return date.toISOString().split('T')[0];
+}
+
+function subDays(ymd: string, days: number): string {
+  const [year, month, day] = ymd.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().split('T')[0];
 }
 
 // Helper function to calculate discount percentage based on community count
@@ -147,8 +153,8 @@ Deno.serve(async (req: Request) => {
           if (!nextInvoiceDate) {
             continue;
           }
-          const invoiceDateInNY = formatYMD(new Date(nextInvoiceDate));
-          if (invoiceDateInNY > todayYMD) {
+          const invoiceDatePrefix = (nextInvoiceDate || "").split('T')[0];
+          if (invoiceDatePrefix > todayYMD) {
             continue;
           }
 
@@ -156,8 +162,10 @@ Deno.serve(async (req: Request) => {
 
           // Calculate period: use the next_invoice_date as both start and end of the billing period
           // Since we removed proration, each invoice covers exactly 1 year from the next_invoice_date
-          const periodStart = formatYMD(new Date(nextInvoiceDate));
-          const periodEnd = addYears(periodStart, 1);
+          const periodStart = (nextInvoiceDate || "").split('T')[0];
+          
+          const period1Year = addYears(periodStart, 1);
+          const periodEnd = subDays(period1Year, 1);
 
           // For discount calculation, we need to determine if this is an organization community or standalone
           // Since we removed primary_manager, we'll check if there's an organization_id
@@ -221,7 +229,7 @@ Deno.serve(async (req: Request) => {
           console.log(`Renewal: Community=${communityName}, tier=${tier}, periodStart=${periodStart}, periodEnd=${periodEnd}, amount_cents=${baseAmount}, discount=${discountPercentage}%`);
 
           const { error: insertError } = await supabase.from("invoices").insert({
-            issue_date: todayYMD,
+            issue_date: periodStart,
             period_start: periodStart,
             period_end: periodEnd,
             amount_cents: amountBeforeDiscount,

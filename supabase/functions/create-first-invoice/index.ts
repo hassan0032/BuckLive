@@ -28,11 +28,17 @@ function getCurrentDateInNY(): Date {
 }
 
 function addYears(ymd: string, years: number): string {
-  // Parse the date in New York time zone
   const [year, month, day] = ymd.split('-').map(Number);
-  const date = new Date(year, month - 1, day); // month is 0-indexed
-  date.setFullYear(date.getFullYear() + years);
-  return formatYMD(date);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCFullYear(date.getUTCFullYear() + years);
+  return date.toISOString().split('T')[0];
+}
+
+function subDays(ymd: string, days: number): string {
+  const [year, month, day] = ymd.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().split('T')[0];
 }
 
 // Helper function to calculate discount percentage based on community count
@@ -108,7 +114,7 @@ Deno.serve(async (req: Request) => {
     // 1. Find active communities without any invoices
     const { data: allCommunities, error: communitiesError } = await supabaseClient
       .from("communities")
-      .select("id, name, code, membership_tier, created_at, organization_id")
+      .select("id, name, code, membership_tier, created_at, organization_id, activation_date")
       .eq("is_active", true);
 
     if (communitiesError) {
@@ -156,33 +162,34 @@ Deno.serve(async (req: Request) => {
     console.log(`Found ${communitiesWithoutInvoice.length} communities without invoices.`);
 
     for (const community of communitiesWithoutInvoice) {
-      const { id: communityId, name: communityName, code: communityCode, membership_tier: tier, created_at: createdAt } = community;
+      const { id: communityId, name: communityName, code: communityCode, membership_tier: tier, created_at: createdAt, activation_date: activationDate } = community;
 
-      // 2. Check 24-hour delay (skip if force=true)
+      // 2. Check activation date
+      if (!activationDate) {
+        console.log(`Skipping community ${communityName}: No activation date set`);
+        continue;
+      }
+
       if (!force) {
-        const createdAtDate = new Date(createdAt);
-        const currentTime = new Date();
-
-        // Calculate time difference in hours
-        const diffInHours = (currentTime.getTime() - createdAtDate.getTime()) / (1000 * 60 * 60);
-
-        if (diffInHours < 24) {
-          console.log(`Skipping community ${communityName}: Created ${diffInHours.toFixed(2)} hours ago (needs 24h)`);
+        const actDatePrefix = (activationDate || "").split('T')[0];
+        if (actDatePrefix > todayYMD) {
+          console.log(`Skipping community ${communityName}: Activation date ${actDatePrefix} is in the future.`);
           results.skippedTooEarly++;
           continue;
         }
       } else {
-        console.log(`Force mode enabled - bypassing 24-hour delay for ${communityName}`);
+        console.log(`Force mode enabled - bypassing date check for ${communityName}`);
       }
 
-      console.log(`Processing first invoice for community: ${communityName} (Created: ${createdAt})`);
+      console.log(`Processing first invoice for community: ${communityName} (Activation Date: ${activationDate})`);
 
       // 3. Calculate Invoice Details
-      // Set period_start to community creation date (in NY timezone)
-      const creationDateNY = new Date(createdAt);
-      // Format creation date to YYYY-MM-DD in NY Timezone
-      const periodStart = formatYMD(creationDateNY);
-      const periodEnd = addYears(periodStart, 1);
+      // The activation_date comes from the DB as a UTC string representing the chosen calendar day (e.g., "2026-04-13T00:00:00Z").
+      // We directly extract the YYYY-MM-DD prefix to prevent local timezone shifts via 'new Date()'.
+      const periodStart = (activationDate || "").split('T')[0];
+      
+      const period1Year = addYears(periodStart, 1);
+      const periodEnd = subDays(period1Year, 1);
 
       const baseAmount = tier === 'gold' ? 500000 : 250000;
 
@@ -243,7 +250,7 @@ Deno.serve(async (req: Request) => {
 
       // 4. Create Invoice
       const { error: insertError } = await supabaseClient.from("invoices").insert({
-        issue_date: todayYMD,
+        issue_date: periodStart,
         period_start: periodStart,
         period_end: periodEnd,
         amount_cents: baseAmount,
@@ -262,8 +269,8 @@ Deno.serve(async (req: Request) => {
         results.errors.push(`Failed to create invoice for ${communityName}: ${insertError.message}`);
       } else {
         // 5. Update next_invoice_date
-        // Set to period_end (which is 1 year after creation)
-        const nextBillingDate = periodEnd;
+        // Set to exactly 1 year after activation date, so the cycle remains correct
+        const nextBillingDate = period1Year;
         // Create a date object representing the next billing date at midnight in New York time
         const [year, month, day] = nextBillingDate.split('-').map(Number);
         const nextInvoiceDateTime = new Date(year, month - 1, day, 0, 0, 0);

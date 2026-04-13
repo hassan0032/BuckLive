@@ -53,7 +53,7 @@ function Invoices() {
         <div className='flex items-center gap-2'>
           <Info className="w-5 h-5" />
           <p className="text-sm leading-relaxed">
-            Invoices will be generated in 24 hours so you can benefit from volume discounts.{pendingCommunities.length > 0 && (
+            Invoices are generated based on the community's activation date so you can benefit from volume discounts.{pendingCommunities.length > 0 && (
               <> <span className="font-semibold">{pendingCommunities.length}</span> {pendingCommunities.length === 1 ? 'invoice is' : 'invoices are'} pending.</>
             )}
           </p>

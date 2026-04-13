@@ -53,7 +53,7 @@ export function useBilling() {
     // Fetch community details to check for pending invoices
     const { data: communities, error: communitiesError } = await supabase
       .from('communities')
-      .select('id, name')
+      .select('id, name, activation_date')
       .in('id', communityIds);
 
     if (communitiesError) {
@@ -81,9 +81,13 @@ export function useBilling() {
     const invoicedCommunityIds = new Set(
       (existingInvoices || []).map((inv: any) => inv.community_id)
     );
-    const pending = (communities || []).filter(
-      (c) => !invoicedCommunityIds.has(c.id)
-    );
+    const pending = (communities || []).filter((c) => {
+      if (invoicedCommunityIds.has(c.id)) return false;
+      if (!c.activation_date) return false;
+      const today = new Date().toISOString().split('T')[0];
+      const actDate = new Date(c.activation_date).toISOString().split('T')[0];
+      return actDate <= today;
+    });
     setPendingCommunities(pending);
 
     // Map to Invoice type
