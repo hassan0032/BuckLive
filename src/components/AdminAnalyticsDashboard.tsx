@@ -193,7 +193,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             Most Popular Content
           </h3>
           <div className="space-y-3">
-            {analytics.topContent.slice(0, 8).map((content, index) => (
+            {analytics.topContent.map((content, index) => (
               <div key={content.content_id} className="flex items-start space-x-3">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-beige-light flex items-center justify-center">
                   <span className="text-sm font-semibold text-brand-primary">{index + 1}</span>
