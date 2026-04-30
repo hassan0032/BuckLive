@@ -179,7 +179,7 @@ export const useCommunityAnalytics = (communityId?: string) => {
           total_duration: stats.duration,
         }))
         .sort((a, b) => b.view_count - a.view_count)
-        .slice(0, 10);
+      // .slice(0, 10);
 
       const { data: userSessions } = await supabase
         .from('user_sessions')
@@ -214,7 +214,7 @@ export const useCommunityAnalytics = (communityId?: string) => {
 
       const recentViewsWithNames = (views || []).map(view => {
         const user = users?.find(u => u.id === view.user_id);
-        const user_name = user 
+        const user_name = user
           ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email
           : 'Unknown User';
         const user_email = user?.email || 'Unknown Email';
@@ -226,7 +226,7 @@ export const useCommunityAnalytics = (communityId?: string) => {
 
       // Calculate engagement rate (views today / total views)
       // Reuse the 'today' variable already defined above
-      const anonymousViewsToday = anonymousViews?.filter(view => 
+      const anonymousViewsToday = anonymousViews?.filter(view =>
         new Date(view.viewed_at) >= today
       ).length || 0;
 
@@ -264,7 +264,7 @@ export const useCommunityAnalytics = (communityId?: string) => {
           total_duration: stats.duration,
         }))
         .sort((a, b) => b.view_count - a.view_count)
-        .slice(0, 10);
+      // .slice(0, 10);
 
       const anonymousRecentViews = (anonymousViews || []).map(view => ({
         ...view,
