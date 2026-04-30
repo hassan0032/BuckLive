@@ -211,14 +211,14 @@ export const useSystemAnalytics = (communityFilter?: string) => {
           total_duration: stats.duration,
         }))
         .sort((a, b) => b.view_count - a.view_count)
-        .slice(0, 10);
+      // .slice(0, 10);
 
       const { data: userSessions } = userIds.length > 0
         ? await supabase
-            .from('user_sessions')
-            .select('user_id, login_at')
-            .in('user_id', userIds)
-            .order('login_at', { ascending: false })
+          .from('user_sessions')
+          .select('user_id, login_at')
+          .in('user_id', userIds)
+          .order('login_at', { ascending: false })
         : { data: [] };
 
       const userLoginMap = new Map<string, { lastLogin: string; count: number }>();
@@ -260,7 +260,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
 
       // For filtered community, use same member_count logic as Community Performance table
       // Prefer registered users, fallback to unique viewers
-      const memberCount = communityFilter 
+      const memberCount = communityFilter
         ? (totalUsers > 0 ? totalUsers : uniqueViewersCount)
         : totalUsers;
 
@@ -330,7 +330,7 @@ export const useSystemAnalytics = (communityFilter?: string) => {
         totalUsers: memberCount,
         // For engagement calculation: when filtered, scale unique viewers by member count divided by total views
         // This ensures: (activeUsersToday / totalUsers) * 100 = (uniqueViewersCount / totalViews) * 100
-        activeUsersToday: communityFilter 
+        activeUsersToday: communityFilter
           ? (totalViews > 0 ? (uniqueViewersCount * memberCount) / totalViews : 0)
           : activeUsersToday,
         averageSessionDuration: Math.round(avgDuration),
